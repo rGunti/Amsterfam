@@ -17,7 +17,8 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<ActivityVote> ActivityVotes => Set<ActivityVote>();
     public DbSet<ItineraryEntry> ItineraryEntries => Set<ItineraryEntry>();
     public DbSet<ShoppingItem> ShoppingItems => Set<ShoppingItem>();
-    public DbSet<ComfortQuestionTemplate> ComfortQuestionTemplates => Set<ComfortQuestionTemplate>();
+    public DbSet<ComfortQuestionTemplate> ComfortQuestionTemplates =>
+        Set<ComfortQuestionTemplate>();
     public DbSet<EventComfortQuestion> EventComfortQuestions => Set<EventComfortQuestion>();
     public DbSet<ComfortAnswer> ComfortAnswers => Set<ComfortAnswer>();
 
@@ -33,7 +34,10 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         {
             e.Property(ev => ev.Status).HasConversion<string>();
             e.Property(ev => ev.CreatedAt).HasDefaultValueSql("now()");
-            e.HasOne(ev => ev.CreatedBy).WithMany().HasForeignKey(ev => ev.CreatedById).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(ev => ev.CreatedBy)
+                .WithMany()
+                .HasForeignKey(ev => ev.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<EventAttendance>(e =>
@@ -44,7 +48,13 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
 
         modelBuilder.Entity<AvailabilityEntry>(e =>
         {
-            e.HasIndex(a => new { a.EventId, a.UserId, a.Date }).IsUnique();
+            e.HasIndex(a => new
+                {
+                    a.EventId,
+                    a.UserId,
+                    a.Date,
+                })
+                .IsUnique();
             e.Property(a => a.Status).HasConversion<string>();
         });
 

@@ -35,8 +35,18 @@ public class UserTests(DatabaseFixture db) : IClassFixture<DatabaseFixture>
         await using var context = db.CreateDbContext();
 
         context.Users.AddRange(
-            new User { ExternalId = "discord|dupe", DisplayName = "A", Email = "a@example.com" },
-            new User { ExternalId = "discord|dupe", DisplayName = "B", Email = "b@example.com" }
+            new User
+            {
+                ExternalId = "discord|dupe",
+                DisplayName = "A",
+                Email = "a@example.com",
+            },
+            new User
+            {
+                ExternalId = "discord|dupe",
+                DisplayName = "B",
+                Email = "b@example.com",
+            }
         );
 
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
