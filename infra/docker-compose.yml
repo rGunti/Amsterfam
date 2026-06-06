@@ -16,14 +16,77 @@ services:
       timeout: 5s
       retries: 5
 
+  authentik-db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: authentik
+    volumes:
+      - authentik-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authentik"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  authentik-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  authentik:
+    image: ghcr.io/goauthentik/server:2025.6
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-db
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_started
+    volumes:
+      - authentik-media:/media
+      - authentik-templates:/templates
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2025.6
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-db
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    depends_on:
+      - authentik
+    volumes:
+      - authentik-media:/media
+      - authentik-templates:/templates
+
   api:
     build:
-      context: backend/Amsterfam
+      context: ../backend/Amsterfam
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       ConnectionStrings__Default: "Host=db;Database=amsterfam;Username=amsterfam;Password=amsterfam"
-      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Authority: "http://authentik:9000/application/o/amsterfam/"
+      Jwt__Audience: "amsterfam"
+      ASPNETCORE_ENVIRONMENT: Production
     ports:
       - "8080:8080"
     depends_on:
@@ -32,3 +95,6 @@ services:
 
 volumes:
   db-data:
+  authentik-db-data:
+  authentik-media:
+  authentik-templates:
