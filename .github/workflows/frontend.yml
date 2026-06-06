@@ -51,7 +51,7 @@ jobs:
         working-directory: frontend
 
       - name: Test
-        run: pnpm run test -- --watch=false --browsers=ChromeHeadless
+        run: pnpm run test
         working-directory: frontend
 
   docker:
