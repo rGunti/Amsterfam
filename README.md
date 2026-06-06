@@ -24,8 +24,20 @@ A self-hosted progressive web app for organising a recurring annual friend group
 
 ## Running Locally
 
+Start the database (from `infra/`):
+
 ```bash
+cd infra
 docker compose up
+```
+
+The API can then be run locally with `dotnet run` from `backend/Amsterfam/Amsterfam.Api`.
+
+To run the full containerised stack:
+
+```bash
+cd infra
+docker compose --profile full up
 ```
 
 Tear down (including volumes):

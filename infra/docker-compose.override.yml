@@ -1,0 +1,5 @@
+# Local dev override: runs only the DB, so the API can be run locally with `dotnet run`.
+services:
+  api:
+    profiles:
+      - full
