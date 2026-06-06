@@ -120,3 +120,13 @@ resource "authentik_group" "organisers" {
   name         = "Amsterfam Organisers"
   is_superuser = false
 }
+
+resource "authentik_group" "attendees" {
+  name         = "Amsterfam Attendees"
+  is_superuser = false
+}
+
+resource "authentik_group" "pending" {
+  name         = "Amsterfam Pending"
+  is_superuser = false
+}
