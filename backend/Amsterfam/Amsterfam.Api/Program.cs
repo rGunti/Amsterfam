@@ -14,8 +14,8 @@ builder.Services.AddDbContext<AmsterfamDbContext>(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-builder.Services
-    .AddAuthentication()
+builder
+    .Services.AddAuthentication()
     .AddJwtBearer(options =>
     {
         options.Authority = builder.Configuration["Jwt:Authority"];

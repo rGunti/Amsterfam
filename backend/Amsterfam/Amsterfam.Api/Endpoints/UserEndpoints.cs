@@ -19,7 +19,9 @@ public static class UserEndpoints
     private static async Task<IResult> GetMe(ICurrentUserService currentUser)
     {
         var user = await currentUser.GetOrCreateAsync();
-        return TypedResults.Ok(new UserResponse(user.Id, user.DisplayName, user.Email, user.AvatarUrl));
+        return TypedResults.Ok(
+            new UserResponse(user.Id, user.DisplayName, user.Email, user.AvatarUrl)
+        );
     }
 
     private static async Task<IResult> UpdateMe(
@@ -32,6 +34,8 @@ public static class UserEndpoints
         user.DisplayName = request.DisplayName;
         user.AvatarUrl = request.AvatarUrl;
         await db.SaveChangesAsync();
-        return TypedResults.Ok(new UserResponse(user.Id, user.DisplayName, user.Email, user.AvatarUrl));
+        return TypedResults.Ok(
+            new UserResponse(user.Id, user.DisplayName, user.Email, user.AvatarUrl)
+        );
     }
 }

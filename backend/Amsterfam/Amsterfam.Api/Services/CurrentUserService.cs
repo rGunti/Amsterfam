@@ -10,7 +10,8 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor, Amster
 {
     public async Task<User> GetOrCreateAsync(CancellationToken ct = default)
     {
-        var principal = httpContextAccessor.HttpContext?.User
+        var principal =
+            httpContextAccessor.HttpContext?.User
             ?? throw new InvalidOperationException("No HTTP context.");
 
         var externalId =

@@ -26,8 +26,8 @@ public static class EventEndpoints
 
     private static async Task<IResult> GetEvents(AmsterfamDbContext db)
     {
-        var events = await db.Events
-            .OrderByDescending(e => e.CreatedAt)
+        var events = await db
+            .Events.OrderByDescending(e => e.CreatedAt)
             .Select(e => ToResponse(e))
             .ToListAsync();
         return TypedResults.Ok(events);
@@ -60,12 +60,14 @@ public static class EventEndpoints
 
         db.Events.Add(ev);
 
-        db.EventAttendances.Add(new EventAttendance
-        {
-            Event = ev,
-            UserId = user.Id,
-            Role = AttendanceRole.Organiser,
-        });
+        db.EventAttendances.Add(
+            new EventAttendance
+            {
+                Event = ev,
+                UserId = user.Id,
+                Role = AttendanceRole.Organiser,
+            }
+        );
 
         await db.SaveChangesAsync();
         return TypedResults.Created($"/api/v1/events/{ev.Id}", ToResponse(ev));
@@ -131,7 +133,9 @@ public static class EventEndpoints
             return TypedResults.Forbid();
 
         if (ev.Status != EventStatus.Draft)
-            return TypedResults.Conflict(new { error = "Event must be in Draft status to publish." });
+            return TypedResults.Conflict(
+                new { error = "Event must be in Draft status to publish." }
+            );
 
         ev.Status = EventStatus.Open;
         await db.SaveChangesAsync();
@@ -160,15 +164,27 @@ public static class EventEndpoints
         return TypedResults.Ok(ToResponse(ev));
     }
 
-    private static async Task<bool> IsOrganiserOrSuperuser(AmsterfamDbContext db, int eventId, int userId)
+    private static async Task<bool> IsOrganiserOrSuperuser(
+        AmsterfamDbContext db,
+        int eventId,
+        int userId
+    )
     {
         return await db.EventAttendances.AnyAsync(a =>
-            a.EventId == eventId &&
-            a.UserId == userId &&
-            a.Role == AttendanceRole.Organiser
+            a.EventId == eventId && a.UserId == userId && a.Role == AttendanceRole.Organiser
         );
     }
 
     private static EventResponse ToResponse(Event ev) =>
-        new(ev.Id, ev.Name, ev.Description, ev.StartDate, ev.EndDate, ev.Location, ev.CostPerNight, ev.Status.ToString(), ev.CreatedAt);
+        new(
+            ev.Id,
+            ev.Name,
+            ev.Description,
+            ev.StartDate,
+            ev.EndDate,
+            ev.Location,
+            ev.CostPerNight,
+            ev.Status.ToString(),
+            ev.CreatedAt
+        );
 }

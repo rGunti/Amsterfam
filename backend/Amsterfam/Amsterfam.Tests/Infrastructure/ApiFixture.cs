@@ -27,8 +27,8 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
         builder.ConfigureServices(services =>
         {
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<AmsterfamDbContext>)
+            var descriptor = services.SingleOrDefault(d =>
+                d.ServiceType == typeof(DbContextOptions<AmsterfamDbContext>)
             );
             if (descriptor is not null)
                 services.Remove(descriptor);
@@ -37,9 +37,11 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
                 options.UseNpgsql(_container.GetConnectionString())
             );
 
-            services.AddAuthentication(TestAuthHandler.SchemeName)
+            services
+                .AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
-                    TestAuthHandler.SchemeName, _ => { }
+                    TestAuthHandler.SchemeName,
+                    _ => { }
                 );
         });
     }

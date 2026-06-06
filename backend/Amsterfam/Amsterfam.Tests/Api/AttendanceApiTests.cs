@@ -9,11 +9,19 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 {
     private async Task<EventResponse> CreateOpenEvent(HttpClient client, string suffix)
     {
-        var ev = await (await client.PostAsJsonAsync("/api/v1/events/", new CreateEventRequest(
-            $"Attendance Test {suffix}", null,
-            new DateOnly(2030, 8, 1), new DateOnly(2030, 8, 7),
-            "Amsterdam", 35.00m
-        ))).Content.ReadFromJsonAsync<EventResponse>();
+        var ev = await (
+            await client.PostAsJsonAsync(
+                "/api/v1/events/",
+                new CreateEventRequest(
+                    $"Attendance Test {suffix}",
+                    null,
+                    new DateOnly(2030, 8, 1),
+                    new DateOnly(2030, 8, 7),
+                    "Amsterdam",
+                    35.00m
+                )
+            )
+        ).Content.ReadFromJsonAsync<EventResponse>();
 
         await client.PostAsync($"/api/v1/events/{ev!.Id}/publish", null);
         return ev;
@@ -51,8 +59,9 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var joinResponse = await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
         Assert.Equal(HttpStatusCode.Created, joinResponse.StatusCode);
 
-        var attendees = await (await organiser.GetAsync($"/api/v1/events/{ev.Id}/attendees/"))
-            .Content.ReadFromJsonAsync<List<AttendeeResponse>>();
+        var attendees = await (
+            await organiser.GetAsync($"/api/v1/events/{ev.Id}/attendees/")
+        ).Content.ReadFromJsonAsync<List<AttendeeResponse>>();
 
         Assert.Contains(attendees!, a => a.Role == "Pending");
     }
@@ -78,16 +87,19 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
 
-        var attendeeUser = await (await attendee.GetAsync("/api/v1/me/"))
-            .Content.ReadFromJsonAsync<UserResponse>();
+        var attendeeUser = await (
+            await attendee.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
 
         var confirm = await organiser.PostAsync(
-            $"/api/v1/events/{ev.Id}/attendees/{attendeeUser!.Id}/confirm", null
+            $"/api/v1/events/{ev.Id}/attendees/{attendeeUser!.Id}/confirm",
+            null
         );
         Assert.Equal(HttpStatusCode.NoContent, confirm.StatusCode);
 
-        var attendees = await (await organiser.GetAsync($"/api/v1/events/{ev.Id}/attendees/"))
-            .Content.ReadFromJsonAsync<List<AttendeeResponse>>();
+        var attendees = await (
+            await organiser.GetAsync($"/api/v1/events/{ev.Id}/attendees/")
+        ).Content.ReadFromJsonAsync<List<AttendeeResponse>>();
 
         var confirmed = attendees!.First(a => a.UserId == attendeeUser.Id);
         Assert.Equal("Attendee", confirmed.Role);
@@ -102,10 +114,13 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var ev = await CreateOpenEvent(organiser, "f");
 
         await user1.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
-        var user1Info = await (await user1.GetAsync("/api/v1/me/")).Content.ReadFromJsonAsync<UserResponse>();
+        var user1Info = await (
+            await user1.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
 
         var response = await user2.PostAsync(
-            $"/api/v1/events/{ev.Id}/attendees/{user1Info!.Id}/confirm", null
+            $"/api/v1/events/{ev.Id}/attendees/{user1Info!.Id}/confirm",
+            null
         );
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -118,9 +133,13 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var ev = await CreateOpenEvent(organiser, "g");
 
         await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
-        var attendeeInfo = await (await attendee.GetAsync("/api/v1/me/")).Content.ReadFromJsonAsync<UserResponse>();
+        var attendeeInfo = await (
+            await attendee.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
 
-        var response = await attendee.DeleteAsync($"/api/v1/events/{ev.Id}/attendees/{attendeeInfo!.Id}");
+        var response = await attendee.DeleteAsync(
+            $"/api/v1/events/{ev.Id}/attendees/{attendeeInfo!.Id}"
+        );
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
@@ -132,7 +151,9 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var ev = await CreateOpenEvent(organiser, "h");
 
         await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
-        var attendeeInfo = await (await attendee.GetAsync("/api/v1/me/")).Content.ReadFromJsonAsync<UserResponse>();
+        var attendeeInfo = await (
+            await attendee.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
 
         var update = new UpdateAttendanceRequest(
             new DateOnly(2030, 8, 2),
@@ -141,7 +162,8 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         );
 
         var response = await attendee.PutAsJsonAsync(
-            $"/api/v1/events/{ev.Id}/attendees/{attendeeInfo!.Id}", update
+            $"/api/v1/events/{ev.Id}/attendees/{attendeeInfo!.Id}",
+            update
         );
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }

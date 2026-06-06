@@ -28,8 +28,8 @@ public static class AttendanceEndpoints
         if (!exists)
             return TypedResults.NotFound();
 
-        var attendees = await db.EventAttendances
-            .Where(a => a.EventId == eventId)
+        var attendees = await db
+            .EventAttendances.Where(a => a.EventId == eventId)
             .Include(a => a.User)
             .Select(a => new AttendeeResponse(
                 a.UserId,
@@ -58,18 +58,21 @@ public static class AttendanceEndpoints
 
         var user = await currentUser.GetOrCreateAsync();
 
-        var existing = await db.EventAttendances
-            .AnyAsync(a => a.EventId == eventId && a.UserId == user.Id);
+        var existing = await db.EventAttendances.AnyAsync(a =>
+            a.EventId == eventId && a.UserId == user.Id
+        );
 
         if (existing)
             return TypedResults.Conflict(new { error = "Already attending this event." });
 
-        db.EventAttendances.Add(new EventAttendance
-        {
-            EventId = eventId,
-            UserId = user.Id,
-            Role = AttendanceRole.Pending,
-        });
+        db.EventAttendances.Add(
+            new EventAttendance
+            {
+                EventId = eventId,
+                UserId = user.Id,
+                Role = AttendanceRole.Pending,
+            }
+        );
 
         await db.SaveChangesAsync();
         return TypedResults.Created($"/api/v1/events/{eventId}/attendees/{user.Id}");
@@ -86,8 +89,9 @@ public static class AttendanceEndpoints
         if (!await IsOrganiser(db, eventId, requestingUser.Id))
             return TypedResults.Forbid();
 
-        var attendance = await db.EventAttendances
-            .FirstOrDefaultAsync(a => a.EventId == eventId && a.UserId == userId);
+        var attendance = await db.EventAttendances.FirstOrDefaultAsync(a =>
+            a.EventId == eventId && a.UserId == userId
+        );
 
         if (attendance is null)
             return TypedResults.NotFound();
@@ -111,8 +115,9 @@ public static class AttendanceEndpoints
         if (!isSelf && !isOrganiser)
             return TypedResults.Forbid();
 
-        var attendance = await db.EventAttendances
-            .FirstOrDefaultAsync(a => a.EventId == eventId && a.UserId == userId);
+        var attendance = await db.EventAttendances.FirstOrDefaultAsync(a =>
+            a.EventId == eventId && a.UserId == userId
+        );
 
         if (attendance is null)
             return TypedResults.NotFound();
@@ -137,8 +142,9 @@ public static class AttendanceEndpoints
         if (!isSelf && !isOrganiser)
             return TypedResults.Forbid();
 
-        var attendance = await db.EventAttendances
-            .FirstOrDefaultAsync(a => a.EventId == eventId && a.UserId == userId);
+        var attendance = await db.EventAttendances.FirstOrDefaultAsync(a =>
+            a.EventId == eventId && a.UserId == userId
+        );
 
         if (attendance is null)
             return TypedResults.NotFound();
@@ -155,8 +161,6 @@ public static class AttendanceEndpoints
 
     private static Task<bool> IsOrganiser(AmsterfamDbContext db, int eventId, int userId) =>
         db.EventAttendances.AnyAsync(a =>
-            a.EventId == eventId &&
-            a.UserId == userId &&
-            a.Role == AttendanceRole.Organiser
+            a.EventId == eventId && a.UserId == userId && a.Role == AttendanceRole.Organiser
         );
 }

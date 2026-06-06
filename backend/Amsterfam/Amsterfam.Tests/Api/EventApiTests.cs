@@ -7,14 +7,15 @@ namespace Amsterfam.Tests.Api;
 
 public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 {
-    private static CreateEventRequest SampleEvent(string suffix = "") => new(
-        $"Amsterfam 2030{suffix}",
-        "Annual trip",
-        new DateOnly(2030, 7, 1),
-        new DateOnly(2030, 7, 8),
-        "Amsterdam",
-        35.00m
-    );
+    private static CreateEventRequest SampleEvent(string suffix = "") =>
+        new(
+            $"Amsterfam 2030{suffix}",
+            "Annual trip",
+            new DateOnly(2030, 7, 1),
+            new DateOnly(2030, 7, 8),
+            "Amsterdam",
+            35.00m
+        );
 
     [Fact]
     public async Task GetEvents_Returns401_WhenUnauthenticated()
@@ -39,8 +40,9 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task GetEvent_ReturnsEvent()
     {
         var client = api.CreateClientWithUser("discord|organiser-b");
-        var created = await (await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-b")))
-            .Content.ReadFromJsonAsync<EventResponse>();
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-b"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
 
         var response = await client.GetAsync($"/api/v1/events/{created!.Id}");
         response.EnsureSuccessStatusCode();
@@ -60,8 +62,9 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task UpdateEvent_UpdatesName()
     {
         var client = api.CreateClientWithUser("discord|organiser-d");
-        var created = await (await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-d")))
-            .Content.ReadFromJsonAsync<EventResponse>();
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-d"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
 
         var updateRequest = new UpdateEventRequest(
             "Updated Name",
@@ -84,13 +87,17 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var organiser = api.CreateClientWithUser("discord|organiser-e");
         var other = api.CreateClientWithUser("discord|other-e");
 
-        var created = await (await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-e")))
-            .Content.ReadFromJsonAsync<EventResponse>();
+        var created = await (
+            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-e"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
 
         var updateRequest = new UpdateEventRequest(
-            "Hacked Name", null,
-            new DateOnly(2030, 7, 1), new DateOnly(2030, 7, 8),
-            "Amsterdam", 35.00m
+            "Hacked Name",
+            null,
+            new DateOnly(2030, 7, 1),
+            new DateOnly(2030, 7, 8),
+            "Amsterdam",
+            35.00m
         );
 
         var response = await other.PutAsJsonAsync($"/api/v1/events/{created!.Id}", updateRequest);
@@ -101,8 +108,9 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task PublishEvent_TransitionsDraftToOpen()
     {
         var client = api.CreateClientWithUser("discord|organiser-f");
-        var created = await (await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-f")))
-            .Content.ReadFromJsonAsync<EventResponse>();
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-f"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
 
         var response = await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
         response.EnsureSuccessStatusCode();
@@ -114,8 +122,9 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task PublishEvent_Returns409_WhenAlreadyOpen()
     {
         var client = api.CreateClientWithUser("discord|organiser-g");
-        var created = await (await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-g")))
-            .Content.ReadFromJsonAsync<EventResponse>();
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-g"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
 
         await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
         var response = await client.PostAsync($"/api/v1/events/{created.Id}/publish", null);
@@ -126,8 +135,9 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task CloseEvent_TransitionsOpenToClosed()
     {
         var client = api.CreateClientWithUser("discord|organiser-h");
-        var created = await (await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-h")))
-            .Content.ReadFromJsonAsync<EventResponse>();
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-h"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
 
         await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
         var response = await client.PostAsync($"/api/v1/events/{created.Id}/close", null);
@@ -140,8 +150,9 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task DeleteEvent_Returns204()
     {
         var client = api.CreateClientWithUser("discord|organiser-i");
-        var created = await (await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-i")))
-            .Content.ReadFromJsonAsync<EventResponse>();
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-i"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
 
         var response = await client.DeleteAsync($"/api/v1/events/{created!.Id}");
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
