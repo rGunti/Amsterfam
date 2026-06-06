@@ -90,6 +90,8 @@ dotnet ef database update
 
 ## Notes for AI Assistants
 
+- **Never commit without explicit user approval.** Always show what would be committed and wait for confirmation before running `git commit`.
+
 - This is a **close-knit friend group app**, not a generic events platform. Keep suggestions appropriately scoped — no need for enterprise-scale patterns.
 - The **comfort & consent preference questions** (e.g. hugs, photos, support at nights out) are a deliberate, thoughtful feature. Treat them with care.
 - **Cost tracking** is per bed-night occupied, derived from BedAssignments.
