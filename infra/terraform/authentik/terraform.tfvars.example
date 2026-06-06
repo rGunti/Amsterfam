@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars and fill in values before running terraform apply.
+# Never commit terraform.tfvars — it contains secrets.
+
+authentik_url   = "http://localhost:9000"
+authentik_token = ""  # Admin Settings → Tokens → create API token
+
+discord_client_id     = ""  # Discord Developer Portal → OAuth2
+discord_client_secret = ""
+
+# Leave as-is unless you need a custom client ID
+amsterfam_client_id = "amsterfam"
