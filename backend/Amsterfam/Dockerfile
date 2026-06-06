@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY Amsterfam.sln .
+COPY Amsterfam.slnx .
 COPY Amsterfam.Api/Amsterfam.Api.csproj Amsterfam.Api/
 COPY Amsterfam.Tests/Amsterfam.Tests.csproj Amsterfam.Tests/
 RUN dotnet restore -p:HUSKY=0
