@@ -2,7 +2,7 @@
 
 ## Context
 
-Amsterfam is a recurring annual friend group event in Amsterdam (~18–20 people), with a tail-end segment at TwitchCon Rotterdam for some attendees. Typical pattern: ~1 week Amsterdam + optional Rotterdam tail. Accommodation: Amsterdam Farm Lodge (multiple apartments).
+Amsterfam is a recurring annual friend group event in Amsterdam (~18–20 people). Accommodation: Amsterdam Farm Lodge (multiple apartments).
 
 This app replaces a Google Sheets spreadsheet covering availability, accommodation, costs, activity voting, comfort/consent preferences, and itinerary.
 
