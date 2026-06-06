@@ -1,0 +1,4 @@
+﻿<Solution>
+  <Project Path="Amsterfam.Api/Amsterfam.Api.csproj" />
+  <Project Path="Amsterfam.Tests/Amsterfam.Tests.csproj" />
+</Solution>
