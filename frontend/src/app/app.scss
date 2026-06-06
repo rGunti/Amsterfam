@@ -1,0 +1,27 @@
+mat-toolbar {
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+
+  button[mat-icon-button] {
+    color: var(--mat-sys-on-primary);
+  }
+}
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidenav-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidenav {
+  width: 220px;
+}
+
+.main-content {
+  padding: 24px;
+}
