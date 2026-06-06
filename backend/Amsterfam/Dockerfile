@@ -3,6 +3,8 @@ WORKDIR /src
 
 COPY Amsterfam.slnx .
 COPY Amsterfam.Api/Amsterfam.Api.csproj Amsterfam.Api/
+COPY Amsterfam.Core/Amsterfam.Core.csproj Amsterfam.Core/
+COPY Amsterfam.Infrastructure/Amsterfam.Infrastructure.csproj Amsterfam.Infrastructure/
 COPY Amsterfam.Tests/Amsterfam.Tests.csproj Amsterfam.Tests/
 RUN dotnet restore -p:HUSKY=0
 
