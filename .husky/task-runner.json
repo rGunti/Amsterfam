@@ -6,7 +6,8 @@
       "group": "pre-commit",
       "command": "pnpm",
       "args": ["exec", "prettier", "--write", "${staged}"],
-      "pathMode": "staged",
+      "pathMode": "absolute",
+      "cwd": "frontend",
       "include": [
         "frontend/**/*.ts",
         "frontend/**/*.html",
