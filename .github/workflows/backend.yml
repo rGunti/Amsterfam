@@ -47,7 +47,7 @@ jobs:
         working-directory: backend/Amsterfam
 
       - name: Publish test report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Test Results
