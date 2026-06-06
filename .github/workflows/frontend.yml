@@ -42,6 +42,10 @@ jobs:
         run: pnpm exec prettier --check .
         working-directory: frontend
 
+      - name: Lint
+        run: pnpm run lint
+        working-directory: frontend
+
       - name: Build
         run: pnpm run build
         working-directory: frontend
