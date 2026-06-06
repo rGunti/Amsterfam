@@ -20,7 +20,7 @@
       "group": "pre-commit",
       "command": "dotnet",
       "args": ["tool", "run", "csharpier", "format", "${staged}"],
-      "pathMode": "staged",
+      "pathMode": "absolute",
       "include": [
         "backend/Amsterfam/**/*.cs",
         "backend/Amsterfam/**/*.slnx",
