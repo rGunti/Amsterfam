@@ -1,12 +1,12 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { UpdateUserRequest, User } from '../models/user';
 
 @Injectable({ providedIn: 'root' })
 export class UserApi {
-  constructor(private readonly http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
   getMe(): Observable<User> {
     return this.http.get<User>('/api/v1/me');

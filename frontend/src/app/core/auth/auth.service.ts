@@ -1,13 +1,15 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 
 import { authConfig } from './auth.config';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly oauthService = inject(OAuthService);
+
   readonly isAuthenticated = signal(false);
 
-  constructor(private readonly oauthService: OAuthService) {
+  constructor() {
     this.oauthService.configure(authConfig);
   }
 

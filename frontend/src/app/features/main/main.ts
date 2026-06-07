@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,9 +13,9 @@ import { User } from '../../core/models/user';
   styleUrl: './main.scss',
 })
 export class Main implements OnInit {
-  readonly user = signal<User | null>(null);
+  private readonly userApi = inject(UserApi);
 
-  constructor(private readonly userApi: UserApi) {}
+  readonly user = signal<User | null>(null);
 
   ngOnInit(): void {
     this.userApi.getMe().subscribe((user) => this.user.set(user));

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import {
   FormBuilder,
   FormControl,
@@ -28,16 +28,15 @@ import { User } from '../../core/models/user';
   styleUrl: './profile.scss',
 })
 export class Profile implements OnInit {
+  private readonly userApi = inject(UserApi);
+  private readonly snackBar = inject(MatSnackBar);
+
   readonly user = signal<User | null>(null);
   readonly saving = signal(false);
   readonly form: FormGroup<{ displayName: FormControl<string> }>;
 
-  constructor(
-    formBuilder: FormBuilder,
-    private readonly userApi: UserApi,
-    private readonly snackBar: MatSnackBar,
-  ) {
-    this.form = formBuilder.nonNullable.group({
+  constructor() {
+    this.form = inject(FormBuilder).nonNullable.group({
       displayName: ['', [Validators.required, Validators.maxLength(100)]],
     });
   }
