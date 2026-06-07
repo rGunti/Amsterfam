@@ -91,6 +91,7 @@ services:
     environment:
       ConnectionStrings__Default: "Host=db;Database=amsterfam;Username=amsterfam;Password=amsterfam"
       Jwt__Authority: "http://authentik:9000/application/o/amsterfam/"
+      Jwt__Issuer: "http://localhost:9000/application/o/amsterfam/"
       Jwt__Audience: "amsterfam"
       ASPNETCORE_ENVIRONMENT: Production
     ports:

@@ -12,7 +12,9 @@
         "frontend/**/*.ts",
         "frontend/**/*.html",
         "frontend/**/*.scss",
-        "frontend/**/*.json"
+        "frontend/**/*.json",
+        "frontend/**/*.yml",
+        "frontend/**/*.yaml"
       ]
     },
     {

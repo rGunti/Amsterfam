@@ -1,0 +1,17 @@
+<mat-card class="welcome-card">
+  @if (user(); as currentUser) {
+    <mat-card-header>
+      <mat-card-title>Welcome, {{ currentUser.displayName }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>This is Amsterfam — your hub for the annual Amsterdam trip.</p>
+    </mat-card-content>
+    <mat-card-actions>
+      <a mat-button routerLink="/profile">View profile</a>
+    </mat-card-actions>
+  } @else {
+    <mat-card-content>
+      <p>Loading…</p>
+    </mat-card-content>
+  }
+</mat-card>
