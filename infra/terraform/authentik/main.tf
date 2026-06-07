@@ -65,7 +65,7 @@ resource "authentik_source_oauth" "discord" {
 resource "authentik_provider_oauth2" "amsterfam" {
   name               = "Amsterfam"
   client_id          = var.amsterfam_client_id
-  client_type        = "confidential"
+  client_type        = "public"
   authorization_flow = data.authentik_flow.default_authorization.id
   invalidation_flow  = data.authentik_flow.default_provider_invalidation.id
 
@@ -107,6 +107,26 @@ resource "authentik_application" "amsterfam" {
   meta_description  = "Annual Amsterdam friend group trip organiser"
   meta_launch_url   = "http://localhost:4200"
   open_in_new_tab   = false
+}
+
+# ── Grant types workaround ────────────────────────────────────────────────────
+# The goauthentik/authentik provider (~> 2026.2) doesn't yet expose `grant_types`
+# on authentik_provider_oauth2, but Authentik >= 2026.4 defaults it to an empty
+# list, which makes the authorization code flow fail with "invalid_request".
+# Patch it directly via the API until the provider catches up.
+
+resource "terraform_data" "amsterfam_grant_types" {
+  triggers_replace = [authentik_provider_oauth2.amsterfam.id]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      curl -sf -X PATCH \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        -H "Content-Type: application/json" \
+        -d '{"grant_types": ["authorization_code", "refresh_token"]}' \
+        "${var.authentik_url}/api/v3/providers/oauth2/${authentik_provider_oauth2.amsterfam.id}/" > /dev/null
+    EOT
+  }
 }
 
 # ── Superuser group ───────────────────────────────────────────────────────────

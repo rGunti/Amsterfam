@@ -20,6 +20,18 @@ builder
     {
         options.Authority = builder.Configuration["Jwt:Authority"];
         options.Audience = builder.Configuration["Jwt:Audience"];
+        options.RequireHttpsMetadata =
+            options.Authority?.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ?? true;
+
+        // Authentik reports its issuer based on the host the discovery document was
+        // fetched through. The backend reaches it via the internal Docker hostname,
+        // but tokens are issued to the browser-facing URL, so the two differ — pin
+        // the issuer we validate against to the externally visible one explicitly.
+        var issuer = builder.Configuration["Jwt:Issuer"];
+        if (!string.IsNullOrEmpty(issuer))
+        {
+            options.TokenValidationParameters.ValidIssuer = issuer;
+        }
     });
 
 builder.Services.AddAuthorization();

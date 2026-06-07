@@ -1,0 +1,26 @@
+@if (user(); as currentUser) {
+  <mat-card class="profile-card">
+    <mat-card-header>
+      <mat-card-title>Your profile</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="email">{{ currentUser.email }}</p>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Display name</mat-label>
+          <input matInput formControlName="displayName" />
+          @if (form.controls.displayName.hasError('required')) {
+            <mat-error>Display name is required</mat-error>
+          }
+        </mat-form-field>
+
+        <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+          {{ saving() ? 'Saving…' : 'Save' }}
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+} @else {
+  <p>Loading…</p>
+}
