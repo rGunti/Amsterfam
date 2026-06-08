@@ -1,3 +1,4 @@
+using Amsterfam.Api.Auth;
 using Amsterfam.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
