@@ -19,15 +19,21 @@ export default defineConfig({
   // check must pass before the next one starts.
   // Note: `cwd` is resolved relative to this config file's directory (frontend/e2e/).
   webServer: [
-    {
-      // Foreground process (no -d): Playwright owns its lifecycle and tears it
-      // down with the others. TCP-port polling is the readiness check since
-      // Postgres has no HTTP endpoint to probe.
-      command: 'docker compose -f ../../infra/docker-compose.yml up db',
-      port: 5432,
-      reuseExistingServer: !isCI,
-      timeout: 120_000,
-    },
+    // In CI, Postgres is provided by a GitHub Actions service container on the
+    // same port — starting another one via docker compose would conflict.
+    ...(isCI
+      ? []
+      : [
+          {
+            // Foreground process (no -d): Playwright owns its lifecycle and tears
+            // it down with the others. TCP-port polling is the readiness check
+            // since Postgres has no HTTP endpoint to probe.
+            command: 'docker compose -f ../../infra/docker-compose.yml up db',
+            port: 5432,
+            reuseExistingServer: true,
+            timeout: 120_000,
+          },
+        ]),
     {
       // --no-launch-profile skips launchSettings.json (which hardcodes
       // ASPNETCORE_ENVIRONMENT=Development), so the URL must be set explicitly too.
