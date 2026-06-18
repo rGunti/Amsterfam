@@ -20,6 +20,13 @@ mat-toolbar {
 
 .sidenav {
   width: 220px;
+
+  button[mat-list-item] {
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
 }
 
 .main-content {
