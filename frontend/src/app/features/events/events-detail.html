@@ -91,6 +91,120 @@
       </mat-card-actions>
     }
   </mat-card>
+
+  @if (ev.status === 'Open') {
+    <mat-card class="event-card">
+      <mat-card-header>
+        <mat-card-title>Your RSVP</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @switch (ev.currentUserRole) {
+          @case (null) {
+            <p class="detail-row">You haven't joined this event yet.</p>
+            <button mat-flat-button color="primary" (click)="join()" [disabled]="actioning()">
+              <mat-icon>person_add</mat-icon> Join
+            </button>
+          }
+          @case ('Pending') {
+            <mat-chip-set>
+              <mat-chip class="status-draft">Pending — waiting for organiser confirmation</mat-chip>
+            </mat-chip-set>
+            <div class="actions">
+              <button mat-button color="warn" (click)="leave()" [disabled]="actioning()">
+                <mat-icon>cancel</mat-icon> Cancel request
+              </button>
+            </div>
+          }
+          @case ('Attendee') {
+            <p class="detail-row"><mat-icon inline>check_circle</mat-icon> You're confirmed.</p>
+            <div class="actions">
+              <button mat-button color="warn" (click)="leave()" [disabled]="actioning()">
+                <mat-icon>logout</mat-icon> Leave event
+              </button>
+            </div>
+          }
+          @default {
+            <p class="detail-row"><mat-icon inline>check_circle</mat-icon> You're confirmed.</p>
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (isOrganiser && pending().length > 0) {
+    <mat-card class="event-card">
+      <mat-card-header>
+        <mat-card-title>Pending attendees</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-list>
+          @for (attendee of pending(); track attendee.userId) {
+            <mat-list-item>
+              <span matListItemTitle>{{ attendee.displayName }}</span>
+              <span matListItemMeta>
+                <button
+                  mat-button
+                  color="primary"
+                  (click)="confirm(attendee.userId)"
+                  [disabled]="actioning()"
+                >
+                  <mat-icon>check</mat-icon> Confirm
+                </button>
+                <button
+                  mat-button
+                  color="warn"
+                  (click)="removeAttendee(attendee.userId, attendee.displayName)"
+                  [disabled]="actioning()"
+                >
+                  <mat-icon>close</mat-icon> Remove
+                </button>
+              </span>
+            </mat-list-item>
+          }
+        </mat-list>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (isConfirmed) {
+    <mat-card class="event-card">
+      <mat-card-header>
+        <mat-card-title>Who's coming</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (attendeesLoading()) {
+          <p>Loading…</p>
+        } @else if (confirmed().length === 0) {
+          <p class="detail-row">No confirmed attendees yet.</p>
+        } @else {
+          <mat-list>
+            @for (attendee of confirmed(); track attendee.userId) {
+              <mat-list-item>
+                <span matListItemTitle>{{ attendee.displayName }}</span>
+                <span matListItemMeta>
+                  @if (attendee.role === 'Organiser') {
+                    <mat-chip-set>
+                      <mat-chip>Organiser</mat-chip>
+                    </mat-chip-set>
+                  }
+                  @if (isOrganiser && attendee.userId !== currentUserId()) {
+                    <button
+                      mat-button
+                      color="warn"
+                      (click)="removeAttendee(attendee.userId, attendee.displayName)"
+                      [disabled]="actioning()"
+                    >
+                      <mat-icon>person_remove</mat-icon> Remove
+                    </button>
+                  }
+                </span>
+              </mat-list-item>
+            }
+          </mat-list>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
 } @else {
   <p>Event not found.</p>
 }
