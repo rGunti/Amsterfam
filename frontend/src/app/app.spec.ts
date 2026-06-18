@@ -1,11 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 import { App } from './app';
 import { AuthService } from './core/auth/auth.service';
 
-const authServiceMock: Partial<AuthService> = {
-  logout: () => {},
-};
+const authServiceMock: Partial<AuthService> = { logout: vi.fn() };
 
 describe('App', () => {
   beforeEach(async () => {
