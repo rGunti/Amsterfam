@@ -7,6 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { AuthService } from './core/auth/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -24,6 +25,7 @@ import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 })
 export class App {
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly authService = inject(AuthService);
 
   protected readonly title = signal('Amsterfam');
 
@@ -42,5 +44,9 @@ export class App {
     if (this.isHandset().matches) {
       this.navOpen.set(false);
     }
+  }
+
+  protected logout(): void {
+    this.authService.logout();
   }
 }

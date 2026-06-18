@@ -20,23 +20,52 @@ public static class EventEndpoints
         group.MapDelete("/{id:int}", DeleteEvent);
         group.MapPost("/{id:int}/publish", PublishEvent);
         group.MapPost("/{id:int}/close", CloseEvent);
+        group.MapPost("/{id:int}/reopen", ReopenEvent);
 
         return app;
     }
 
-    private static async Task<IResult> GetEvents(AmsterfamDbContext db)
+    private static async Task<IResult> GetEvents(
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
     {
+        var user = await currentUser.GetOrCreateAsync();
+
         var events = await db
-            .Events.OrderByDescending(e => e.CreatedAt)
-            .Select(e => ToResponse(e))
+            .Events.Where(e => e.Attendances.Any(a => a.UserId == user.Id))
+            .OrderByDescending(e => e.CreatedAt)
+            .Select(e => new EventResponse(
+                e.Id,
+                e.Name,
+                e.Description,
+                e.StartDate,
+                e.EndDate,
+                e.Location,
+                e.CostPerNight,
+                e.Status.ToString(),
+                e.CreatedAt,
+                e.Attendances.Where(a => a.UserId == user.Id)
+                    .Select(a => a.Role.ToString())
+                    .FirstOrDefault()
+            ))
             .ToListAsync();
         return TypedResults.Ok(events);
     }
 
-    private static async Task<IResult> GetEvent(int id, AmsterfamDbContext db)
+    private static async Task<IResult> GetEvent(
+        int id,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
     {
         var ev = await db.Events.FindAsync(id);
-        return ev is null ? TypedResults.NotFound() : TypedResults.Ok(ToResponse(ev));
+        if (ev is null)
+            return TypedResults.NotFound();
+
+        var user = await currentUser.GetOrCreateAsync();
+        var role = await GetUserRole(db, id, user.Id);
+        return TypedResults.Ok(ToResponse(ev, role));
     }
 
     private static async Task<IResult> CreateEvent(
@@ -70,7 +99,10 @@ public static class EventEndpoints
         );
 
         await db.SaveChangesAsync();
-        return TypedResults.Created($"/api/v1/events/{ev.Id}", ToResponse(ev));
+        return TypedResults.Created(
+            $"/api/v1/events/{ev.Id}",
+            ToResponse(ev, AttendanceRole.Organiser.ToString())
+        );
     }
 
     private static async Task<IResult> UpdateEvent(
@@ -96,7 +128,7 @@ public static class EventEndpoints
         ev.CostPerNight = request.CostPerNight;
 
         await db.SaveChangesAsync();
-        return TypedResults.Ok(ToResponse(ev));
+        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString()));
     }
 
     private static async Task<IResult> DeleteEvent(
@@ -139,7 +171,7 @@ public static class EventEndpoints
 
         ev.Status = EventStatus.Open;
         await db.SaveChangesAsync();
-        return TypedResults.Ok(ToResponse(ev));
+        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString()));
     }
 
     private static async Task<IResult> CloseEvent(
@@ -161,7 +193,31 @@ public static class EventEndpoints
 
         ev.Status = EventStatus.Closed;
         await db.SaveChangesAsync();
-        return TypedResults.Ok(ToResponse(ev));
+        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString()));
+    }
+
+    private static async Task<IResult> ReopenEvent(
+        int id,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var ev = await db.Events.FindAsync(id);
+        if (ev is null)
+            return TypedResults.NotFound();
+
+        var user = await currentUser.GetOrCreateAsync();
+        if (!await IsOrganiserOrSuperuser(db, id, user.Id))
+            return TypedResults.Forbid();
+
+        if (ev.Status != EventStatus.Closed)
+            return TypedResults.Conflict(
+                new { error = "Event must be in Closed status to reopen." }
+            );
+
+        ev.Status = EventStatus.Open;
+        await db.SaveChangesAsync();
+        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString()));
     }
 
     private static async Task<bool> IsOrganiserOrSuperuser(
@@ -175,7 +231,15 @@ public static class EventEndpoints
         );
     }
 
-    private static EventResponse ToResponse(Event ev) =>
+    private static async Task<string?> GetUserRole(AmsterfamDbContext db, int eventId, int userId)
+    {
+        return await db
+            .EventAttendances.Where(a => a.EventId == eventId && a.UserId == userId)
+            .Select(a => a.Role.ToString())
+            .FirstOrDefaultAsync();
+    }
+
+    private static EventResponse ToResponse(Event ev, string? currentUserRole) =>
         new(
             ev.Id,
             ev.Name,
@@ -185,6 +249,7 @@ public static class EventEndpoints
             ev.Location,
             ev.CostPerNight,
             ev.Status.ToString(),
-            ev.CreatedAt
+            ev.CreatedAt,
+            currentUserRole
         );
 }
