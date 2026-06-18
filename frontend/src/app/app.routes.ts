@@ -5,7 +5,12 @@ import { authGuard } from './core/auth/auth.guard';
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./features/main/main').then((m) => m.Main),
+    loadComponent: () => import('./features/events/events-list').then((m) => m.EventsList),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'events/:id',
+    loadComponent: () => import('./features/events/events-detail').then((m) => m.EventsDetail),
     canActivate: [authGuard],
   },
   {

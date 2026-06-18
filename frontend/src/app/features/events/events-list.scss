@@ -1,0 +1,22 @@
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 24px;
+}
+
+.event-card {
+  cursor: pointer;
+}
+
+.dates {
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.empty {
+  padding: 24px;
+  color: var(--mat-sys-on-surface-variant);
+}

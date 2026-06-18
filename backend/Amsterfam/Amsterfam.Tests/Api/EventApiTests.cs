@@ -25,6 +25,59 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task GetEvents_ReturnsOnlyUserEvents_WithOrganiserRole()
+    {
+        var organiser = api.CreateClientWithUser("discord|organiser-list");
+        var created = await (
+            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-list"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        var events = await organiser.GetFromJsonAsync<EventResponse[]>("/api/v1/events/");
+        Assert.NotNull(events);
+        var mine = Assert.Single(events, e => e.Id == created!.Id);
+        Assert.Equal("Organiser", mine.CurrentUserRole);
+    }
+
+    [Fact]
+    public async Task GetEvents_ExcludesEventsUserIsNotAssociatedWith()
+    {
+        var organiser = api.CreateClientWithUser("discord|organiser-excl");
+        var created = await (
+            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-excl"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        var other = api.CreateClientWithUser("discord|other-excl");
+        var events = await other.GetFromJsonAsync<EventResponse[]>("/api/v1/events/");
+        Assert.NotNull(events);
+        Assert.DoesNotContain(events, e => e.Id == created!.Id);
+    }
+
+    [Fact]
+    public async Task GetEvent_IncludesCurrentUserRole()
+    {
+        var organiser = api.CreateClientWithUser("discord|organiser-role");
+        var created = await (
+            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-role"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        var ev = await organiser.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created!.Id}");
+        Assert.Equal("Organiser", ev!.CurrentUserRole);
+    }
+
+    [Fact]
+    public async Task GetEvent_ReturnsNullRole_ForNonAssociatedUser()
+    {
+        var organiser = api.CreateClientWithUser("discord|organiser-nullrole");
+        var created = await (
+            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-nullrole"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        var other = api.CreateClientWithUser("discord|other-nullrole");
+        var ev = await other.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created!.Id}");
+        Assert.Null(ev!.CurrentUserRole);
+    }
+
+    [Fact]
     public async Task CreateEvent_ReturnsCreated_AndEventIsDraft()
     {
         var client = api.CreateClientWithUser("discord|organiser-a");
@@ -144,6 +197,35 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         response.EnsureSuccessStatusCode();
         var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
         Assert.Equal("Closed", ev!.Status);
+    }
+
+    [Fact]
+    public async Task ReopenEvent_TransitionsClosedToOpen()
+    {
+        var client = api.CreateClientWithUser("discord|organiser-reopen");
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-reopen"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
+        await client.PostAsync($"/api/v1/events/{created.Id}/close", null);
+
+        var response = await client.PostAsync($"/api/v1/events/{created.Id}/reopen", null);
+        response.EnsureSuccessStatusCode();
+        var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
+        Assert.Equal("Open", ev!.Status);
+    }
+
+    [Fact]
+    public async Task ReopenEvent_Returns409_WhenNotClosed()
+    {
+        var client = api.CreateClientWithUser("discord|organiser-reopen2");
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-reopen2"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        var response = await client.PostAsync($"/api/v1/events/{created!.Id}/reopen", null);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]

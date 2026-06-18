@@ -11,7 +11,8 @@ public record EventResponse(
     string Location,
     decimal CostPerNight,
     string Status,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? CurrentUserRole
 );
 
 public record CreateEventRequest(

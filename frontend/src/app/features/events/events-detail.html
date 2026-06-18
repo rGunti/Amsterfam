@@ -1,0 +1,96 @@
+@if (loading()) {
+  <p>Loading…</p>
+} @else if (event(); as ev) {
+  <mat-card class="event-card">
+    <mat-card-header>
+      <mat-card-title>{{ ev.name }}</mat-card-title>
+      <mat-card-subtitle>
+        <mat-chip-set>
+          <mat-chip [class]="'status-' + ev.status.toLowerCase()">{{ ev.status }}</mat-chip>
+        </mat-chip-set>
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (editing()) {
+        <form [formGroup]="form" (ngSubmit)="save()" class="edit-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description</mat-label>
+            <textarea matInput formControlName="description" rows="3"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Location</mat-label>
+            <input matInput formControlName="location" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Start date</mat-label>
+            <input matInput type="date" formControlName="startDate" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>End date</mat-label>
+            <input matInput type="date" formControlName="endDate" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Cost per night</mat-label>
+            <span matTextPrefix>€&nbsp;</span>
+            <input matInput type="number" step="0.01" min="0" formControlName="costPerNight" />
+          </mat-form-field>
+
+          <div class="actions">
+            <button
+              mat-flat-button
+              color="primary"
+              type="submit"
+              [disabled]="form.invalid || saving()"
+            >
+              {{ saving() ? 'Saving…' : 'Save' }}
+            </button>
+            <button mat-button type="button" (click)="cancelEdit()" [disabled]="saving()">
+              Cancel
+            </button>
+          </div>
+        </form>
+      } @else {
+        <p class="detail-row">
+          <mat-icon inline>event</mat-icon> {{ ev.startDate }} – {{ ev.endDate }}
+        </p>
+        <p class="detail-row"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
+        <p class="detail-row">
+          <mat-icon inline>payments</mat-icon> {{ ev.costPerNight | currency: 'EUR' }} / night
+        </p>
+        @if (ev.description) {
+          <p class="description">{{ ev.description }}</p>
+        }
+      }
+    </mat-card-content>
+
+    @if (isOrganiser && !editing()) {
+      <mat-card-actions>
+        <button mat-button (click)="startEdit()" [disabled]="saving()">
+          <mat-icon>edit</mat-icon> Edit
+        </button>
+        @if (ev.status === 'Draft') {
+          <button mat-flat-button color="primary" (click)="publish()" [disabled]="saving()">
+            <mat-icon>publish</mat-icon> Publish
+          </button>
+        }
+        @if (ev.status === 'Open') {
+          <button mat-flat-button color="warn" (click)="close()" [disabled]="saving()">
+            <mat-icon>lock</mat-icon> Close
+          </button>
+        }
+        @if (ev.status === 'Closed') {
+          <button mat-flat-button (click)="reopen()" [disabled]="saving()">
+            <mat-icon>lock_open</mat-icon> Reopen
+          </button>
+        }
+      </mat-card-actions>
+    }
+  </mat-card>
+} @else {
+  <p>Event not found.</p>
+}
