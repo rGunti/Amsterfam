@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
   FormBuilder,
@@ -13,11 +13,19 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CurrencyPipe } from '@angular/common';
 
+import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
+
 import { EventApi } from '../../core/api/event.api';
+import { AttendanceApi } from '../../core/api/attendance.api';
+import { UserApi } from '../../core/api/user.api';
 import { EventResponse } from '../../core/models/event';
+import { AttendeeResponse } from '../../core/models/attendance';
 
 interface EventForm {
   name: FormControl<string>;
@@ -38,6 +46,7 @@ interface EventForm {
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    MatListModule,
     CurrencyPipe,
   ],
   templateUrl: './events-detail.html',
@@ -45,13 +54,22 @@ interface EventForm {
 })
 export class EventsDetail implements OnInit {
   private readonly eventApi = inject(EventApi);
+  private readonly attendanceApi = inject(AttendanceApi);
+  private readonly userApi = inject(UserApi);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
 
   readonly event = signal<EventResponse | null>(null);
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly editing = signal(false);
+  readonly currentUserId = signal<number | null>(null);
+  readonly attendees = signal<AttendeeResponse[]>([]);
+  readonly attendeesLoading = signal(false);
+  readonly actioning = signal(false);
+  readonly pending = computed(() => this.attendees().filter((a) => a.role === 'Pending'));
+  readonly confirmed = computed(() => this.attendees().filter((a) => a.role !== 'Pending'));
   readonly form: FormGroup<EventForm>;
 
   constructor() {
@@ -67,17 +85,144 @@ export class EventsDetail implements OnInit {
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+    this.userApi.getMe().subscribe((me) => this.currentUserId.set(me.id));
+    this.loadEvent(id);
+  }
+
+  get isOrganiser(): boolean {
+    return this.event()?.currentUserRole === 'Organiser';
+  }
+
+  get isConfirmed(): boolean {
+    const role = this.event()?.currentUserRole;
+    return role === 'Attendee' || role === 'Organiser';
+  }
+
+  private loadEvent(id: number): void {
     this.eventApi.getEvent(id).subscribe({
       next: (event) => {
         this.setEvent(event);
         this.loading.set(false);
+        // Confirmed attendees (Attendee/Organiser) may view the roster.
+        if (event.currentUserRole === 'Attendee' || event.currentUserRole === 'Organiser') {
+          this.loadAttendees(event.id);
+        }
       },
       error: () => this.loading.set(false),
     });
   }
 
-  get isOrganiser(): boolean {
-    return this.event()?.currentUserRole === 'Organiser';
+  private loadAttendees(eventId: number): void {
+    this.attendeesLoading.set(true);
+    this.attendanceApi.getAttendees(eventId).subscribe({
+      next: (attendees) => {
+        this.attendees.set(attendees);
+        this.attendeesLoading.set(false);
+      },
+      error: () => this.attendeesLoading.set(false),
+    });
+  }
+
+  join(): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.actioning.set(true);
+    this.attendanceApi.join(ev.id).subscribe({
+      next: () => {
+        this.actioning.set(false);
+        this.loadEvent(ev.id);
+        this.snackBar.open('Joined — waiting for confirmation', 'Dismiss', { duration: 3000 });
+      },
+      error: (err: HttpErrorResponse) => {
+        this.actioning.set(false);
+        const message = err.error?.error ?? 'Could not join event';
+        this.snackBar.open(message, 'Dismiss', { duration: 3000 });
+      },
+    });
+  }
+
+  leave(): void {
+    const ev = this.event();
+    const userId = this.currentUserId();
+    if (!ev || userId === null) {
+      return;
+    }
+    this.confirmAction({
+      title: 'Leave event',
+      message: `Are you sure you want to leave “${ev.name}”?`,
+      confirmLabel: 'Leave',
+    }).subscribe((ok) => {
+      if (!ok) {
+        return;
+      }
+      this.actioning.set(true);
+      this.attendanceApi.remove(ev.id, userId).subscribe({
+        next: () => {
+          this.actioning.set(false);
+          this.loadEvent(ev.id);
+          this.snackBar.open('You left the event', 'Dismiss', { duration: 3000 });
+        },
+        error: () => {
+          this.actioning.set(false);
+          this.snackBar.open('Could not leave event', 'Dismiss', { duration: 3000 });
+        },
+      });
+    });
+  }
+
+  confirm(userId: number): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.actioning.set(true);
+    this.attendanceApi.confirm(ev.id, userId).subscribe({
+      next: () => {
+        this.actioning.set(false);
+        this.loadAttendees(ev.id);
+        this.snackBar.open('Attendee confirmed', 'Dismiss', { duration: 3000 });
+      },
+      error: () => {
+        this.actioning.set(false);
+        this.snackBar.open('Could not confirm attendee', 'Dismiss', { duration: 3000 });
+      },
+    });
+  }
+
+  removeAttendee(userId: number, displayName: string): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.confirmAction({
+      title: 'Remove attendee',
+      message: `Are you sure you want to remove ${displayName} from this event?`,
+      confirmLabel: 'Remove',
+    }).subscribe((ok) => {
+      if (!ok) {
+        return;
+      }
+      this.actioning.set(true);
+      this.attendanceApi.remove(ev.id, userId).subscribe({
+        next: () => {
+          this.actioning.set(false);
+          this.loadAttendees(ev.id);
+          this.snackBar.open('Attendee removed', 'Dismiss', { duration: 3000 });
+        },
+        error: () => {
+          this.actioning.set(false);
+          this.snackBar.open('Could not remove attendee', 'Dismiss', { duration: 3000 });
+        },
+      });
+    });
+  }
+
+  private confirmAction(data: ConfirmDialogData) {
+    return this.dialog
+      .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, { data })
+      .afterClosed();
   }
 
   startEdit(): void {
