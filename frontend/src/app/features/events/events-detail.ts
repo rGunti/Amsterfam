@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
   FormBuilder,
@@ -26,6 +26,9 @@ import { AttendanceApi } from '../../core/api/attendance.api';
 import { UserApi } from '../../core/api/user.api';
 import { EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
+import { DatePollRange } from '../date-poll/date-poll-range';
+import { DatePollCalendar } from '../date-poll/date-poll-calendar';
+import { DatePollSummary } from '../date-poll/date-poll-summary';
 
 interface EventForm {
   name: FormControl<string>;
@@ -48,6 +51,9 @@ interface EventForm {
     MatIconModule,
     MatListModule,
     CurrencyPipe,
+    DatePollRange,
+    DatePollCalendar,
+    DatePollSummary,
   ],
   templateUrl: './events-detail.html',
   styleUrl: './events-detail.scss',
@@ -71,6 +77,8 @@ export class EventsDetail implements OnInit {
   readonly pending = computed(() => this.attendees().filter((a) => a.role === 'Pending'));
   readonly confirmed = computed(() => this.attendees().filter((a) => a.role !== 'Pending'));
   readonly form: FormGroup<EventForm>;
+
+  @ViewChild(DatePollSummary) private datePollSummary?: DatePollSummary;
 
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
@@ -294,6 +302,25 @@ export class EventsDetail implements OnInit {
     });
   }
 
+  unpublish(): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.saving.set(true);
+    this.eventApi.unpublishEvent(ev.id).subscribe({
+      next: (updated) => {
+        this.setEvent(updated);
+        this.saving.set(false);
+        this.snackBar.open('Event moved back to draft', 'Dismiss', { duration: 3000 });
+      },
+      error: () => {
+        this.saving.set(false);
+        this.snackBar.open('Could not unpublish event', 'Dismiss', { duration: 3000 });
+      },
+    });
+  }
+
   close(): void {
     const ev = this.event();
     if (!ev) {
@@ -330,6 +357,23 @@ export class EventsDetail implements OnInit {
         this.snackBar.open('Could not reopen event', 'Dismiss', { duration: 3000 });
       },
     });
+  }
+
+  onRangeSaved(summary: { pollRangeStart: string | null; pollRangeEnd: string | null }): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.event.set({
+      ...ev,
+      pollRangeStart: summary.pollRangeStart,
+      pollRangeEnd: summary.pollRangeEnd,
+    });
+    this.datePollSummary?.load();
+  }
+
+  onAvailabilitySaved(): void {
+    this.datePollSummary?.load();
   }
 
   private setEvent(event: EventResponse): void {

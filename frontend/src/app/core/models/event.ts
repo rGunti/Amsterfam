@@ -8,10 +8,17 @@ export interface EventResponse {
   startDate: string; // DateOnly "yyyy-MM-dd"
   endDate: string;
   location: string;
+  pollRangeStart: string | null;
+  pollRangeEnd: string | null;
   costPerNight: number;
   status: EventStatus;
   createdAt: string;
   currentUserRole: AttendanceRole | null;
+}
+
+export interface UpdatePollRangeRequest {
+  pollRangeStart: string | null;
+  pollRangeEnd: string | null;
 }
 
 export interface UpdateEventRequest {

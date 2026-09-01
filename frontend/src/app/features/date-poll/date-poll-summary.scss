@@ -1,0 +1,47 @@
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.month {
+  margin-bottom: 24px;
+}
+
+.month h4 {
+  margin: 0 0 8px;
+}
+
+.weekday-row,
+.week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.weekday-label {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  padding-bottom: 4px;
+}
+
+.week-row {
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: color-mix(in srgb, #4caf50 calc(var(--availability, 0) * 100%), transparent);
+}
+
+.day-cell {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 0.875rem;
+}
+
+.day-cell.dimmed {
+  opacity: 0.35;
+}
+
+.week-counts {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 2px 0 8px;
+  text-align: center;
+}

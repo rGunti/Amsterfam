@@ -30,6 +30,10 @@ export class EventApi {
     return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/publish`), null);
   }
 
+  unpublishEvent(id: number): Observable<EventResponse> {
+    return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/unpublish`), null);
+  }
+
   closeEvent(id: number): Observable<EventResponse> {
     return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/close`), null);
   }

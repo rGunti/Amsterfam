@@ -172,6 +172,47 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task UnpublishEvent_TransitionsOpenToDraft()
+    {
+        var client = api.CreateClientWithUser("discord|organiser-unpub");
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-unpub"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
+        var response = await client.PostAsync($"/api/v1/events/{created.Id}/unpublish", null);
+        response.EnsureSuccessStatusCode();
+        var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
+        Assert.Equal("Draft", ev!.Status);
+    }
+
+    [Fact]
+    public async Task UnpublishEvent_Returns409_WhenNotOpen()
+    {
+        var client = api.CreateClientWithUser("discord|organiser-unpub2");
+        var created = await (
+            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-unpub2"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        var response = await client.PostAsync($"/api/v1/events/{created!.Id}/unpublish", null);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UnpublishEvent_Returns403_ForNonOrganiser()
+    {
+        var organiser = api.CreateClientWithUser("discord|organiser-unpub3");
+        var other = api.CreateClientWithUser("discord|other-unpub3");
+        var created = await (
+            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-unpub3"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        await organiser.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
+        var response = await other.PostAsync($"/api/v1/events/{created.Id}/unpublish", null);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task PublishEvent_Returns409_WhenAlreadyOpen()
     {
         var client = api.CreateClientWithUser("discord|organiser-g");

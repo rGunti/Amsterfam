@@ -1,0 +1,119 @@
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.month {
+  margin-bottom: 24px;
+}
+
+.month h4 {
+  margin: 0 0 8px;
+}
+
+.weekday-row,
+.week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.weekday-label {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  padding-bottom: 4px;
+}
+
+.week-row {
+  position: relative;
+  cursor: pointer;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 2px;
+  background: var(--mat-sys-surface-container-low);
+  transition: background-color 0.15s ease;
+}
+
+.clear-button {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+
+  ::ng-deep .mat-mdc-button-touch-target {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.week-row:hover {
+  filter: brightness(0.97);
+}
+
+.day-cell {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 0.875rem;
+}
+
+.day-cell.dimmed {
+  opacity: 0.35;
+}
+
+.status-available,
+.status-partial,
+.status-unavailable {
+  // The status backgrounds below are fixed pastels (not theme tokens), so pin
+  // the text/icon color too — the app's own on-surface color is light in dark
+  // mode and unreadable against them.
+  color: #1b1b1b;
+}
+
+.status-available,
+.swatch.status-available {
+  background-color: #a5d6a7;
+}
+
+.status-partial,
+.swatch.status-partial {
+  background-color: #ffe082;
+}
+
+.status-unavailable,
+.swatch.status-unavailable {
+  background-color: #ef9a9a;
+}
+
+.status-none {
+  background: var(--mat-sys-surface-container-low);
+}
+
+.clear-button {
+  color: inherit;
+}
+
+.actions {
+  margin-top: 16px;
+}

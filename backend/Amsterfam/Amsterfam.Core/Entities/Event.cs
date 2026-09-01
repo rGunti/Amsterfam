@@ -8,6 +8,8 @@ public class Event
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
     public required string Location { get; set; }
+    public DateOnly? PollRangeStart { get; set; }
+    public DateOnly? PollRangeEnd { get; set; }
     public decimal CostPerNight { get; set; }
     public EventStatus Status { get; set; } = EventStatus.Draft;
     public int CreatedById { get; set; }
@@ -17,6 +19,7 @@ public class Event
     public ICollection<EventAttendance> Attendances { get; set; } = [];
     public ICollection<Accommodation> Accommodations { get; set; } = [];
     public ICollection<AvailabilityEntry> AvailabilityEntries { get; set; } = [];
+    public ICollection<DatePollEntry> DatePollEntries { get; set; } = [];
     public ICollection<Activity> Activities { get; set; } = [];
     public ICollection<ItineraryEntry> ItineraryEntries { get; set; } = [];
     public ICollection<ShoppingItem> ShoppingItems { get; set; } = [];

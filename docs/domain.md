@@ -22,6 +22,7 @@ This app replaces a Google Sheets spreadsheet covering availability, accommodati
 ## Feature Areas
 
 1. **Availability grid** — per-person date grid; statuses: NotComing / Maybe / Planned / Booked / DayTrip
+   - Preceded by a **date-finding poll**: before `StartDate`/`EndDate` are fixed, the organiser proposes a candidate range and attendees mark weeks Available/Unavailable/Partial (see `DatePollEntry` below) to help pick the actual dates.
 2. **Accommodation management** — room/bed assignments per apartment per night
 3. **Cost tracking** — per-person cost derived from bed-nights occupied (see Cost Model below)
 4. **Comfort & consent preferences** — organiser-defined questions with seeded system defaults
@@ -40,6 +41,7 @@ Out of scope (for now): carpool coordination.
 
 ### Event
 - `Id`, `Name`, `Description`, `StartDate`, `EndDate`, `Location`
+- `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable only while `Status` is `Draft`
 - `CostPerNight` (decimal)
 - `Status`: Draft | Open | Closed
 - `CreatedBy`, `CreatedAt`
@@ -69,6 +71,11 @@ Examples:
 Per user, per date, per event.
 - `Id`, `EventId`, `UserId`, `Date`
 - `Status`: NotComing | Maybe | Planned | Booked | DayTrip
+
+### DatePollEntry
+Per user, per week, per event. Captures the pre-decision date-finding poll (distinct from `AvailabilityEntry`, which confirms attendance once dates are fixed).
+- `Id`, `EventId`, `UserId`, `WeekStart` (Monday of the ISO week)
+- `Status`: Available | Unavailable | Partial
 
 ### Accommodation
 - `Id`, `EventId`, `Name` (e.g. "Farm Lodge Apt 1"), `Notes`

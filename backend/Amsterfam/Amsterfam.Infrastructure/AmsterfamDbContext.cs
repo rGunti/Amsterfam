@@ -9,6 +9,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<Event> Events => Set<Event>();
     public DbSet<EventAttendance> EventAttendances => Set<EventAttendance>();
     public DbSet<AvailabilityEntry> AvailabilityEntries => Set<AvailabilityEntry>();
+    public DbSet<DatePollEntry> DatePollEntries => Set<DatePollEntry>();
     public DbSet<Accommodation> Accommodations => Set<Accommodation>();
     public DbSet<Room> Rooms => Set<Room>();
     public DbSet<Bed> Beds => Set<Bed>();
@@ -53,6 +54,18 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
                     a.EventId,
                     a.UserId,
                     a.Date,
+                })
+                .IsUnique();
+            e.Property(a => a.Status).HasConversion<string>();
+        });
+
+        modelBuilder.Entity<DatePollEntry>(e =>
+        {
+            e.HasIndex(a => new
+                {
+                    a.EventId,
+                    a.UserId,
+                    a.WeekStart,
                 })
                 .IsUnique();
             e.Property(a => a.Status).HasConversion<string>();

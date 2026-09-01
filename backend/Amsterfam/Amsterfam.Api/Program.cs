@@ -101,6 +101,7 @@ app.UseAuthorization();
 app.MapUserEndpoints();
 app.MapEventEndpoints();
 app.MapAttendanceEndpoints();
+app.MapDatePollEndpoints();
 
 app.Run();
 
