@@ -115,9 +115,20 @@ public static class DatePollEndpoints
         if (ev.PollRangeStart is null || ev.PollRangeEnd is null)
             return TypedResults.Conflict(new { error = "This event has no poll range set." });
 
+        var firstSelectableMonday = FirstMonday(ev.PollRangeStart.Value);
+
         foreach (var entry in request.Entries)
         {
-            if (entry.WeekStart < ev.PollRangeStart || entry.WeekStart >= ev.PollRangeEnd)
+            if (FirstMonday(entry.WeekStart) != entry.WeekStart)
+                return TypedResults.BadRequest(
+                    new { error = $"WeekStart {entry.WeekStart} is not a Monday." }
+                );
+
+            // Compare against the Monday-aligned start of the range, not the raw
+            // PollRangeStart — a boundary week can legitimately start before a
+            // non-Monday PollRangeStart while still containing an in-range day
+            // (mirrors the week generation in BuildSummary below).
+            if (entry.WeekStart < firstSelectableMonday || entry.WeekStart >= ev.PollRangeEnd)
                 return TypedResults.BadRequest(
                     new { error = $"WeekStart {entry.WeekStart} is outside the poll range." }
                 );

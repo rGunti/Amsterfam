@@ -23,7 +23,7 @@
           }
         </div>
         @if (summaryFor(week[0].weekStart); as s) {
-          <div class="week-counts">
+          <div class="week-counts" [attr.data-testid]="'week-counts-' + week[0].weekStart">
             {{ s.available }} available · {{ s.partial }} partial · {{ s.unavailable }} unavailable
             · {{ s.noResponse }} no response
           </div>

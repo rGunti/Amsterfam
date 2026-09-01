@@ -24,6 +24,7 @@
         <div
           class="week-row"
           [class]="'status-' + (statusFor(week[0].weekStart) ?? 'none').toLowerCase()"
+          [attr.data-testid]="'week-' + week[0].weekStart"
           (click)="toggleWeek(week[0].weekStart, weekInRange(week))"
         >
           @for (day of week; track day.dateStr) {
@@ -37,6 +38,7 @@
               mat-icon-button
               class="clear-button"
               aria-label="Clear this week"
+              [attr.data-testid]="'clear-week-' + week[0].weekStart"
               (click)="clearWeek($event, week[0].weekStart, weekInRange(week))"
             >
               <mat-icon inline>close</mat-icon>

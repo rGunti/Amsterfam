@@ -127,6 +127,51 @@ public class DatePollApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task UpdateMyEntries_AcceptsBoundaryWeek_StartingBeforeANonMondayPollRangeStart()
+    {
+        // PollRangeStart 2030-06-01 is a Saturday — the week containing it starts
+        // Monday 2030-05-27, which is before PollRangeStart itself but still
+        // legitimately selectable (it contains May 31/June 1, both in range).
+        var client = api.CreateClientWithUser("discord|poll-org-boundary");
+        var ev = await CreateDraftEvent(client, "boundary");
+        await client.PutAsJsonAsync(
+            $"/api/v1/events/{ev.Id}/date-poll/range",
+            new UpdatePollRangeRequest(new DateOnly(2030, 6, 1), new DateOnly(2030, 8, 1))
+        );
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/events/{ev.Id}/date-poll/me",
+            new UpdateDatePollEntriesRequest([
+                new DatePollEntryDto(new DateOnly(2030, 5, 27), "Available"),
+            ])
+        );
+
+        response.EnsureSuccessStatusCode();
+        var entries = await response.Content.ReadFromJsonAsync<List<DatePollEntryDto>>();
+        Assert.Contains(entries!, e => e.WeekStart == new DateOnly(2030, 5, 27));
+    }
+
+    [Fact]
+    public async Task UpdateMyEntries_Returns400_WhenWeekStartIsNotAMonday()
+    {
+        var client = api.CreateClientWithUser("discord|poll-org-notmon");
+        var ev = await CreateDraftEvent(client, "notmon");
+        await client.PutAsJsonAsync(
+            $"/api/v1/events/{ev.Id}/date-poll/range",
+            new UpdatePollRangeRequest(new DateOnly(2030, 6, 1), new DateOnly(2030, 8, 1))
+        );
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/events/{ev.Id}/date-poll/me",
+            new UpdateDatePollEntriesRequest([
+                new DatePollEntryDto(new DateOnly(2030, 6, 4), "Available"),
+            ])
+        );
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task DeleteMyEntry_RemovesEntry()
     {
         var client = api.CreateClientWithUser("discord|poll-org-clear");
