@@ -1,0 +1,34 @@
+@if (loading()) {
+  <p>Loading…</p>
+} @else {
+  <p class="hint">Darker green = more people available that week.</p>
+
+  @for (month of months(); track month.label) {
+    <div class="month">
+      <h4>{{ month.label }}</h4>
+      <div class="weekday-row">
+        @for (label of weekdays; track label) {
+          <span class="weekday-label">{{ label }}</span>
+        }
+      </div>
+      @for (week of month.weeks; track week[0].weekStart) {
+        <div
+          class="week-row"
+          [style.--availability]="bestAvailabilityRatio(summaryFor(week[0].weekStart))"
+        >
+          @for (day of week; track day.dateStr) {
+            <span class="day-cell" [class.dimmed]="!day.inPollRange || !day.inCurrentMonth">
+              {{ day.dayOfMonth }}
+            </span>
+          }
+        </div>
+        @if (summaryFor(week[0].weekStart); as s) {
+          <div class="week-counts" [attr.data-testid]="'week-counts-' + week[0].weekStart">
+            {{ s.available }} available · {{ s.partial }} partial · {{ s.unavailable }} unavailable
+            · {{ s.noResponse }} no response
+          </div>
+        }
+      }
+    </div>
+  }
+}

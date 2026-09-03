@@ -29,7 +29,9 @@ GET    /api/v1/events/{id}
 PUT    /api/v1/events/{id}
 DELETE /api/v1/events/{id}
 POST   /api/v1/events/{id}/publish          (RPC – Draft → Open)
+POST   /api/v1/events/{id}/unpublish        (RPC – Open → Draft)
 POST   /api/v1/events/{id}/close            (RPC – Open → Closed)
+POST   /api/v1/events/{id}/reopen           (RPC – Closed → Open)
 ```
 
 ### Attendance
@@ -45,6 +47,14 @@ PUT    /api/v1/events/{id}/attendees/{userId}
 ```
 GET /api/v1/events/{id}/availability
 PUT /api/v1/events/{id}/availability/me     (upsert current user's entries)
+```
+
+### Date Poll
+```
+PUT  /api/v1/events/{id}/date-poll/range        (organiser sets PollRangeStart/End; Draft only)
+GET  /api/v1/events/{id}/date-poll               (per-week aggregated counts, organiser summary)
+GET  /api/v1/events/{id}/date-poll/me            (current user's own entries)
+PUT  /api/v1/events/{id}/date-poll/me            (upsert current user's week responses)
 ```
 
 ### Accommodation

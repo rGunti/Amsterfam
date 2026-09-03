@@ -1,0 +1,63 @@
+@if (loading()) {
+  <p>Loading…</p>
+} @else {
+  <p class="hint">
+    Click any day in a week to cycle it: Available → Partial → Unavailable. Use the clear icon to
+    unset a week.
+  </p>
+
+  <div class="legend">
+    <span class="legend-item"><span class="swatch status-available"></span> Available</span>
+    <span class="legend-item"><span class="swatch status-partial"></span> Partial</span>
+    <span class="legend-item"><span class="swatch status-unavailable"></span> Unavailable</span>
+  </div>
+
+  @for (month of months(); track month.label) {
+    <div class="month">
+      <h4>{{ month.label }}</h4>
+      <div class="weekday-row">
+        @for (label of weekdays; track label) {
+          <span class="weekday-label">{{ label }}</span>
+        }
+      </div>
+      @for (week of month.weeks; track week[0].weekStart) {
+        <div
+          class="week-row"
+          [class]="'status-' + (statusFor(week[0].weekStart) ?? 'none').toLowerCase()"
+          [attr.data-testid]="'week-' + week[0].weekStart"
+          role="button"
+          tabindex="0"
+          (click)="toggleWeek(week[0].weekStart, weekInRange(week))"
+          (keydown.enter)="toggleWeek(week[0].weekStart, weekInRange(week))"
+          (keydown.space)="
+            toggleWeek(week[0].weekStart, weekInRange(week)); $event.preventDefault()
+          "
+        >
+          @for (day of week; track day.dateStr) {
+            <span class="day-cell" [class.dimmed]="!day.inPollRange || !day.inCurrentMonth">
+              {{ day.dayOfMonth }}
+            </span>
+          }
+          @if (statusFor(week[0].weekStart); as status) {
+            <button
+              type="button"
+              mat-icon-button
+              class="clear-button"
+              aria-label="Clear this week"
+              [attr.data-testid]="'clear-week-' + week[0].weekStart"
+              (click)="clearWeek($event, week[0].weekStart, weekInRange(week))"
+            >
+              <mat-icon inline>close</mat-icon>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="actions">
+    <button mat-flat-button color="primary" (click)="save()" [disabled]="!dirty() || saving()">
+      {{ saving() ? 'Saving…' : 'Save my availability' }}
+    </button>
+  </div>
+}

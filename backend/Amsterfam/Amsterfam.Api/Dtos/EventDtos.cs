@@ -9,6 +9,8 @@ public record EventResponse(
     DateOnly StartDate,
     DateOnly EndDate,
     string Location,
+    DateOnly? PollRangeStart,
+    DateOnly? PollRangeEnd,
     decimal CostPerNight,
     string Status,
     DateTime CreatedAt,

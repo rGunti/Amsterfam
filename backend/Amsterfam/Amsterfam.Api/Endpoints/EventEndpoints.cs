@@ -19,6 +19,7 @@ public static class EventEndpoints
         group.MapPut("/{id:int}", UpdateEvent);
         group.MapDelete("/{id:int}", DeleteEvent);
         group.MapPost("/{id:int}/publish", PublishEvent);
+        group.MapPost("/{id:int}/unpublish", UnpublishEvent);
         group.MapPost("/{id:int}/close", CloseEvent);
         group.MapPost("/{id:int}/reopen", ReopenEvent);
 
@@ -42,6 +43,8 @@ public static class EventEndpoints
                 e.StartDate,
                 e.EndDate,
                 e.Location,
+                e.PollRangeStart,
+                e.PollRangeEnd,
                 e.CostPerNight,
                 e.Status.ToString(),
                 e.CreatedAt,
@@ -174,6 +177,37 @@ public static class EventEndpoints
         return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString()));
     }
 
+    private static async Task<IResult> UnpublishEvent(
+        int id,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var ev = await db.Events.FindAsync(id);
+        if (ev is null)
+            return TypedResults.NotFound();
+
+        var user = await currentUser.GetOrCreateAsync();
+        if (!await IsOrganiserOrSuperuser(db, id, user.Id))
+            return TypedResults.Forbid();
+
+        if (ev.Status != EventStatus.Open)
+            return TypedResults.Conflict(
+                new { error = "Event must be in Open status to unpublish." }
+            );
+
+        // Clear the prior poll round entirely rather than leaving stale
+        // PollRangeStart/PollRangeEnd and DatePollEntries around for a
+        // re-published range to silently mix responses with.
+        ev.Status = EventStatus.Draft;
+        ev.PollRangeStart = null;
+        ev.PollRangeEnd = null;
+        await db.DatePollEntries.Where(e => e.EventId == id).ExecuteDeleteAsync();
+
+        await db.SaveChangesAsync();
+        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString()));
+    }
+
     private static async Task<IResult> CloseEvent(
         int id,
         ICurrentUserService currentUser,
@@ -247,6 +281,8 @@ public static class EventEndpoints
             ev.StartDate,
             ev.EndDate,
             ev.Location,
+            ev.PollRangeStart,
+            ev.PollRangeEnd,
             ev.CostPerNight,
             ev.Status.ToString(),
             ev.CreatedAt,

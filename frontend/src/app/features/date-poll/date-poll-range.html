@@ -1,0 +1,16 @@
+<form [formGroup]="form" (ngSubmit)="save()" class="range-form">
+  <p class="hint">
+    <mat-icon inline>info</mat-icon> Set a candidate range so people can mark which weeks work.
+  </p>
+  <mat-form-field appearance="outline">
+    <mat-label>Earliest possible week</mat-label>
+    <input matInput type="date" formControlName="pollRangeStart" />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Latest possible week</mat-label>
+    <input matInput type="date" formControlName="pollRangeEnd" />
+  </mat-form-field>
+  <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+    {{ saving() ? 'Saving…' : 'Save range' }}
+  </button>
+</form>

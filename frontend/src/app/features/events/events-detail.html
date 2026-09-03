@@ -79,6 +79,9 @@
           </button>
         }
         @if (ev.status === 'Open') {
+          <button mat-button (click)="unpublish()" [disabled]="saving()">
+            <mat-icon>unpublished</mat-icon> Unpublish
+          </button>
           <button mat-flat-button color="warn" (click)="close()" [disabled]="saving()">
             <mat-icon>lock</mat-icon> Close
           </button>
@@ -201,6 +204,33 @@
               </mat-list-item>
             }
           </mat-list>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (
+    ev.status === 'Draft' &&
+    (ev.currentUserRole === 'Organiser' || ev.currentUserRole === 'Attendee')
+  ) {
+    <mat-card class="date-poll-card">
+      <mat-card-header>
+        <mat-card-title>Find a date</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (isOrganiser) {
+          <app-date-poll-range [event]="ev" (rangeSaved)="onRangeSaved($event)" />
+        }
+
+        @if (ev.pollRangeStart && ev.pollRangeEnd) {
+          <app-date-poll-calendar [event]="ev" (saved)="onAvailabilitySaved()" />
+
+          @if (isOrganiser) {
+            <mat-card-title class="summary-title">Group availability</mat-card-title>
+            <app-date-poll-summary [event]="ev" />
+          }
+        } @else if (!isOrganiser) {
+          <p>The organiser hasn't set a candidate date range yet.</p>
         }
       </mat-card-content>
     </mat-card>
