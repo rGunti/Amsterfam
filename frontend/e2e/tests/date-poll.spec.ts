@@ -177,12 +177,12 @@ test.describe('date-finding poll', () => {
     await page.goto(`/events/${ev.id}`);
 
     await page.getByRole('button', { name: 'Publish' }).click();
-    await expect(page.locator('mat-chip')).toHaveText('Open');
+    await expect(page.locator('mat-chip[class*="status-"]')).toHaveText('Open');
     await expect(page.getByText('Find a date', { exact: true })).not.toBeVisible();
 
     await page.getByRole('button', { name: 'Unpublish' }).click();
     await expect(page.getByText('Event moved back to draft')).toBeVisible();
-    await expect(page.locator('mat-chip')).toHaveText('Draft');
+    await expect(page.locator('mat-chip[class*="status-"]')).toHaveText('Draft');
     await expect(page.getByText('Find a date', { exact: true })).toBeVisible();
   });
 });

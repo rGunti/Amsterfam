@@ -196,7 +196,14 @@ public static class EventEndpoints
                 new { error = "Event must be in Open status to unpublish." }
             );
 
+        // Clear the prior poll round entirely rather than leaving stale
+        // PollRangeStart/PollRangeEnd and DatePollEntries around for a
+        // re-published range to silently mix responses with.
         ev.Status = EventStatus.Draft;
+        ev.PollRangeStart = null;
+        ev.PollRangeEnd = null;
+        await db.DatePollEntries.Where(e => e.EventId == id).ExecuteDeleteAsync();
+
         await db.SaveChangesAsync();
         return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString()));
     }

@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { DatePollApi } from '../../core/api/date-poll.api';
 import { EventResponse } from '../../core/models/event';
@@ -13,6 +14,7 @@ import { CalendarMonth, buildCalendarMonths, parseDateOnly, weekdayLabels } from
 })
 export class DatePollSummary implements OnInit {
   private readonly datePollApi = inject(DatePollApi);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly event = input.required<EventResponse>();
 
@@ -39,7 +41,10 @@ export class DatePollSummary implements OnInit {
         this.weekSummaries.set(new Map(summary.weeks.map((w) => [w.weekStart, w])));
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.loading.set(false);
+        this.snackBar.open('Could not load group availability', 'Dismiss', { duration: 3000 });
+      },
     });
   }
 

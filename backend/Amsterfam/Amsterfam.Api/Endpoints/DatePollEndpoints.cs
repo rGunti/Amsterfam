@@ -42,6 +42,11 @@ public static class DatePollEndpoints
                 new { error = "Poll range can only be set while the event is in Draft status." }
             );
 
+        if (request.PollRangeStart is null != request.PollRangeEnd is null)
+            return TypedResults.BadRequest(
+                new { error = "PollRangeStart and PollRangeEnd must both be set or both be null." }
+            );
+
         if (
             request.PollRangeStart is not null
             && request.PollRangeEnd is not null
@@ -112,10 +117,26 @@ public static class DatePollEndpoints
         if (!await IsConfirmedMember(db, eventId, user.Id))
             return TypedResults.Forbid();
 
+        if (ev.Status != EventStatus.Draft)
+            return TypedResults.Conflict(
+                new
+                {
+                    error = "Poll entries can only be changed while the event is in Draft status.",
+                }
+            );
+
         if (ev.PollRangeStart is null || ev.PollRangeEnd is null)
             return TypedResults.Conflict(new { error = "This event has no poll range set." });
 
         var firstSelectableMonday = FirstMonday(ev.PollRangeStart.Value);
+
+        // Load once and both read from and write into this dictionary below —
+        // avoids one query per entry, and lets a duplicate WeekStart within the
+        // same request update the same tracked entity instead of being Added
+        // twice (which would violate the unique index at SaveChangesAsync).
+        var existingEntries = await db
+            .DatePollEntries.Where(e => e.EventId == eventId && e.UserId == user.Id)
+            .ToDictionaryAsync(e => e.WeekStart);
 
         foreach (var entry in request.Entries)
         {
@@ -136,34 +157,29 @@ public static class DatePollEndpoints
             if (!Enum.TryParse<DatePollStatus>(entry.Status, out var status))
                 return TypedResults.BadRequest(new { error = $"Invalid status '{entry.Status}'." });
 
-            var existing = await db.DatePollEntries.FirstOrDefaultAsync(e =>
-                e.EventId == eventId && e.UserId == user.Id && e.WeekStart == entry.WeekStart
-            );
-
-            if (existing is null)
+            if (existingEntries.TryGetValue(entry.WeekStart, out var existing))
             {
-                db.DatePollEntries.Add(
-                    new DatePollEntry
-                    {
-                        EventId = eventId,
-                        UserId = user.Id,
-                        WeekStart = entry.WeekStart,
-                        Status = status,
-                    }
-                );
+                existing.Status = status;
             }
             else
             {
-                existing.Status = status;
+                var newEntry = new DatePollEntry
+                {
+                    EventId = eventId,
+                    UserId = user.Id,
+                    WeekStart = entry.WeekStart,
+                    Status = status,
+                };
+                db.DatePollEntries.Add(newEntry);
+                existingEntries[entry.WeekStart] = newEntry;
             }
         }
 
         await db.SaveChangesAsync();
 
-        var entries = await db
-            .DatePollEntries.Where(e => e.EventId == eventId && e.UserId == user.Id)
-            .Select(e => new DatePollEntryDto(e.WeekStart, e.Status.ToString()))
-            .ToListAsync();
+        var entries = existingEntries
+            .Values.Select(e => new DatePollEntryDto(e.WeekStart, e.Status.ToString()))
+            .ToList();
 
         return TypedResults.Ok(entries);
     }
@@ -179,12 +195,20 @@ public static class DatePollEndpoints
         if (ev is null)
             return TypedResults.NotFound();
 
-        if (!DateOnly.TryParseExact(weekStart, "yyyy-MM-dd", out var parsedWeekStart))
-            return TypedResults.BadRequest(new { error = $"Invalid weekStart '{weekStart}'." });
-
         var user = await currentUser.GetOrCreateAsync();
         if (!await IsConfirmedMember(db, eventId, user.Id))
             return TypedResults.Forbid();
+
+        if (ev.Status != EventStatus.Draft)
+            return TypedResults.Conflict(
+                new
+                {
+                    error = "Poll entries can only be changed while the event is in Draft status.",
+                }
+            );
+
+        if (!DateOnly.TryParseExact(weekStart, "yyyy-MM-dd", out var parsedWeekStart))
+            return TypedResults.BadRequest(new { error = $"Invalid weekStart '{weekStart}'." });
 
         var existing = await db.DatePollEntries.FirstOrDefaultAsync(e =>
             e.EventId == eventId && e.UserId == user.Id && e.WeekStart == parsedWeekStart

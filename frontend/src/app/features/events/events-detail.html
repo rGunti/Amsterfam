@@ -227,7 +227,7 @@
 
           @if (isOrganiser) {
             <mat-card-title class="summary-title">Group availability</mat-card-title>
-            <app-date-poll-summary #summary [event]="ev" />
+            <app-date-poll-summary [event]="ev" />
           }
         } @else if (!isOrganiser) {
           <p>The organiser hasn't set a candidate date range yet.</p>

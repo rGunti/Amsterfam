@@ -25,7 +25,13 @@
           class="week-row"
           [class]="'status-' + (statusFor(week[0].weekStart) ?? 'none').toLowerCase()"
           [attr.data-testid]="'week-' + week[0].weekStart"
+          role="button"
+          tabindex="0"
           (click)="toggleWeek(week[0].weekStart, weekInRange(week))"
+          (keydown.enter)="toggleWeek(week[0].weekStart, weekInRange(week))"
+          (keydown.space)="
+            toggleWeek(week[0].weekStart, weekInRange(week)); $event.preventDefault()
+          "
         >
           @for (day of week; track day.dateStr) {
             <span class="day-cell" [class.dimmed]="!day.inPollRange || !day.inCurrentMonth">
