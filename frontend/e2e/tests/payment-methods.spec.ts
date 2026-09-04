@@ -65,7 +65,7 @@ test.describe('payment methods', () => {
     await addDialog.getByRole('button', { name: 'Save' }).click();
 
     await expect(page.getByText('Payment method added')).toBeVisible();
-    const row = card.locator('mat-list-item', { hasText: title });
+    const row = card.locator('.method-row', { hasText: title });
     await expect(row).toBeVisible();
 
     await row.getByRole('button', { name: 'Edit' }).click();
