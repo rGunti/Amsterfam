@@ -49,6 +49,24 @@ resource "authentik_certificate_key_pair" "amsterfam" {
 
 # ── Discord OAuth Source ──────────────────────────────────────────────────────
 
+# Discord's OAuth source type only maps username/email/name out of the box
+# (authentik/sources/oauth/types/discord.py). This mapping fills in the
+# avatar CDN URL from the raw profile response into a user attribute, which
+# AUTHENTIK_AVATARS (see infra/docker-compose.yml) is configured to read.
+resource "authentik_property_mapping_source_oauth" "discord_avatar" {
+  name = "Discord Avatar"
+  expression = <<-EOT
+    avatar_url = None
+    if info.get("avatar"):
+        avatar_url = f"https://cdn.discordapp.com/avatars/{info['id']}/{info['avatar']}.png"
+    return {
+        "attributes": {
+            "avatar": avatar_url,
+        },
+    }
+  EOT
+}
+
 resource "authentik_source_oauth" "discord" {
   name                = "Discord"
   slug                = "discord"
@@ -58,6 +76,7 @@ resource "authentik_source_oauth" "discord" {
   consumer_secret     = var.discord_client_secret
   authentication_flow = data.authentik_flow.default_source_authentication.id
   enrollment_flow     = data.authentik_flow.default_source_enrollment.id
+  property_mappings   = [authentik_property_mapping_source_oauth.discord_avatar.id]
 }
 
 # ── OAuth2/OIDC Provider for the Amsterfam backend ────────────────────────────
@@ -87,7 +106,10 @@ resource "authentik_provider_oauth2" "amsterfam" {
 
   sub_mode = "hashed_user_id"
 
-  property_mappings = data.authentik_property_mapping_provider_scope.scopes.ids
+  property_mappings = concat(
+    data.authentik_property_mapping_provider_scope.scopes.ids,
+    [authentik_property_mapping_provider_scope.picture.id],
+  )
 }
 
 data "authentik_property_mapping_provider_scope" "scopes" {
@@ -96,6 +118,15 @@ data "authentik_property_mapping_provider_scope" "scopes" {
     "goauthentik.io/providers/oauth2/scope-email",
     "goauthentik.io/providers/oauth2/scope-profile",
   ]
+}
+
+# The built-in scope-profile mapping doesn't emit a "picture" claim. This
+# adds one under the same "profile" scope, backed by user.avatar (which
+# AUTHENTIK_AVATARS resolves — see the Discord avatar source mapping above).
+resource "authentik_property_mapping_provider_scope" "picture" {
+  name       = "Amsterfam: OpenID 'profile' picture"
+  scope_name = "profile"
+  expression = "return {\"picture\": request.user.avatar}"
 }
 
 # ── Application ───────────────────────────────────────────────────────────────
