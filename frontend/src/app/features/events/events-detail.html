@@ -190,6 +190,13 @@
                       <mat-chip>Organiser</mat-chip>
                     </mat-chip-set>
                   }
+                  <button
+                    mat-icon-button
+                    (click)="viewPaymentMethods(attendee.userId, attendee.displayName)"
+                    aria-label="View payment methods"
+                  >
+                    <mat-icon>payments</mat-icon>
+                  </button>
                   @if (isOrganiser && attendee.userId !== currentUserId()) {
                     <button
                       mat-button

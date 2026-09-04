@@ -10,3 +10,8 @@
 .email {
   color: var(--mat-sys-on-surface-variant);
 }
+
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+}

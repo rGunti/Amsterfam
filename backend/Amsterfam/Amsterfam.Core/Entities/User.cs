@@ -10,4 +10,5 @@ public class User
     public DateTime CreatedAt { get; set; }
 
     public ICollection<EventAttendance> Attendances { get; set; } = [];
+    public ICollection<PaymentMethod> PaymentMethods { get; set; } = [];
 }

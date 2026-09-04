@@ -102,6 +102,7 @@ app.MapUserEndpoints();
 app.MapEventEndpoints();
 app.MapAttendanceEndpoints();
 app.MapDatePollEndpoints();
+app.MapPaymentMethodEndpoints();
 
 app.Run();
 
