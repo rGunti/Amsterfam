@@ -1,7 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 
 import { PaymentMethodApi } from '../../core/api/payment-method.api';
@@ -14,7 +13,7 @@ export interface PaymentMethodsViewerDialogData {
 
 @Component({
   selector: 'app-payment-methods-viewer-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatListModule, MatIconModule],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule],
   template: `
     <h2 mat-dialog-title>{{ data.displayName }}'s payment methods</h2>
     <mat-dialog-content>
@@ -23,11 +22,11 @@ export interface PaymentMethodsViewerDialogData {
       } @else if (methods().length === 0) {
         <p>No payment methods added yet.</p>
       } @else {
-        <mat-list>
-          @for (method of methods(); track method.id) {
-            <mat-list-item [lines]="method.description ? 2 : 1">
-              <mat-icon matListItemIcon>payments</mat-icon>
-              <span matListItemTitle>
+        @for (method of methods(); track method.id) {
+          <div class="method-row">
+            <mat-icon>payments</mat-icon>
+            <div class="method-text">
+              <span class="method-title">
                 @if (method.link) {
                   <a [href]="method.link" target="_blank" rel="noopener">{{ method.title }}</a>
                 } @else {
@@ -35,16 +34,35 @@ export interface PaymentMethodsViewerDialogData {
                 }
               </span>
               @if (method.description) {
-                <span matListItemLine>{{ method.description }}</span>
+                <span class="method-description">{{ method.description }}</span>
               }
-            </mat-list-item>
-          }
-        </mat-list>
+            </div>
+          </div>
+        }
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Close</button>
     </mat-dialog-actions>
+  `,
+  styles: `
+    .method-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+    }
+
+    .method-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .method-description {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      white-space: pre-wrap;
+    }
   `,
 })
 export class PaymentMethodsViewerDialog implements OnInit {

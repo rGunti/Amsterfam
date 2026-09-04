@@ -19,7 +19,6 @@ export interface PaymentMethodDialogData {
 
 interface PaymentMethodForm {
   title: FormControl<string>;
-  icon: FormControl<string>;
   link: FormControl<string>;
   description: FormControl<string>;
 }
@@ -46,18 +45,18 @@ interface PaymentMethodForm {
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Icon (optional)</mat-label>
-          <input matInput formControlName="icon" placeholder="wise, paypal, bunq…" />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
           <mat-label>Payment link (optional)</mat-label>
           <input matInput formControlName="link" placeholder="https://…" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Description (optional)</mat-label>
-          <input matInput formControlName="description" placeholder="e.g. ask for IBAN" />
+          <textarea
+            matInput
+            formControlName="description"
+            rows="3"
+            placeholder="e.g. ask for IBAN"
+          ></textarea>
         </mat-form-field>
       </mat-dialog-content>
       <mat-dialog-actions align="end">
@@ -83,7 +82,6 @@ export class PaymentMethodDialog {
     const method = this.data.method;
     this.form = inject(FormBuilder).nonNullable.group({
       title: [method?.title ?? '', [Validators.required, Validators.maxLength(100)]],
-      icon: [method?.icon ?? ''],
       link: [method?.link ?? ''],
       description: [method?.description ?? ''],
     });
@@ -96,7 +94,7 @@ export class PaymentMethodDialog {
     const raw = this.form.getRawValue();
     this.dialogRef.close({
       title: raw.title.trim(),
-      icon: raw.icon.trim() || null,
+      icon: null,
       link: raw.link.trim() || null,
       description: raw.description.trim() || null,
     });

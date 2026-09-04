@@ -143,6 +143,11 @@
         <mat-list>
           @for (attendee of pending(); track attendee.userId) {
             <mat-list-item>
+              @if (attendee.avatarUrl) {
+                <img matListItemAvatar [src]="attendee.avatarUrl" alt="" />
+              } @else {
+                <mat-icon matListItemAvatar>account_circle</mat-icon>
+              }
               <span matListItemTitle>{{ attendee.displayName }}</span>
               <span matListItemMeta>
                 <button
@@ -183,12 +188,15 @@
           <mat-list>
             @for (attendee of confirmed(); track attendee.userId) {
               <mat-list-item>
+                @if (attendee.avatarUrl) {
+                  <img matListItemAvatar [src]="attendee.avatarUrl" alt="" />
+                } @else {
+                  <mat-icon matListItemAvatar>account_circle</mat-icon>
+                }
                 <span matListItemTitle>{{ attendee.displayName }}</span>
-                <span matListItemMeta>
+                <span matListItemMeta class="attendee-meta">
                   @if (attendee.role === 'Organiser') {
-                    <mat-chip-set>
-                      <mat-chip>Organiser</mat-chip>
-                    </mat-chip-set>
+                    <span class="organiser-badge">Organiser</span>
                   }
                   <button
                     mat-icon-button

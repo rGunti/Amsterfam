@@ -37,25 +37,25 @@
       } @else if (paymentMethods().length === 0) {
         <p>No payment methods added yet.</p>
       } @else {
-        <mat-list>
-          @for (method of paymentMethods(); track method.id) {
-            <mat-list-item [lines]="method.description ? 2 : 1">
-              <mat-icon matListItemIcon>payments</mat-icon>
-              <span matListItemTitle>{{ method.title }}</span>
+        @for (method of paymentMethods(); track method.id) {
+          <div class="method-row">
+            <mat-icon>payments</mat-icon>
+            <div class="method-text">
+              <span class="method-title">{{ method.title }}</span>
               @if (method.description) {
-                <span matListItemLine>{{ method.description }}</span>
+                <span class="method-description">{{ method.description }}</span>
               }
-              <span matListItemMeta>
-                <button mat-icon-button (click)="editPaymentMethod(method)" aria-label="Edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button (click)="deletePaymentMethod(method)" aria-label="Remove">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </span>
-            </mat-list-item>
-          }
-        </mat-list>
+            </div>
+            <span class="method-actions">
+              <button mat-icon-button (click)="editPaymentMethod(method)" aria-label="Edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button (click)="deletePaymentMethod(method)" aria-label="Remove">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </span>
+          </div>
+        }
       }
       <button mat-button color="primary" (click)="addPaymentMethod()">
         <mat-icon>add</mat-icon> Add payment method
