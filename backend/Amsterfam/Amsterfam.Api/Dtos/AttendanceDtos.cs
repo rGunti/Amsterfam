@@ -3,6 +3,7 @@ namespace Amsterfam.Api.Dtos;
 public record AttendeeResponse(
     int UserId,
     string DisplayName,
+    string? AvatarUrl,
     string Role,
     DateOnly? PlannedArrival,
     DateOnly? PlannedDeparture

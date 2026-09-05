@@ -39,6 +39,11 @@ Out of scope (for now): carpool coordination.
 ### User
 - `Id`, `ExternalId` (Authentik subject), `DisplayName`, `Email`, `AvatarUrl`, `CreatedAt`
 
+### PaymentMethod
+Per user, list of preferred ways for others to pay them back (splitting costs). No sensitive banking data (IBAN, card numbers) is stored — links and a free-text description only.
+- `Id`, `UserId`, `Title` (e.g. "Wise", "PayPal", "Bank transfer"), `Icon` (optional free-text hint, e.g. `wise`/`paypal`/`bunq`; unrecognized values fall back to a generic icon client-side), `Link` (optional payment URL), `Description` (optional, e.g. "ask for IBAN")
+- Readable by any authenticated user (not just the owner), so attendees can find how to pay each other; only the owner can create/update/delete their own methods
+
 ### Event
 - `Id`, `Name`, `Description`, `StartDate`, `EndDate`, `Location`
 - `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable only while `Status` is `Draft`

@@ -1,6 +1,11 @@
 @if (user(); as currentUser) {
   <mat-card class="profile-card">
     <mat-card-header>
+      @if (currentUser.avatarUrl) {
+        <img mat-card-avatar [src]="currentUser.avatarUrl" alt="" class="avatar" />
+      } @else {
+        <mat-icon mat-card-avatar>account_circle</mat-icon>
+      }
       <mat-card-title>Your profile</mat-card-title>
     </mat-card-header>
     <mat-card-content>
@@ -19,6 +24,42 @@
           {{ saving() ? 'Saving…' : 'Save' }}
         </button>
       </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="profile-card">
+    <mat-card-header>
+      <mat-card-title>Payment methods</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (paymentMethodsLoading()) {
+        <p>Loading…</p>
+      } @else if (paymentMethods().length === 0) {
+        <p>No payment methods added yet.</p>
+      } @else {
+        @for (method of paymentMethods(); track method.id) {
+          <div class="method-row">
+            <mat-icon>payments</mat-icon>
+            <div class="method-text">
+              <span class="method-title">{{ method.title }}</span>
+              @if (method.description) {
+                <span class="method-description">{{ method.description }}</span>
+              }
+            </div>
+            <span class="method-actions">
+              <button mat-icon-button (click)="editPaymentMethod(method)" aria-label="Edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button (click)="deletePaymentMethod(method)" aria-label="Remove">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </span>
+          </div>
+        }
+      }
+      <button mat-button color="primary" (click)="addPaymentMethod()">
+        <mat-icon>add</mat-icon> Add payment method
+      </button>
     </mat-card-content>
   </mat-card>
 } @else {

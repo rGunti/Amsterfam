@@ -22,6 +22,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         Set<ComfortQuestionTemplate>();
     public DbSet<EventComfortQuestion> EventComfortQuestions => Set<EventComfortQuestion>();
     public DbSet<ComfortAnswer> ComfortAnswers => Set<ComfortAnswer>();
+    public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -106,6 +107,14 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         modelBuilder.Entity<ShoppingItem>(e =>
         {
             e.Property(s => s.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<PaymentMethod>(e =>
+        {
+            e.HasOne(p => p.User)
+                .WithMany(u => u.PaymentMethods)
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

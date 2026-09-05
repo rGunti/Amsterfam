@@ -34,6 +34,7 @@ public static class AttendanceEndpoints
             .Select(a => new AttendeeResponse(
                 a.UserId,
                 a.User.DisplayName,
+                a.User.AvatarUrl,
                 a.Role.ToString(),
                 a.PlannedArrival,
                 a.PlannedDeparture

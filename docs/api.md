@@ -21,6 +21,15 @@ GET  /api/v1/me
 PUT  /api/v1/me
 ```
 
+### Payment Methods
+```
+GET    /api/v1/me/payment-methods
+POST   /api/v1/me/payment-methods
+PUT    /api/v1/me/payment-methods/{id}
+DELETE /api/v1/me/payment-methods/{id}
+GET    /api/v1/users/{userId}/payment-methods    (read-only; any authenticated user, not just /me)
+```
+
 ### Events
 ```
 GET    /api/v1/events

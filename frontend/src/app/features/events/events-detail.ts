@@ -20,6 +20,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CurrencyPipe } from '@angular/common';
 
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
+import {
+  PaymentMethodsViewerDialog,
+  PaymentMethodsViewerDialogData,
+} from '../../shared/payment-methods-viewer-dialog/payment-methods-viewer-dialog';
 
 import { EventApi } from '../../core/api/event.api';
 import { AttendanceApi } from '../../core/api/attendance.api';
@@ -231,6 +235,13 @@ export class EventsDetail implements OnInit {
     return this.dialog
       .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, { data })
       .afterClosed();
+  }
+
+  viewPaymentMethods(userId: number, displayName: string): void {
+    this.dialog.open<PaymentMethodsViewerDialog, PaymentMethodsViewerDialogData>(
+      PaymentMethodsViewerDialog,
+      { data: { userId, displayName } },
+    );
   }
 
   startEdit(): void {

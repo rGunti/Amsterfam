@@ -38,3 +38,26 @@
   display: flex;
   gap: 8px;
 }
+
+.attendee-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.organiser-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+[matListItemAvatar] {
+  object-fit: cover;
+}

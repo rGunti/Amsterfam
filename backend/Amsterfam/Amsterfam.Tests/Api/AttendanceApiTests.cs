@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Amsterfam.Api.Dtos;
 using Amsterfam.Tests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Amsterfam.Tests.Api;
 
@@ -141,6 +142,33 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             $"/api/v1/events/{ev.Id}/attendees/{attendeeInfo!.Id}"
         );
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAttendees_IncludesAvatarUrl()
+    {
+        var organiser = api.CreateClientWithUser("discord|att-org-i");
+        var attendee = api.CreateClientWithUser("discord|att-user-i");
+        var ev = await CreateOpenEvent(organiser, "i");
+
+        await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        var attendeeInfo = await (
+            await attendee.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
+
+        await using (var db = await api.CreateDbContextAsync())
+        {
+            var user = await db.Users.SingleAsync(u => u.Id == attendeeInfo!.Id);
+            user.AvatarUrl = "https://cdn.discordapp.com/avatars/test/avatar.png";
+            await db.SaveChangesAsync();
+        }
+
+        var attendees = await (
+            await organiser.GetAsync($"/api/v1/events/{ev.Id}/attendees/")
+        ).Content.ReadFromJsonAsync<List<AttendeeResponse>>();
+
+        var confirmed = attendees!.First(a => a.UserId == attendeeInfo!.Id);
+        Assert.Equal("https://cdn.discordapp.com/avatars/test/avatar.png", confirmed.AvatarUrl);
     }
 
     [Fact]

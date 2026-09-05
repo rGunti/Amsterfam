@@ -50,6 +50,10 @@ services:
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      # Discord's avatar is synced into user.attributes.avatar by a source
+      # property mapping (see infra/terraform/authentik); fall back to
+      # gravatar/initials for accounts without one.
+      AUTHENTIK_AVATARS: "attributes.avatar,gravatar,initials"
     ports:
       - "9000:9000"
       - "9443:9443"
@@ -77,6 +81,7 @@ services:
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      AUTHENTIK_AVATARS: "attributes.avatar,gravatar,initials"
     depends_on:
       - authentik
     volumes:
