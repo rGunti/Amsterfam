@@ -109,6 +109,9 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+      args:
+        API_ADDRESS: ${API_ADDRESS:-http://localhost:5293}
+        OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:9000/application/o/amsterfam/}
     restart: unless-stopped
     profiles:
       - full
