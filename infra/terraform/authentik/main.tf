@@ -97,19 +97,19 @@ resource "terraform_data" "discord_login_button" {
   provisioner "local-exec" {
     command = <<-EOT
       set -euo pipefail
-      stage_pk=$(curl -sf \
+      stage_pk=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -f \
         -H "Authorization: Bearer ${var.authentik_token}" \
         "${var.authentik_url}/api/v3/flows/bindings/?target=${data.authentik_flow.default_authentication.id}" \
         | jq -r '.results[] | select(.stage_obj.component == "ak-stage-identification-form") | .stage_obj.pk')
 
-      current_sources=$(curl -sf \
+      current_sources=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -f \
         -H "Authorization: Bearer ${var.authentik_token}" \
         "${var.authentik_url}/api/v3/stages/identification/$stage_pk/" | jq -c '.sources')
 
       new_sources=$(echo "$current_sources" \
         | jq -c --arg src "${authentik_source_oauth.discord.id}" '. + [$src] | unique')
 
-      curl -sf -X PATCH \
+      curl -sS --retry 3 --retry-connrefused --retry-delay 2 -f -X PATCH \
         -H "Authorization: Bearer ${var.authentik_token}" \
         -H "Content-Type: application/json" \
         -d "{\"sources\": $new_sources}" \
