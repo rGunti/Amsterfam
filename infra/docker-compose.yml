@@ -114,14 +114,10 @@ services:
       - full
 
   traefik:
-    image: traefik:v3.5
+    # v3.5's Docker provider can't negotiate with newer Docker Engine API
+    # versions (fails outright, not just a warning) — needs 3.7+.
+    image: traefik:v3.7.13
     restart: unless-stopped
-    environment:
-      # Traefik's bundled Docker client sometimes fails to negotiate the
-      # daemon's API version and falls back to the ancient default (1.24),
-      # which current Docker Engine rejects outright. Pin a modern version
-      # explicitly to skip the broken negotiation.
-      DOCKER_API_VERSION: "1.41"
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
