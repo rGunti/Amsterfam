@@ -1,7 +1,7 @@
 ---
 deploy_dir: /opt/amsterfam
 deploy_user: deploy
-git_repo_url: git@github.com:<org>/Amsterfam.git # fill in the real remote
+git_repo_url: git@github.com:rGunti/Amsterfam.git # fill in the real remote
 git_repo_ref: main
 
 frontend_domain: dev.amsterfam.eu

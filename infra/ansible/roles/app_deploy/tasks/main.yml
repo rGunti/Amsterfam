@@ -14,6 +14,15 @@
     mode: "0755"
   become: true
 
+- name: Ensure deploy user's .ssh directory exists
+  ansible.builtin.file:
+    path: "/home/{{ deploy_user }}/.ssh"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0700"
+  become: true
+
 - name: Check for an existing deploy SSH keypair
   ansible.builtin.stat:
     path: "/home/{{ deploy_user }}/.ssh/id_ed25519"
