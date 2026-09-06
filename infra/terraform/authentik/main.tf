@@ -92,8 +92,13 @@ resource "authentik_source_oauth" "discord" {
 # overwriting, in case others get added later outside Terraform. Also sets
 # show_source_labels so the button reads "Discord" instead of icon-only.
 # Requires jq on the machine running `terraform apply`.
+#
+# The provisioner only (re-)runs when triggers_replace changes — editing the
+# command below does NOT re-run it on its own. Bump the version string here
+# whenever the script changes (the script itself is idempotent/safe to rerun,
+# so bumping unnecessarily is harmless).
 resource "terraform_data" "discord_login_button" {
-  triggers_replace = [authentik_source_oauth.discord.id]
+  triggers_replace = [authentik_source_oauth.discord.id, "v2"]
 
   provisioner "local-exec" {
     command = <<-EOT
