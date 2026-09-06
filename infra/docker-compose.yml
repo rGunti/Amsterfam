@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
 
   authentik:
-    image: ghcr.io/goauthentik/server:2026.5.2
+    image: ghcr.io/goauthentik/server:2026.8.1
     restart: unless-stopped
     command: server
     environment:
@@ -54,6 +54,12 @@ services:
       # property mapping (see infra/terraform/authentik); fall back to
       # gravatar/initials for accounts without one.
       AUTHENTIK_AVATARS: "attributes.avatar,gravatar,initials"
+      # Since 2026.8, forwarded headers (X-Forwarded-Proto etc.) are only
+      # honored from trusted networks. Traefik reaches this container over
+      # the compose bridge network, which isn't externally reachable itself
+      # (see docker-compose.prod.yml — no public port published here), so
+      # trusting the standard private ranges is safe in this topology.
+      AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS: "172.16.0.0/12,192.168.0.0/16,10.0.0.0/8"
     ports:
       - "9000:9000"
       - "9443:9443"
@@ -67,7 +73,7 @@ services:
       - authentik-templates:/templates
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2026.5.2
+    image: ghcr.io/goauthentik/server:2026.8.1
     restart: unless-stopped
     command: worker
     environment:
