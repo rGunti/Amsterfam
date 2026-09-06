@@ -17,6 +17,10 @@ data "authentik_flow" "default_provider_invalidation" {
   slug = "default-provider-invalidation-flow"
 }
 
+data "authentik_flow" "default_authentication" {
+  slug = "default-authentication-flow"
+}
+
 # ── Certificate (self-signed, used for token signing) ─────────────────────────
 
 resource "tls_private_key" "amsterfam" {
@@ -77,6 +81,41 @@ resource "authentik_source_oauth" "discord" {
   authentication_flow = data.authentik_flow.default_source_authentication.id
   enrollment_flow     = data.authentik_flow.default_source_enrollment.id
   property_mappings   = [authentik_property_mapping_source_oauth.discord_avatar.id]
+}
+
+# Creating the source above doesn't make it show up as a login button — that
+# requires adding it to the login page's identification stage, which the
+# goauthentik/authentik provider (~> 2026.2) doesn't expose a clean way to
+# manage without a manual `terraform import` of Authentik's built-in stage.
+# PATCH it directly instead (same approach as the grant_types workaround
+# below), merging into whatever sources are already configured rather than
+# overwriting, in case others get added later outside Terraform. Requires
+# jq on the machine running `terraform apply`.
+resource "terraform_data" "discord_login_button" {
+  triggers_replace = [authentik_source_oauth.discord.id]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -euo pipefail
+      stage_pk=$(curl -sf \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        "${var.authentik_url}/api/v3/flows/bindings/?target=${data.authentik_flow.default_authentication.id}" \
+        | jq -r '.results[] | select(.stage_obj.component == "ak-stage-identification-form") | .stage_obj.pk')
+
+      current_sources=$(curl -sf \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        "${var.authentik_url}/api/v3/stages/identification/$stage_pk/" | jq -c '.sources')
+
+      new_sources=$(echo "$current_sources" \
+        | jq -c --arg src "${authentik_source_oauth.discord.id}" '. + [$src] | unique')
+
+      curl -sf -X PATCH \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        -H "Content-Type: application/json" \
+        -d "{\"sources\": $new_sources}" \
+        "${var.authentik_url}/api/v3/stages/identification/$stage_pk/" > /dev/null
+    EOT
+  }
 }
 
 # ── OAuth2/OIDC Provider for the Amsterfam backend ────────────────────────────
