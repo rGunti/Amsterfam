@@ -90,16 +90,24 @@ resource "authentik_provider_oauth2" "amsterfam" {
 
   signing_key = authentik_certificate_key_pair.amsterfam.id
 
-  allowed_redirect_uris = [
-    {
-      matching_mode = "strict"
-      url           = "http://localhost:4200/auth/callback"
-    },
-    {
-      matching_mode = "strict"
-      url           = "http://localhost:8080/auth/callback"
-    },
-  ]
+  allowed_redirect_uris = concat(
+    [
+      {
+        matching_mode = "strict"
+        url           = "http://localhost:4200/auth/callback"
+      },
+      {
+        matching_mode = "strict"
+        url           = "http://localhost:8080/auth/callback"
+      },
+    ],
+    [
+      for uri in var.additional_redirect_uris : {
+        matching_mode = "strict"
+        url           = uri
+      }
+    ],
+  )
 
   access_token_validity  = "minutes=60"
   refresh_token_validity = "days=30"

@@ -4,6 +4,6 @@ output "amsterfam_client_id" {
 }
 
 output "oidc_issuer_url" {
-  description = "OIDC issuer URL (configure as Jwt__Authority in the backend)"
-  value       = "http://localhost:9000/application/o/${authentik_application.amsterfam.slug}/"
+  description = "OIDC issuer URL (configure as Jwt__Issuer in the backend)"
+  value       = "${var.authentik_url}/application/o/${authentik_application.amsterfam.slug}/"
 }

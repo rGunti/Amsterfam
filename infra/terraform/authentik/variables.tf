@@ -26,3 +26,9 @@ variable "amsterfam_client_id" {
   type        = string
   default     = "amsterfam"
 }
+
+variable "additional_redirect_uris" {
+  description = "Extra allowed OIDC redirect URIs beyond the local dev defaults (e.g. the deployed frontend's callback URL)"
+  type        = list(string)
+  default     = []
+}
