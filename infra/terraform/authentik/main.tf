@@ -97,23 +97,47 @@ resource "terraform_data" "discord_login_button" {
   provisioner "local-exec" {
     command = <<-EOT
       set -euo pipefail
-      stage_pk=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -f \
-        -H "Authorization: Bearer ${var.authentik_token}" \
-        "${var.authentik_url}/api/v3/flows/bindings/?target=${data.authentik_flow.default_authentication.id}" \
-        | jq -r '.results[] | select(.stage_obj.component == "ak-stage-identification-form") | .stage_obj.pk')
 
-      current_sources=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -f \
+      resp1=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -w '\n%%{http_code}' \
         -H "Authorization: Bearer ${var.authentik_token}" \
-        "${var.authentik_url}/api/v3/stages/identification/$stage_pk/" | jq -c '.sources')
+        "${var.authentik_url}/api/v3/flows/bindings/?target=${data.authentik_flow.default_authentication.id}")
+      http_status1=$(echo "$resp1" | tail -n1)
+      body1=$(echo "$resp1" | sed '$d')
+      if [ "$http_status1" -ge 400 ]; then
+        echo "GET flow bindings failed ($http_status1): $body1" >&2
+        exit 1
+      fi
+      stage_pk=$(echo "$body1" | jq -r '.results[] | select(.stage_obj.component == "ak-stage-identification-form") | .stage_obj.pk')
+      if [ -z "$stage_pk" ]; then
+        echo "No identification stage bound to the default authentication flow" >&2
+        exit 1
+      fi
+
+      resp2=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -w '\n%%{http_code}' \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        "${var.authentik_url}/api/v3/stages/identification/$stage_pk/")
+      http_status2=$(echo "$resp2" | tail -n1)
+      body2=$(echo "$resp2" | sed '$d')
+      if [ "$http_status2" -ge 400 ]; then
+        echo "GET identification stage failed ($http_status2): $body2" >&2
+        exit 1
+      fi
+      current_sources=$(echo "$body2" | jq -c '.sources // []')
 
       new_sources=$(echo "$current_sources" \
         | jq -c --arg src "${authentik_source_oauth.discord.id}" '. + [$src] | unique')
 
-      curl -sS --retry 3 --retry-connrefused --retry-delay 2 -f -X PATCH \
+      resp3=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -X PATCH -w '\n%%{http_code}' \
         -H "Authorization: Bearer ${var.authentik_token}" \
         -H "Content-Type: application/json" \
         -d "{\"sources\": $new_sources}" \
-        "${var.authentik_url}/api/v3/stages/identification/$stage_pk/" > /dev/null
+        "${var.authentik_url}/api/v3/stages/identification/$stage_pk/")
+      http_status3=$(echo "$resp3" | tail -n1)
+      body3=$(echo "$resp3" | sed '$d')
+      if [ "$http_status3" -ge 400 ]; then
+        echo "PATCH identification stage failed ($http_status3): $body3" >&2
+        exit 1
+      fi
     EOT
   }
 }
