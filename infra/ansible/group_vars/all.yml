@@ -1,0 +1,14 @@
+---
+deploy_dir: /opt/amsterfam
+deploy_user: deploy
+git_repo_url: git@github.com:<org>/Amsterfam.git # fill in the real remote
+git_repo_ref: main
+
+frontend_domain: dev.amsterfam.eu
+api_domain: api.dev.amsterfam.eu
+authentik_domain: a.dev.amsterfam.eu
+
+timezone: Europe/Amsterdam
+
+backup_dir: "{{ deploy_dir }}/backups"
+backup_retention_days: 14

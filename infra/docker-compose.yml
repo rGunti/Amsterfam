@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: amsterfam
       POSTGRES_USER: amsterfam
-      POSTGRES_PASSWORD: amsterfam
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-amsterfam}
     ports:
       - "5432:5432"
     volumes:
@@ -22,7 +22,7 @@ services:
     environment:
       POSTGRES_DB: authentik
       POSTGRES_USER: authentik
-      POSTGRES_PASSWORD: authentik
+      POSTGRES_PASSWORD: ${AUTHENTIK_DB_PASSWORD:-authentik}
     volumes:
       - authentik-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -43,7 +43,7 @@ services:
       AUTHENTIK_REDIS__HOST: authentik-redis
       AUTHENTIK_POSTGRESQL__HOST: authentik-db
       AUTHENTIK_POSTGRESQL__USER: authentik
-      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
@@ -74,7 +74,7 @@ services:
       AUTHENTIK_REDIS__HOST: authentik-redis
       AUTHENTIK_POSTGRESQL__HOST: authentik-db
       AUTHENTIK_POSTGRESQL__USER: authentik
-      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
@@ -94,9 +94,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      ConnectionStrings__Default: "Host=db;Database=amsterfam;Username=amsterfam;Password=amsterfam"
-      Jwt__Authority: "http://authentik:9000/application/o/amsterfam/"
-      Jwt__Issuer: "http://localhost:9000/application/o/amsterfam/"
+      ConnectionStrings__Default: "Host=db;Database=amsterfam;Username=amsterfam;Password=${POSTGRES_PASSWORD:-amsterfam}"
+      Jwt__Authority: "${JWT_AUTHORITY:-http://authentik:9000/application/o/amsterfam/}"
+      Jwt__Issuer: "${JWT_ISSUER:-http://localhost:9000/application/o/amsterfam/}"
       Jwt__Audience: "amsterfam"
       ASPNETCORE_ENVIRONMENT: Production
     ports:
@@ -104,6 +104,36 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    profiles:
+      - full
+
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:-admin@amsterfam.eu}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+    profiles:
+      - full
 
 volumes:
   db-data:

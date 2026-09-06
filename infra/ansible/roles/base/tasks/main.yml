@@ -1,0 +1,44 @@
+---
+- name: Update apt cache and upgrade packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: full
+    cache_valid_time: 3600
+
+- name: Install unattended-upgrades and fail2ban
+  ansible.builtin.apt:
+    name:
+      - unattended-upgrades
+      - fail2ban
+    state: present
+
+- name: Enable unattended-upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    mode: "0644"
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+# Password auth off everywhere; root login stays key-only rather than fully
+# disabled, per operator preference. deploy_user's key must already be in
+# place by the time this runs (see site.yml role ordering).
+- name: Harden sshd_config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: "^#?PasswordAuthentication", line: "PasswordAuthentication no" }
+    - { regexp: "^#?PermitRootLogin", line: "PermitRootLogin prohibit-password" }
+  notify: Restart sshd
+
+- name: Enable fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true

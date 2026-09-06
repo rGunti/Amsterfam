@@ -1,0 +1,15 @@
+---
+# Non-secret indirection onto the vault-encrypted values in vault.yml, so
+# `git diff` on this file stays readable even though the underlying secrets
+# are encrypted. See vault.yml.example for the full list of vault_* keys.
+authentik_secret_key: "{{ vault_authentik_secret_key }}"
+authentik_bootstrap_token: "{{ vault_authentik_bootstrap_token }}"
+authentik_bootstrap_email: "{{ vault_authentik_bootstrap_email }}"
+authentik_bootstrap_password: "{{ vault_authentik_bootstrap_password }}"
+
+postgres_password: "{{ vault_postgres_password }}"
+authentik_db_password: "{{ vault_authentik_db_password }}"
+
+acme_email: "{{ vault_acme_email }}"
+
+deploy_ssh_public_key: "{{ vault_deploy_ssh_public_key }}"

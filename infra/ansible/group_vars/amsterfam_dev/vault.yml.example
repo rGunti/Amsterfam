@@ -1,0 +1,17 @@
+# Copy to vault.yml, fill in real values, then encrypt in place:
+#   cp vault.yml.example vault.yml
+#   ansible-vault encrypt vault.yml
+# Never commit an unencrypted vault.yml.
+
+vault_authentik_secret_key: "" # openssl rand -base64 60
+vault_authentik_bootstrap_token: ""
+vault_authentik_bootstrap_email: ""
+vault_authentik_bootstrap_password: ""
+
+vault_postgres_password: "" # openssl rand -hex 24
+vault_authentik_db_password: "" # openssl rand -hex 24
+
+vault_acme_email: "" # Let's Encrypt expiry/abuse notifications
+
+# Public half of the deploy user's SSH keypair (see roles/deploy_user).
+vault_deploy_ssh_public_key: ""

@@ -1,0 +1,23 @@
+---
+# Host-level prep only — the traefik container itself is defined in
+# infra/docker-compose.yml so it's versioned and testable locally too.
+- name: Create traefik directories
+  ansible.builtin.file:
+    path: "{{ deploy_dir }}/infra/traefik/{{ item }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+  loop:
+    - letsencrypt
+    - dynamic
+
+- name: Create acme.json with correct permissions
+  ansible.builtin.file:
+    path: "{{ deploy_dir }}/infra/traefik/letsencrypt/acme.json"
+    state: touch
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0600"
+    modification_time: preserve
+    access_time: preserve
