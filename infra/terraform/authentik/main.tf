@@ -98,6 +98,23 @@ resource "terraform_data" "discord_login_button" {
     command = <<-EOT
       set -euo pipefail
 
+      # authentik_source_oauth.discord.id is the slug ("discord"), but the
+      # stage's `sources` field wants the source's actual UUID pk.
+      resp0=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -w '\n%%{http_code}' \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        "${var.authentik_url}/api/v3/sources/oauth/?slug=${authentik_source_oauth.discord.id}")
+      http_status0=$(echo "$resp0" | tail -n1)
+      body0=$(echo "$resp0" | sed '$d')
+      if [ "$http_status0" -ge 400 ]; then
+        echo "GET discord source failed ($http_status0): $body0" >&2
+        exit 1
+      fi
+      source_pk=$(echo "$body0" | jq -r '.results[0].pk')
+      if [ -z "$source_pk" ] || [ "$source_pk" = "null" ]; then
+        echo "Discord source not found by slug" >&2
+        exit 1
+      fi
+
       resp1=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -w '\n%%{http_code}' \
         -H "Authorization: Bearer ${var.authentik_token}" \
         "${var.authentik_url}/api/v3/flows/bindings/?target=${data.authentik_flow.default_authentication.id}")
@@ -125,7 +142,7 @@ resource "terraform_data" "discord_login_button" {
       current_sources=$(echo "$body2" | jq -c '.sources // []')
 
       new_sources=$(echo "$current_sources" \
-        | jq -c --arg src "${authentik_source_oauth.discord.id}" '. + [$src] | unique')
+        | jq -c --arg src "$source_pk" '. + [$src] | unique')
 
       resp3=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -X PATCH -w '\n%%{http_code}' \
         -H "Authorization: Bearer ${var.authentik_token}" \
