@@ -89,8 +89,9 @@ resource "authentik_source_oauth" "discord" {
 # manage without a manual `terraform import` of Authentik's built-in stage.
 # PATCH it directly instead (same approach as the grant_types workaround
 # below), merging into whatever sources are already configured rather than
-# overwriting, in case others get added later outside Terraform. Requires
-# jq on the machine running `terraform apply`.
+# overwriting, in case others get added later outside Terraform. Also sets
+# show_source_labels so the button reads "Discord" instead of icon-only.
+# Requires jq on the machine running `terraform apply`.
 resource "terraform_data" "discord_login_button" {
   triggers_replace = [authentik_source_oauth.discord.id]
 
@@ -147,7 +148,7 @@ resource "terraform_data" "discord_login_button" {
       resp3=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -X PATCH -w '\n%%{http_code}' \
         -H "Authorization: Bearer ${var.authentik_token}" \
         -H "Content-Type: application/json" \
-        -d "{\"sources\": $new_sources}" \
+        -d "{\"sources\": $new_sources, \"show_source_labels\": true}" \
         "${var.authentik_url}/api/v3/stages/identification/$stage_pk/")
       http_status3=$(echo "$resp3" | tail -n1)
       body3=$(echo "$resp3" | sed '$d')
