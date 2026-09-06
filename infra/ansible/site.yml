@@ -13,6 +13,9 @@
     - role: geerlingguy.docker
       vars:
         docker_users: ["{{ deploy_user }}"]
+    - role: app_deploy
+      tasks_from: clone.yml
     - traefik
-    - app_deploy
+    - role: app_deploy
+      tasks_from: up.yml
     - backup

@@ -1,0 +1,24 @@
+---
+- name: Build images
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_dir }}/infra"
+    files:
+      - docker-compose.yml
+      - docker-compose.prod.yml
+    profiles: [full]
+    build: always
+    state: present
+  become: true
+  become_user: "{{ deploy_user }}"
+
+- name: Bring the stack up
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_dir }}/infra"
+    files:
+      - docker-compose.yml
+      - docker-compose.prod.yml
+    profiles: [full]
+    state: present
+    pull: missing
+  become: true
+  become_user: "{{ deploy_user }}"
