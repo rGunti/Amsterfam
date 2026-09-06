@@ -1,4 +1,6 @@
 ---
+git_repo_ref: feat/ansible-deploy-dev-host
+
 # Non-secret indirection onto the vault-encrypted values in vault.yml, so
 # `git diff` on this file stays readable even though the underlying secrets
 # are encrypted. See vault.yml.example for the full list of vault_* keys.
