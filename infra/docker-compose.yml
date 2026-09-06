@@ -116,6 +116,12 @@ services:
   traefik:
     image: traefik:v3.5
     restart: unless-stopped
+    environment:
+      # Traefik's bundled Docker client sometimes fails to negotiate the
+      # daemon's API version and falls back to the ancient default (1.24),
+      # which current Docker Engine rejects outright. Pin a modern version
+      # explicitly to skip the broken negotiation.
+      DOCKER_API_VERSION: "1.41"
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
