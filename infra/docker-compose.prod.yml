@@ -1,0 +1,39 @@
+# Production overlay for dev.amsterfam.eu — applied via explicit -f flags:
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.prod.yml --profile full up -d
+# (explicit -f flags disable Compose's implicit docker-compose.override.yml auto-load, so
+# local-dev's override never applies here)
+#
+# Adds Traefik routing labels and drops public port publishing for everything that should
+# only be reachable through Traefik. Requires Docker Compose >= 2.24 for the `!reset` tag.
+services:
+  db:
+    ports: !reset []
+
+  authentik-db:
+    ports: !reset []
+
+  authentik:
+    ports: !reset []
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authentik.rule=Host(`${AUTHENTIK_DOMAIN}`)"
+      - "traefik.http.routers.authentik.entrypoints=websecure"
+      - "traefik.http.routers.authentik.tls.certresolver=le"
+      - "traefik.http.services.authentik.loadbalancer.server.port=9000"
+
+  api:
+    ports: !reset []
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=le"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+
+  frontend:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"

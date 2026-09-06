@@ -1,0 +1,21 @@
+# Copy to dev-host.tfvars and fill in values before applying against the
+# deployed instance at a.dev.amsterfam.eu. Use a dedicated Terraform
+# workspace so this state never mixes with local dev's:
+#
+#   terraform workspace new dev-host
+#   terraform workspace select dev-host
+#   terraform apply -var-file=dev-host.tfvars
+#
+# Never commit dev-host.tfvars — it contains secrets.
+
+authentik_url   = "https://a.dev.amsterfam.eu"
+authentik_token = "" # Admin Settings -> Tokens -> create API token, on a.dev.amsterfam.eu
+
+discord_client_id     = "" # Discord Developer Portal -> OAuth2 (register the app's own credentials or reuse the local-dev ones)
+discord_client_secret = ""
+
+amsterfam_client_id = "amsterfam"
+
+additional_redirect_uris = [
+  "https://dev.amsterfam.eu/auth/callback",
+]

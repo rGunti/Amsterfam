@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Managed by Ansible (roles/backup) — do not edit by hand.
+set -euo pipefail
+
+cd "{{ deploy_dir }}/infra"
+stamp=$(date +%Y%m%d-%H%M%S)
+
+docker compose exec -T db pg_dump -U amsterfam amsterfam \
+  | gzip > "{{ backup_dir }}/db-${stamp}.sql.gz"
+
+docker compose exec -T authentik-db pg_dump -U authentik authentik \
+  | gzip > "{{ backup_dir }}/authentik-db-${stamp}.sql.gz"
+
+find "{{ backup_dir }}" -name '*.sql.gz' -mtime +{{ backup_retention_days }} -delete

@@ -1,0 +1,9 @@
+---
+# Fast path for shipping a new version: git pull, rebuild, docker compose up.
+# Connects as the deploy user only (default ansible_user in inventory/dev.ini)
+# — never root. Used both for manual redeploys and by
+# .github/workflows/deploy.yml.
+- name: Deploy latest amsterfam
+  hosts: amsterfam_dev
+  roles:
+    - app_deploy

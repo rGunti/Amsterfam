@@ -1,0 +1,8 @@
+---
+# Default entry point (used by deploy.yml): full clone-then-up sequence.
+# site.yml instead calls clone.yml and up.yml separately with the traefik
+# role's host-prep sandwiched in between — traefik needs the repo checked
+# out first (its dirs live under infra/), and docker compose needs
+# traefik's acme.json to exist as a file before the stack comes up.
+- ansible.builtin.import_tasks: clone.yml
+- ansible.builtin.import_tasks: up.yml

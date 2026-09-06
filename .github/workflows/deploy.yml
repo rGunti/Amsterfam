@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  # Triggers once per completed Backend/Frontend run on main — a PR touching
+  # only one of them still redeploys, which is fine since app_deploy is
+  # idempotent (git pull + compose build/up is a no-op if nothing changed).
+  workflow_run:
+    workflows: ["Backend", "Frontend"]
+    branches: [main]
+    types: [completed]
+
+jobs:
+  deploy:
+    name: Deploy to dev.amsterfam.eu
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Ansible
+        run: pipx install ansible-core
+
+      - name: Install Galaxy roles
+        run: ansible-galaxy install -r infra/ansible/requirements.yml
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Run deploy playbook
+        working-directory: infra/ansible
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        run: |
+          echo "$ANSIBLE_VAULT_PASSWORD" > /tmp/vault_pass
+          ansible-playbook deploy.yml \
+            --private-key ~/.ssh/deploy_key \
+            --vault-password-file /tmp/vault_pass
+          rm -f /tmp/vault_pass

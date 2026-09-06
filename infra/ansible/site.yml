@@ -1,0 +1,21 @@
+---
+# Full host bring-up. On a brand-new box, run once with:
+#   ansible-playbook site.yml -e bootstrap_user=root --ask-vault-pass
+# (or whatever initial account the host provides) — deploy_user doesn't exist
+# yet, so the default ansible_user=deploy in inventory/dev.ini won't connect.
+# Subsequent runs use the default deploy user.
+- name: Bring up dev.amsterfam.eu
+  hosts: amsterfam_dev
+  become: true
+  roles:
+    - deploy_user
+    - base
+    - role: geerlingguy.docker
+      vars:
+        docker_users: ["{{ deploy_user }}"]
+    - role: app_deploy
+      tasks_from: clone.yml
+    - traefik
+    - role: app_deploy
+      tasks_from: up.yml
+    - backup

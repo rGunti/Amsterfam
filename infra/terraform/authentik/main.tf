@@ -17,6 +17,10 @@ data "authentik_flow" "default_provider_invalidation" {
   slug = "default-provider-invalidation-flow"
 }
 
+data "authentik_flow" "default_authentication" {
+  slug = "default-authentication-flow"
+}
+
 # ── Certificate (self-signed, used for token signing) ─────────────────────────
 
 resource "tls_private_key" "amsterfam" {
@@ -79,6 +83,88 @@ resource "authentik_source_oauth" "discord" {
   property_mappings   = [authentik_property_mapping_source_oauth.discord_avatar.id]
 }
 
+# Creating the source above doesn't make it show up as a login button — that
+# requires adding it to the login page's identification stage, which the
+# goauthentik/authentik provider (~> 2026.2) doesn't expose a clean way to
+# manage without a manual `terraform import` of Authentik's built-in stage.
+# PATCH it directly instead (same approach as the grant_types workaround
+# below), merging into whatever sources are already configured rather than
+# overwriting, in case others get added later outside Terraform. Also sets
+# show_source_labels so the button reads "Discord" instead of icon-only.
+# Requires jq on the machine running `terraform apply`.
+#
+# The provisioner only (re-)runs when triggers_replace changes — editing the
+# command below does NOT re-run it on its own. Bump the version string here
+# whenever the script changes (the script itself is idempotent/safe to rerun,
+# so bumping unnecessarily is harmless).
+resource "terraform_data" "discord_login_button" {
+  triggers_replace = [authentik_source_oauth.discord.id, "v2"]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -euo pipefail
+
+      # authentik_source_oauth.discord.id is the slug ("discord"), but the
+      # stage's `sources` field wants the source's actual UUID pk.
+      resp0=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -w '\n%%{http_code}' \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        "${var.authentik_url}/api/v3/sources/oauth/?slug=${authentik_source_oauth.discord.id}")
+      http_status0=$(echo "$resp0" | tail -n1)
+      body0=$(echo "$resp0" | sed '$d')
+      if [ "$http_status0" -ge 400 ]; then
+        echo "GET discord source failed ($http_status0): $body0" >&2
+        exit 1
+      fi
+      source_pk=$(echo "$body0" | jq -r '.results[0].pk')
+      if [ -z "$source_pk" ] || [ "$source_pk" = "null" ]; then
+        echo "Discord source not found by slug" >&2
+        exit 1
+      fi
+
+      resp1=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -w '\n%%{http_code}' \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        "${var.authentik_url}/api/v3/flows/bindings/?target=${data.authentik_flow.default_authentication.id}")
+      http_status1=$(echo "$resp1" | tail -n1)
+      body1=$(echo "$resp1" | sed '$d')
+      if [ "$http_status1" -ge 400 ]; then
+        echo "GET flow bindings failed ($http_status1): $body1" >&2
+        exit 1
+      fi
+      stage_pk=$(echo "$body1" | jq -r '.results[] | select(.stage_obj.component == "ak-stage-identification-form") | .stage_obj.pk')
+      if [ -z "$stage_pk" ]; then
+        echo "No identification stage bound to the default authentication flow" >&2
+        exit 1
+      fi
+
+      resp2=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -w '\n%%{http_code}' \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        "${var.authentik_url}/api/v3/stages/identification/$stage_pk/")
+      http_status2=$(echo "$resp2" | tail -n1)
+      body2=$(echo "$resp2" | sed '$d')
+      if [ "$http_status2" -ge 400 ]; then
+        echo "GET identification stage failed ($http_status2): $body2" >&2
+        exit 1
+      fi
+      current_sources=$(echo "$body2" | jq -c '.sources // []')
+
+      new_sources=$(echo "$current_sources" \
+        | jq -c --arg src "$source_pk" '. + [$src] | unique')
+
+      resp3=$(curl -sS --retry 3 --retry-connrefused --retry-delay 2 -X PATCH -w '\n%%{http_code}' \
+        -H "Authorization: Bearer ${var.authentik_token}" \
+        -H "Content-Type: application/json" \
+        -d "{\"sources\": $new_sources, \"show_source_labels\": true}" \
+        "${var.authentik_url}/api/v3/stages/identification/$stage_pk/")
+      http_status3=$(echo "$resp3" | tail -n1)
+      body3=$(echo "$resp3" | sed '$d')
+      if [ "$http_status3" -ge 400 ]; then
+        echo "PATCH identification stage failed ($http_status3): $body3" >&2
+        exit 1
+      fi
+    EOT
+  }
+}
+
 # ── OAuth2/OIDC Provider for the Amsterfam backend ────────────────────────────
 
 resource "authentik_provider_oauth2" "amsterfam" {
@@ -90,16 +176,24 @@ resource "authentik_provider_oauth2" "amsterfam" {
 
   signing_key = authentik_certificate_key_pair.amsterfam.id
 
-  allowed_redirect_uris = [
-    {
-      matching_mode = "strict"
-      url           = "http://localhost:4200/auth/callback"
-    },
-    {
-      matching_mode = "strict"
-      url           = "http://localhost:8080/auth/callback"
-    },
-  ]
+  allowed_redirect_uris = concat(
+    [
+      {
+        matching_mode = "strict"
+        url           = "http://localhost:4200/auth/callback"
+      },
+      {
+        matching_mode = "strict"
+        url           = "http://localhost:8080/auth/callback"
+      },
+    ],
+    [
+      for uri in var.additional_redirect_uris : {
+        matching_mode = "strict"
+        url           = uri
+      }
+    ],
+  )
 
   access_token_validity  = "minutes=60"
   refresh_token_validity = "days=30"

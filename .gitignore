@@ -12,3 +12,6 @@
 
 # OS
 .DS_Store
+
+# Ansible (installed via ansible-galaxy install -r infra/ansible/requirements.yml)
+infra/ansible/roles/geerlingguy.docker/
