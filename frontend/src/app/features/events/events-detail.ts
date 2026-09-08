@@ -255,7 +255,7 @@ export class EventsDetail implements OnInit {
       startDate: ev.startDate,
       endDate: ev.endDate,
       location: ev.location,
-      costPerNight: ev.costPerNight,
+      costPerNight: ev.costPerNight ?? 0,
     });
     this.editing.set(true);
   }

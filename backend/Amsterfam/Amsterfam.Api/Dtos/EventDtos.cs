@@ -11,10 +11,11 @@ public record EventResponse(
     string Location,
     DateOnly? PollRangeStart,
     DateOnly? PollRangeEnd,
-    decimal CostPerNight,
+    decimal? CostPerNight,
     string Status,
     DateTime CreatedAt,
-    string? CurrentUserRole
+    string? CurrentUserRole,
+    bool IsMember
 );
 
 public record CreateEventRequest(

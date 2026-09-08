@@ -59,11 +59,17 @@
           <mat-icon inline>event</mat-icon> {{ ev.startDate }} – {{ ev.endDate }}
         </p>
         <p class="detail-row"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
-        <p class="detail-row">
-          <mat-icon inline>payments</mat-icon> {{ ev.costPerNight | currency: 'EUR' }} / night
-        </p>
-        @if (ev.description) {
-          <p class="description">{{ ev.description }}</p>
+        @if (ev.isMember) {
+          <p class="detail-row">
+            <mat-icon inline>payments</mat-icon> {{ ev.costPerNight | currency: 'EUR' }} / night
+          </p>
+          @if (ev.description) {
+            <p class="description">{{ ev.description }}</p>
+          }
+        } @else {
+          <p class="detail-row">
+            <mat-icon inline>info</mat-icon> Join this event to see full details.
+          </p>
         }
       }
     </mat-card-content>

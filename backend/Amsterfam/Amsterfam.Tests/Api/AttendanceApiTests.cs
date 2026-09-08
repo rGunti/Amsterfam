@@ -51,6 +51,30 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task GetAttendees_Returns403_ForNonMember()
+    {
+        var organiser = api.CreateClientWithUser("discord|att-org-nonmember");
+        var stranger = api.CreateClientWithUser("discord|att-stranger");
+        var ev = await CreateOpenEvent(organiser, "nonmember");
+
+        var response = await stranger.GetAsync($"/api/v1/events/{ev.Id}/attendees/");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAttendees_Returns200_ForPendingAttendee()
+    {
+        var organiser = api.CreateClientWithUser("discord|att-org-pending200");
+        var pending = api.CreateClientWithUser("discord|att-pending200");
+        var ev = await CreateOpenEvent(organiser, "pending200");
+
+        await pending.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+
+        var response = await pending.GetAsync($"/api/v1/events/{ev.Id}/attendees/");
+        response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
     public async Task Join_AddsPendingAttendee()
     {
         var organiser = api.CreateClientWithUser("discord|att-org-c");

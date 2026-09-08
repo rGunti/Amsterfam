@@ -50,7 +50,8 @@ public static class EventEndpoints
                 e.CreatedAt,
                 e.Attendances.Where(a => a.UserId == user.Id)
                     .Select(a => a.Role.ToString())
-                    .FirstOrDefault()
+                    .FirstOrDefault(),
+                true
             ))
             .ToListAsync();
         return TypedResults.Ok(events);
@@ -68,7 +69,7 @@ public static class EventEndpoints
 
         var user = await currentUser.GetOrCreateAsync();
         var role = await GetUserRole(db, id, user.Id);
-        return TypedResults.Ok(ToResponse(ev, role));
+        return TypedResults.Ok(role is null ? ToPreviewResponse(ev) : ToResponse(ev, role));
     }
 
     private static async Task<IResult> CreateEvent(
@@ -286,6 +287,24 @@ public static class EventEndpoints
             ev.CostPerNight,
             ev.Status.ToString(),
             ev.CreatedAt,
-            currentUserRole
+            currentUserRole,
+            true
+        );
+
+    private static EventResponse ToPreviewResponse(Event ev) =>
+        new(
+            ev.Id,
+            ev.Name,
+            null,
+            ev.StartDate,
+            ev.EndDate,
+            ev.Location,
+            null,
+            null,
+            null,
+            ev.Status.ToString(),
+            ev.CreatedAt,
+            null,
+            false
         );
 }
