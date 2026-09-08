@@ -65,7 +65,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task GetEvent_ReturnsNullRole_ForNonAssociatedUser()
+    public async Task GetEvent_ReturnsPreview_ForNonMember()
     {
         var organiser = api.CreateClientWithUser("discord|organiser-nullrole");
         var created = await (
@@ -75,6 +75,29 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var other = api.CreateClientWithUser("discord|other-nullrole");
         var ev = await other.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created!.Id}");
         Assert.Null(ev!.CurrentUserRole);
+        Assert.False(ev.IsMember);
+        Assert.Null(ev.Description);
+        Assert.Null(ev.CostPerNight);
+        Assert.Null(ev.PollRangeStart);
+        Assert.Null(ev.PollRangeEnd);
+    }
+
+    [Fact]
+    public async Task GetEvent_ReturnsFullDetail_ForPendingAttendee()
+    {
+        var organiser = api.CreateClientWithUser("discord|organiser-pending-full");
+        var created = await (
+            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-pending-full"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+        await organiser.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
+
+        var pending = api.CreateClientWithUser("discord|pending-full-user");
+        await pending.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null);
+
+        var ev = await pending.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created.Id}");
+        Assert.Equal("Pending", ev!.CurrentUserRole);
+        Assert.True(ev.IsMember);
+        Assert.NotNull(ev.CostPerNight);
     }
 
     [Fact]
@@ -101,6 +124,8 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         response.EnsureSuccessStatusCode();
         var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
         Assert.Equal(created.Id, ev!.Id);
+        Assert.True(ev.IsMember);
+        Assert.NotNull(ev.CostPerNight);
     }
 
     [Fact]

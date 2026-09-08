@@ -22,11 +22,19 @@ public static class AttendanceEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetAttendees(int eventId, AmsterfamDbContext db)
+    private static async Task<IResult> GetAttendees(
+        int eventId,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
     {
         var exists = await db.Events.AnyAsync(e => e.Id == eventId);
         if (!exists)
             return TypedResults.NotFound();
+
+        var user = await currentUser.GetOrCreateAsync();
+        if (!await IsMember(db, eventId, user.Id))
+            return TypedResults.Forbid();
 
         var attendees = await db
             .EventAttendances.Where(a => a.EventId == eventId)
@@ -164,4 +172,7 @@ public static class AttendanceEndpoints
         db.EventAttendances.AnyAsync(a =>
             a.EventId == eventId && a.UserId == userId && a.Role == AttendanceRole.Organiser
         );
+
+    private static Task<bool> IsMember(AmsterfamDbContext db, int eventId, int userId) =>
+        db.EventAttendances.AnyAsync(a => a.EventId == eventId && a.UserId == userId);
 }

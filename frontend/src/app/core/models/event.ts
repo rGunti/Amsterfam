@@ -10,10 +10,11 @@ export interface EventResponse {
   location: string;
   pollRangeStart: string | null;
   pollRangeEnd: string | null;
-  costPerNight: number;
+  costPerNight: number | null;
   status: EventStatus;
   createdAt: string;
   currentUserRole: AttendanceRole | null;
+  isMember: boolean;
 }
 
 export interface UpdatePollRangeRequest {
