@@ -14,7 +14,7 @@ jobs:
     name: Deploy to dev.amsterfam.eu
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success'
-    environment: production
+    environment: dev
 
     steps:
       - uses: actions/checkout@v7
