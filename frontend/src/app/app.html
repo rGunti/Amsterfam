@@ -46,6 +46,10 @@
         <span matListItemTitle>Log out</span>
       </button>
     </mat-nav-list>
+
+    <div class="version-info">
+      <span>F {{ frontendVersion }} / B {{ backendVersion() ?? '…' }}</span>
+    </div>
   </mat-sidenav>
 
   <mat-sidenav-content class="main-content">

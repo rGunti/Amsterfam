@@ -98,6 +98,7 @@ using (var scope = app.Services.CreateScope())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapVersionEndpoints();
 app.MapUserEndpoints();
 app.MapEventEndpoints();
 app.MapAttendanceEndpoints();
