@@ -350,6 +350,7 @@ export class EventsDetail implements OnInit {
       this.saving.set(true);
       this.eventApi.deleteEvent(ev.id).subscribe({
         next: () => {
+          this.saving.set(false);
           this.snackBar.open('Event deleted', 'Dismiss', { duration: 3000 });
           this.router.navigate(['/']);
         },

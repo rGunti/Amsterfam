@@ -71,13 +71,13 @@ public static class EventEndpoints
         AmsterfamDbContext db
     )
     {
-        var ev = await db.Events.FindAsync(id);
+        var ev = await LoadEventWithOrganisers(db, id);
         if (ev is null)
             return TypedResults.NotFound();
 
         var user = await currentUser.GetOrCreateAsync();
         var role = await GetUserRole(db, id, user.Id);
-        var organisers = await GetOrganisers(db, id);
+        var organisers = OrganisersFrom(ev);
         return TypedResults.Ok(
             role is null ? ToPreviewResponse(ev, organisers) : ToResponse(ev, role, organisers)
         );
@@ -131,7 +131,7 @@ public static class EventEndpoints
         AmsterfamDbContext db
     )
     {
-        var ev = await db.Events.FindAsync(id);
+        var ev = await LoadEventWithOrganisers(db, id);
         if (ev is null)
             return TypedResults.NotFound();
 
@@ -147,8 +147,9 @@ public static class EventEndpoints
         ev.CostPerNight = request.CostPerNight;
 
         await db.SaveChangesAsync();
-        var organisers = await GetOrganisers(db, id);
-        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString(), organisers));
+        return TypedResults.Ok(
+            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
+        );
     }
 
     private static async Task<IResult> DeleteEvent(
@@ -176,7 +177,7 @@ public static class EventEndpoints
         AmsterfamDbContext db
     )
     {
-        var ev = await db.Events.FindAsync(id);
+        var ev = await LoadEventWithOrganisers(db, id);
         if (ev is null)
             return TypedResults.NotFound();
 
@@ -191,8 +192,9 @@ public static class EventEndpoints
 
         ev.Status = EventStatus.Open;
         await db.SaveChangesAsync();
-        var organisers = await GetOrganisers(db, id);
-        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString(), organisers));
+        return TypedResults.Ok(
+            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
+        );
     }
 
     private static async Task<IResult> UnpublishEvent(
@@ -201,7 +203,7 @@ public static class EventEndpoints
         AmsterfamDbContext db
     )
     {
-        var ev = await db.Events.FindAsync(id);
+        var ev = await LoadEventWithOrganisers(db, id);
         if (ev is null)
             return TypedResults.NotFound();
 
@@ -223,8 +225,9 @@ public static class EventEndpoints
         await db.DatePollEntries.Where(e => e.EventId == id).ExecuteDeleteAsync();
 
         await db.SaveChangesAsync();
-        var organisers = await GetOrganisers(db, id);
-        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString(), organisers));
+        return TypedResults.Ok(
+            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
+        );
     }
 
     private static async Task<IResult> CloseEvent(
@@ -233,7 +236,7 @@ public static class EventEndpoints
         AmsterfamDbContext db
     )
     {
-        var ev = await db.Events.FindAsync(id);
+        var ev = await LoadEventWithOrganisers(db, id);
         if (ev is null)
             return TypedResults.NotFound();
 
@@ -246,8 +249,9 @@ public static class EventEndpoints
 
         ev.Status = EventStatus.Closed;
         await db.SaveChangesAsync();
-        var organisers = await GetOrganisers(db, id);
-        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString(), organisers));
+        return TypedResults.Ok(
+            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
+        );
     }
 
     private static async Task<IResult> ReopenEvent(
@@ -256,7 +260,7 @@ public static class EventEndpoints
         AmsterfamDbContext db
     )
     {
-        var ev = await db.Events.FindAsync(id);
+        var ev = await LoadEventWithOrganisers(db, id);
         if (ev is null)
             return TypedResults.NotFound();
 
@@ -271,8 +275,9 @@ public static class EventEndpoints
 
         ev.Status = EventStatus.Open;
         await db.SaveChangesAsync();
-        var organisers = await GetOrganisers(db, id);
-        return TypedResults.Ok(ToResponse(ev, AttendanceRole.Organiser.ToString(), organisers));
+        return TypedResults.Ok(
+            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
+        );
     }
 
     private static async Task<bool> IsOrganiserOrSuperuser(
@@ -294,11 +299,17 @@ public static class EventEndpoints
             .FirstOrDefaultAsync();
     }
 
-    private static Task<List<OrganiserSummary>> GetOrganisers(AmsterfamDbContext db, int eventId) =>
+    private static Task<Event?> LoadEventWithOrganisers(AmsterfamDbContext db, int eventId) =>
         db
-            .EventAttendances.Where(a => a.EventId == eventId && a.Role == AttendanceRole.Organiser)
+            .Events.Include(e => e.Attendances)
+                .ThenInclude(a => a.User)
+            .FirstOrDefaultAsync(e => e.Id == eventId);
+
+    private static List<OrganiserSummary> OrganisersFrom(Event ev) =>
+        ev
+            .Attendances.Where(a => a.Role == AttendanceRole.Organiser)
             .Select(a => new OrganiserSummary(a.UserId, a.User.DisplayName, a.User.AvatarUrl))
-            .ToListAsync();
+            .ToList();
 
     private static EventResponse ToResponse(
         Event ev,

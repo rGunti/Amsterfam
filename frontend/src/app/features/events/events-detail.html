@@ -251,26 +251,46 @@
 
           <mat-menu #attendeeMenu="matMenu">
             @if (menuAttendee(); as ma) {
-              <button mat-menu-item (click)="viewPaymentMethods(ma.userId, ma.displayName)">
+              <button
+                mat-menu-item
+                [disabled]="actioning()"
+                (click)="viewPaymentMethods(ma.userId, ma.displayName)"
+              >
                 <mat-icon>payments</mat-icon> View payment methods
               </button>
               @if (isOwner && ma.role === 'Attendee') {
-                <button mat-menu-item (click)="promoteToOrganiser(ma.userId, ma.displayName)">
+                <button
+                  mat-menu-item
+                  [disabled]="actioning()"
+                  (click)="promoteToOrganiser(ma.userId, ma.displayName)"
+                >
                   <mat-icon>workspace_premium</mat-icon> Promote to organiser
                 </button>
               }
               @if (isOwner && ma.role === 'Organiser' && ma.userId !== currentUserId()) {
-                <button mat-menu-item (click)="transferOwnership(ma.userId, ma.displayName)">
+                <button
+                  mat-menu-item
+                  [disabled]="actioning()"
+                  (click)="transferOwnership(ma.userId, ma.displayName)"
+                >
                   <mat-icon>stars</mat-icon> Transfer ownership
                 </button>
-                <button mat-menu-item (click)="demoteOrganiser(ma.userId, ma.displayName)">
+                <button
+                  mat-menu-item
+                  [disabled]="actioning()"
+                  (click)="demoteOrganiser(ma.userId, ma.displayName)"
+                >
                   <mat-icon>remove_moderator</mat-icon> Remove from organiser team
                 </button>
               }
               @if (
                 isOrganiser && ma.userId !== currentUserId() && (ma.role !== 'Organiser' || isOwner)
               ) {
-                <button mat-menu-item (click)="removeAttendee(ma.userId, ma.displayName)">
+                <button
+                  mat-menu-item
+                  [disabled]="actioning()"
+                  (click)="removeAttendee(ma.userId, ma.displayName)"
+                >
                   <mat-icon color="warn">person_remove</mat-icon> Remove
                 </button>
               }
