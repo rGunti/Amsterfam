@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Amsterfam.Api.Dtos;
+using Amsterfam.Core.Entities;
 using Amsterfam.Tests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Amsterfam.Tests.Api;
 
@@ -25,7 +27,8 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var user = await response.Content.ReadFromJsonAsync<UserResponse>();
 
         Assert.NotNull(user);
-        Assert.Equal("Test User discord|new-user-1", user.DisplayName);
+        Assert.Equal("Test User discord|new-user-1", user.Handle);
+        Assert.Null(user.DisplayName);
         Assert.Equal("discord|new-user-1@test.example", user.Email);
     }
 
@@ -58,5 +61,54 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         var user = await response.Content.ReadFromJsonAsync<UserResponse>();
         Assert.Equal("Updated Name", user!.DisplayName);
+    }
+
+    [Fact]
+    public async Task PutMe_DisplayNamePersists_AndDoesNotAffectHandle_OnReload()
+    {
+        var client = api.CreateClientWithUser("discord|reload-user");
+        var before = await (
+            await client.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
+
+        var putResponse = await client.PutAsJsonAsync(
+            "/api/v1/me/",
+            new UpdateUserRequest("My Chosen Name", null)
+        );
+        putResponse.EnsureSuccessStatusCode();
+
+        var reloaded = await (
+            await client.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
+
+        Assert.Equal("My Chosen Name", reloaded!.DisplayName);
+        Assert.Equal(before!.Handle, reloaded.Handle);
+    }
+
+    [Fact]
+    public async Task GetMe_ResyncsHandle_WhenOAuthClaimChangesOnExistingUser()
+    {
+        const string externalId = "discord|handle-resync-user";
+        await using (var db = await api.CreateDbContextAsync())
+        {
+            db.Users.Add(
+                new User
+                {
+                    ExternalId = externalId,
+                    Handle = "Stale Handle",
+                    DisplayName = "Kept Display Name",
+                    Email = $"{externalId}@test.example",
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        var client = api.CreateClientWithUser(externalId);
+        var response = await client.GetAsync("/api/v1/me/");
+        response.EnsureSuccessStatusCode();
+        var user = await response.Content.ReadFromJsonAsync<UserResponse>();
+
+        Assert.Equal($"Test User {externalId}", user!.Handle);
+        Assert.Equal("Kept Display Name", user.DisplayName);
     }
 }

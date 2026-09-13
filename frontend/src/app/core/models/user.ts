@@ -1,11 +1,12 @@
 export interface User {
   id: number;
-  displayName: string;
+  handle: string;
+  displayName: string | null;
   email: string;
   avatarUrl: string | null;
 }
 
 export interface UpdateUserRequest {
-  displayName: string;
+  displayName: string | null;
   avatarUrl: string | null;
 }

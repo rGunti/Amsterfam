@@ -46,7 +46,7 @@ public static class AttendanceEndpoints
             .Include(a => a.User)
             .Select(a => new AttendeeResponse(
                 a.UserId,
-                a.User.DisplayName,
+                a.User.DisplayName ?? a.User.Handle,
                 a.User.AvatarUrl,
                 a.Role.ToString(),
                 a.PlannedArrival,

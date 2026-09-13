@@ -20,7 +20,7 @@ public static class UserEndpoints
     {
         var user = await currentUser.GetOrCreateAsync();
         return TypedResults.Ok(
-            new UserResponse(user.Id, user.DisplayName, user.Email, user.AvatarUrl)
+            new UserResponse(user.Id, user.Handle, user.DisplayName, user.Email, user.AvatarUrl)
         );
     }
 
@@ -35,7 +35,7 @@ public static class UserEndpoints
         user.AvatarUrl = request.AvatarUrl;
         await db.SaveChangesAsync();
         return TypedResults.Ok(
-            new UserResponse(user.Id, user.DisplayName, user.Email, user.AvatarUrl)
+            new UserResponse(user.Id, user.Handle, user.DisplayName, user.Email, user.AvatarUrl)
         );
     }
 }

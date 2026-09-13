@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -31,6 +32,7 @@ import { PaymentMethod } from '../../core/models/payment-method';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
@@ -43,22 +45,44 @@ export class Profile implements OnInit {
 
   readonly user = signal<User | null>(null);
   readonly saving = signal(false);
+  readonly editingName = signal(false);
   readonly form: FormGroup<{ displayName: FormControl<string> }>;
   readonly paymentMethods = signal<PaymentMethod[]>([]);
   readonly paymentMethodsLoading = signal(true);
 
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
-      displayName: ['', [Validators.required, Validators.maxLength(100)]],
+      displayName: ['', [Validators.maxLength(100)]],
     });
   }
 
   ngOnInit(): void {
     this.userApi.getMe().subscribe((user) => {
       this.user.set(user);
-      this.form.setValue({ displayName: user.displayName });
+      this.form.setValue({ displayName: user.displayName ?? '' });
     });
     this.loadPaymentMethods();
+  }
+
+  displayNameFor(user: User): string {
+    return user.displayName ?? user.handle;
+  }
+
+  startEditingName(): void {
+    const currentUser = this.user();
+    if (!currentUser) {
+      return;
+    }
+    this.form.setValue({ displayName: currentUser.displayName ?? '' });
+    this.editingName.set(true);
+  }
+
+  cancelEditingName(): void {
+    const currentUser = this.user();
+    if (currentUser) {
+      this.form.setValue({ displayName: currentUser.displayName ?? '' });
+    }
+    this.editingName.set(false);
   }
 
   private loadPaymentMethods(): void {
@@ -145,15 +169,17 @@ export class Profile implements OnInit {
     }
 
     this.saving.set(true);
+    const trimmedDisplayName = this.form.getRawValue().displayName.trim();
     this.userApi
       .updateMe({
-        displayName: this.form.getRawValue().displayName.trim(),
+        displayName: trimmedDisplayName.length > 0 ? trimmedDisplayName : null,
         avatarUrl: currentUser.avatarUrl,
       })
       .subscribe({
         next: (updated) => {
           this.user.set(updated);
           this.saving.set(false);
+          this.editingName.set(false);
           this.snackBar.open('Profile updated', 'Dismiss', { duration: 3000 });
         },
         error: () => {

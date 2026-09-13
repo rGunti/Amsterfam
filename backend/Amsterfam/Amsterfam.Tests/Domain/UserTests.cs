@@ -14,7 +14,7 @@ public class UserTests(DatabaseFixture db) : IClassFixture<DatabaseFixture>
         var user = new User
         {
             ExternalId = "discord|123456",
-            DisplayName = "Test User",
+            Handle = "Test User",
             Email = "test@example.com",
         };
 
@@ -24,7 +24,7 @@ public class UserTests(DatabaseFixture db) : IClassFixture<DatabaseFixture>
         await using var readContext = db.CreateDbContext();
         var saved = await readContext.Users.SingleAsync(u => u.ExternalId == "discord|123456");
 
-        Assert.Equal("Test User", saved.DisplayName);
+        Assert.Equal("Test User", saved.Handle);
         Assert.Equal("test@example.com", saved.Email);
         Assert.True(saved.CreatedAt > DateTime.MinValue);
     }
@@ -38,13 +38,13 @@ public class UserTests(DatabaseFixture db) : IClassFixture<DatabaseFixture>
             new User
             {
                 ExternalId = "discord|dupe",
-                DisplayName = "A",
+                Handle = "A",
                 Email = "a@example.com",
             },
             new User
             {
                 ExternalId = "discord|dupe",
-                DisplayName = "B",
+                Handle = "B",
                 Email = "b@example.com",
             }
         );

@@ -10,7 +10,7 @@ public class EventTests(DatabaseFixture db) : IClassFixture<DatabaseFixture>
         new()
         {
             ExternalId = $"discord|event-test-{suffix}",
-            DisplayName = $"User {suffix}",
+            Handle = $"User {suffix}",
             Email = $"{suffix}@example.com",
         };
 
