@@ -40,6 +40,12 @@
         }
         <span matListItemTitle>Profile</span>
       </a>
+      @if (canInstall()) {
+        <button mat-list-item (click)="promptInstall()">
+          <mat-icon matListItemIcon>install_mobile</mat-icon>
+          <span matListItemTitle>Install app</span>
+        </button>
+      }
       <mat-divider />
       <button mat-list-item (click)="logout(); onNavLinkClick()">
         <mat-icon matListItemIcon>logout</mat-icon>

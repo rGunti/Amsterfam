@@ -23,7 +23,12 @@ export class CurrentUserService {
   }
 
   refresh(): void {
-    this.userApi.getMe().subscribe((user) => this._user.set(user));
+    this.userApi.getMe().subscribe({
+      next: (user) => this._user.set(user),
+      error: () => {
+        // Keep whatever we last had (e.g. cached offline) rather than clearing it on a transient error.
+      },
+    });
   }
 
   setUser(user: User): void {
