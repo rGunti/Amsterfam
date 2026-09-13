@@ -22,7 +22,9 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withNavigationErrorHandler((event) => {
-        if (!navigator.onLine) {
+        const message = event.error instanceof Error ? event.error.message : String(event.error);
+        const isChunkLoadFailure = /dynamically imported module|Loading chunk/i.test(message);
+        if (isChunkLoadFailure) {
           inject(Router).navigateByUrl('/offline');
         } else {
           console.error(event.error);

@@ -65,7 +65,10 @@ export class App {
     effect(() => this.navOpen.set(!this.isHandset().matches));
 
     const showOfflineNotice = () => {
-      this.offlineSnackBarRef ??= this.snackBar.open("You're offline");
+      if (this.offlineSnackBarRef) {
+        return;
+      }
+      this.offlineSnackBarRef = this.snackBar.open("You're offline");
     };
     const dismissOfflineNotice = () => {
       this.offlineSnackBarRef?.dismiss();

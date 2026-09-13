@@ -15,6 +15,10 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+# ngsw-config.json's "current-user" dataGroup URL is also the localhost:5293
+# placeholder — it must stay in sync with environment.ts here, since a plain
+# `pnpm run build` outside Docker won't rewrite either and will keep pointing
+# at the dev API address.
 RUN sed -i "s|http://localhost:5293|${API_ADDRESS}|" src/environments/environment.ts ngsw-config.json && \
     sed -i "s|http://localhost:9000/application/o/amsterfam/|${OIDC_ISSUER}|" src/app/core/auth/auth.config.ts
 RUN pnpm run build
