@@ -308,4 +308,31 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var get = await client.GetAsync($"/api/v1/events/{created.Id}");
         Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
     }
+
+    [Fact]
+    public async Task DeleteEvent_Returns403_ForNonOwnerOrganiser()
+    {
+        var owner = api.CreateClientWithUser("discord|organiser-delete403");
+        var secondOrganiser = api.CreateClientWithUser("discord|org2-delete403");
+        var created = await (
+            await owner.PostAsJsonAsync("/api/v1/events/", SampleEvent("-delete403"))
+        ).Content.ReadFromJsonAsync<EventResponse>();
+
+        await owner.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
+        await secondOrganiser.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null);
+        var secondOrgInfo = await (
+            await secondOrganiser.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
+        await owner.PostAsync(
+            $"/api/v1/events/{created.Id}/attendees/{secondOrgInfo!.Id}/confirm",
+            null
+        );
+        await owner.PostAsync(
+            $"/api/v1/events/{created.Id}/attendees/{secondOrgInfo.Id}/promote",
+            null
+        );
+
+        var response = await secondOrganiser.DeleteAsync($"/api/v1/events/{created.Id}");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }

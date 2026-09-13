@@ -6,8 +6,8 @@ public record EventResponse(
     int Id,
     string Name,
     string? Description,
-    DateOnly StartDate,
-    DateOnly EndDate,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
     string Location,
     DateOnly? PollRangeStart,
     DateOnly? PollRangeEnd,
@@ -15,23 +15,27 @@ public record EventResponse(
     string Status,
     DateTime CreatedAt,
     string? CurrentUserRole,
-    bool IsMember
+    bool IsMember,
+    int CreatedById,
+    IReadOnlyList<OrganiserSummary> Organisers
 );
+
+public record OrganiserSummary(int UserId, string DisplayName, string? AvatarUrl);
 
 public record CreateEventRequest(
     string Name,
     string? Description,
-    DateOnly StartDate,
-    DateOnly EndDate,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
     string Location,
-    decimal CostPerNight
+    decimal? CostPerNight
 );
 
 public record UpdateEventRequest(
     string Name,
     string? Description,
-    DateOnly StartDate,
-    DateOnly EndDate,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
     string Location,
-    decimal CostPerNight
+    decimal? CostPerNight
 );

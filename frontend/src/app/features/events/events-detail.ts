@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   FormBuilder,
   FormControl,
@@ -14,6 +14,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -33,6 +35,7 @@ import { AttendeeResponse } from '../../core/models/attendance';
 import { DatePollRange } from '../date-poll/date-poll-range';
 import { DatePollCalendar } from '../date-poll/date-poll-calendar';
 import { DatePollSummary } from '../date-poll/date-poll-summary';
+import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 
 interface EventForm {
   name: FormControl<string>;
@@ -54,10 +57,13 @@ interface EventForm {
     MatButtonModule,
     MatIconModule,
     MatListModule,
+    MatMenuModule,
+    MatTooltipModule,
     CurrencyPipe,
     DatePollRange,
     DatePollCalendar,
     DatePollSummary,
+    OrganiserAvatarStack,
   ],
   templateUrl: './events-detail.html',
   styleUrl: './events-detail.scss',
@@ -67,6 +73,7 @@ export class EventsDetail implements OnInit {
   private readonly attendanceApi = inject(AttendanceApi);
   private readonly userApi = inject(UserApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
@@ -79,7 +86,17 @@ export class EventsDetail implements OnInit {
   readonly attendeesLoading = signal(false);
   readonly actioning = signal(false);
   readonly pending = computed(() => this.attendees().filter((a) => a.role === 'Pending'));
-  readonly confirmed = computed(() => this.attendees().filter((a) => a.role !== 'Pending'));
+  readonly confirmed = computed(() => {
+    const ownerId = this.event()?.createdById;
+    const rank = (a: AttendeeResponse) =>
+      a.userId === ownerId ? 0 : a.role === 'Organiser' ? 1 : 2;
+    return this.attendees()
+      .filter((a) => a.role !== 'Pending')
+      .slice()
+      .sort((a, b) => rank(a) - rank(b) || a.displayName.localeCompare(b.displayName));
+  });
+  readonly organisers = computed(() => this.attendees().filter((a) => a.role === 'Organiser'));
+  readonly menuAttendee = signal<AttendeeResponse | null>(null);
   readonly form: FormGroup<EventForm>;
 
   @ViewChild(DatePollSummary) private datePollSummary?: DatePollSummary;
@@ -88,8 +105,8 @@ export class EventsDetail implements OnInit {
     this.form = inject(FormBuilder).nonNullable.group({
       name: ['', [Validators.required, Validators.maxLength(200)]],
       description: [''],
-      startDate: ['', Validators.required],
-      endDate: ['', Validators.required],
+      startDate: [''],
+      endDate: [''],
       location: ['', Validators.required],
       costPerNight: [0, [Validators.required, Validators.min(0)]],
     });
@@ -105,9 +122,26 @@ export class EventsDetail implements OnInit {
     return this.event()?.currentUserRole === 'Organiser';
   }
 
+  get isOwner(): boolean {
+    const ev = this.event();
+    const userId = this.currentUserId();
+    return ev !== null && userId !== null && ev.createdById === userId;
+  }
+
   get isConfirmed(): boolean {
     const role = this.event()?.currentUserRole;
     return role === 'Attendee' || role === 'Organiser';
+  }
+
+  attendeeLabel(attendee: AttendeeResponse): string {
+    const ev = this.event();
+    if (attendee.userId === ev?.createdById) {
+      return `${attendee.displayName} · Event owner`;
+    }
+    if (attendee.role === 'Organiser') {
+      return `${attendee.displayName} · Organiser`;
+    }
+    return attendee.displayName;
   }
 
   private loadEvent(id: number): void {
@@ -115,10 +149,8 @@ export class EventsDetail implements OnInit {
       next: (event) => {
         this.setEvent(event);
         this.loading.set(false);
-        // Confirmed attendees (Attendee/Organiser) may view the roster.
-        if (event.currentUserRole === 'Attendee' || event.currentUserRole === 'Organiser') {
-          this.loadAttendees(event.id);
-        }
+        // Members see the full roster; non-members get organisers only (backend-enforced).
+        this.loadAttendees(event.id);
       },
       error: () => this.loading.set(false),
     });
@@ -231,6 +263,116 @@ export class EventsDetail implements OnInit {
     });
   }
 
+  promoteToOrganiser(userId: number, displayName: string): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.actioning.set(true);
+    this.attendanceApi.promote(ev.id, userId).subscribe({
+      next: () => {
+        this.actioning.set(false);
+        this.loadAttendees(ev.id);
+        this.snackBar.open(`${displayName} is now an organiser`, 'Dismiss', { duration: 3000 });
+      },
+      error: (err: HttpErrorResponse) => {
+        this.actioning.set(false);
+        const message = err.error?.error ?? 'Could not promote attendee';
+        this.snackBar.open(message, 'Dismiss', { duration: 3000 });
+      },
+    });
+  }
+
+  demoteOrganiser(userId: number, displayName: string): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.confirmAction({
+      title: 'Remove from organiser team',
+      message: `Are you sure you want to remove ${displayName} from the organiser team? They'll remain a confirmed attendee.`,
+      confirmLabel: 'Remove',
+    }).subscribe((ok) => {
+      if (!ok) {
+        return;
+      }
+      this.actioning.set(true);
+      this.attendanceApi.demote(ev.id, userId).subscribe({
+        next: () => {
+          this.actioning.set(false);
+          this.loadAttendees(ev.id);
+          this.snackBar.open(`${displayName} is no longer an organiser`, 'Dismiss', {
+            duration: 3000,
+          });
+        },
+        error: (err: HttpErrorResponse) => {
+          this.actioning.set(false);
+          const message = err.error?.error ?? 'Could not remove organiser';
+          this.snackBar.open(message, 'Dismiss', { duration: 3000 });
+        },
+      });
+    });
+  }
+
+  transferOwnership(userId: number, displayName: string): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.confirmAction({
+      title: 'Transfer ownership',
+      message: `Are you sure you want to make ${displayName} the owner of this event? You'll remain an organiser, but they'll gain full control, including deleting the event.`,
+      confirmLabel: 'Transfer',
+    }).subscribe((ok) => {
+      if (!ok) {
+        return;
+      }
+      this.actioning.set(true);
+      this.attendanceApi.transferOwnership(ev.id, userId).subscribe({
+        next: () => {
+          this.actioning.set(false);
+          this.loadEvent(ev.id);
+          this.snackBar.open(`Ownership transferred to ${displayName}`, 'Dismiss', {
+            duration: 3000,
+          });
+        },
+        error: (err: HttpErrorResponse) => {
+          this.actioning.set(false);
+          const message = err.error?.error ?? 'Could not transfer ownership';
+          this.snackBar.open(message, 'Dismiss', { duration: 3000 });
+        },
+      });
+    });
+  }
+
+  deleteEvent(): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.confirmAction({
+      title: 'Delete event',
+      message: `Are you sure you want to permanently delete “${ev.name}”? This cannot be undone.`,
+      confirmLabel: 'Delete',
+    }).subscribe((ok) => {
+      if (!ok) {
+        return;
+      }
+      this.saving.set(true);
+      this.eventApi.deleteEvent(ev.id).subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.snackBar.open('Event deleted', 'Dismiss', { duration: 3000 });
+          this.router.navigate(['/']);
+        },
+        error: () => {
+          this.saving.set(false);
+          this.snackBar.open('Could not delete event', 'Dismiss', { duration: 3000 });
+        },
+      });
+    });
+  }
+
   private confirmAction(data: ConfirmDialogData) {
     return this.dialog
       .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, { data })
@@ -252,8 +394,8 @@ export class EventsDetail implements OnInit {
     this.form.setValue({
       name: ev.name,
       description: ev.description ?? '',
-      startDate: ev.startDate,
-      endDate: ev.endDate,
+      startDate: ev.startDate ?? '',
+      endDate: ev.endDate ?? '',
       location: ev.location,
       costPerNight: ev.costPerNight ?? 0,
     });
@@ -275,8 +417,8 @@ export class EventsDetail implements OnInit {
       .updateEvent(ev.id, {
         name: raw.name.trim(),
         description: raw.description.trim() || null,
-        startDate: raw.startDate,
-        endDate: raw.endDate,
+        startDate: raw.startDate || null,
+        endDate: raw.endDate || null,
         location: raw.location.trim(),
         costPerNight: raw.costPerNight,
       })

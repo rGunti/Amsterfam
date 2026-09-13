@@ -32,4 +32,25 @@ export class AttendanceApi {
   remove(eventId: number, userId: number): Observable<void> {
     return this.http.delete<void>(this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}`));
   }
+
+  promote(eventId: number, userId: number): Observable<void> {
+    return this.http.post<void>(
+      this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}/promote`),
+      null,
+    );
+  }
+
+  demote(eventId: number, userId: number): Observable<void> {
+    return this.http.post<void>(
+      this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}/demote`),
+      null,
+    );
+  }
+
+  transferOwnership(eventId: number, userId: number): Observable<void> {
+    return this.http.post<void>(
+      this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}/transfer-ownership`),
+      null,
+    );
+  }
 }

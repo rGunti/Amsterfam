@@ -51,14 +51,19 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task GetAttendees_Returns403_ForNonMember()
+    public async Task GetAttendees_ReturnsOrganisersOnly_ForNonMember()
     {
         var organiser = api.CreateClientWithUser("discord|att-org-nonmember");
         var stranger = api.CreateClientWithUser("discord|att-stranger");
         var ev = await CreateOpenEvent(organiser, "nonmember");
 
         var response = await stranger.GetAsync($"/api/v1/events/{ev.Id}/attendees/");
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.EnsureSuccessStatusCode();
+        var attendees = await response.Content.ReadFromJsonAsync<List<AttendeeResponse>>();
+
+        Assert.NotNull(attendees);
+        Assert.All(attendees, a => Assert.Equal("Organiser", a.Role));
+        Assert.Contains(attendees, a => a.Role == "Organiser");
     }
 
     [Fact]
@@ -193,6 +198,182 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         var confirmed = attendees!.First(a => a.UserId == attendeeInfo!.Id);
         Assert.Equal("https://cdn.discordapp.com/avatars/test/avatar.png", confirmed.AvatarUrl);
+    }
+
+    private async Task<UserResponse> JoinAndConfirm(
+        HttpClient organiser,
+        HttpClient attendee,
+        int eventId
+    )
+    {
+        await attendee.PostAsync($"/api/v1/events/{eventId}/attendees/join", null);
+        var attendeeInfo = await (
+            await attendee.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
+
+        await organiser.PostAsync(
+            $"/api/v1/events/{eventId}/attendees/{attendeeInfo!.Id}/confirm",
+            null
+        );
+        return attendeeInfo;
+    }
+
+    [Fact]
+    public async Task Promote_ChangesAttendeeToOrganiser()
+    {
+        var owner = api.CreateClientWithUser("discord|att-owner-promote");
+        var attendee = api.CreateClientWithUser("discord|att-user-promote");
+        var ev = await CreateOpenEvent(owner, "promote");
+        var attendeeInfo = await JoinAndConfirm(owner, attendee, ev.Id);
+
+        var response = await owner.PostAsync(
+            $"/api/v1/events/{ev.Id}/attendees/{attendeeInfo.Id}/promote",
+            null
+        );
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var attendees = await (
+            await owner.GetAsync($"/api/v1/events/{ev.Id}/attendees/")
+        ).Content.ReadFromJsonAsync<List<AttendeeResponse>>();
+        Assert.Contains(attendees!, a => a.UserId == attendeeInfo.Id && a.Role == "Organiser");
+    }
+
+    [Fact]
+    public async Task Promote_Returns403_ForNonOwnerOrganiser()
+    {
+        var owner = api.CreateClientWithUser("discord|att-owner-promote403");
+        var secondOrganiser = api.CreateClientWithUser("discord|att-org2-promote403");
+        var attendee = api.CreateClientWithUser("discord|att-user-promote403");
+        var ev = await CreateOpenEvent(owner, "promote403");
+
+        var secondOrgInfo = await JoinAndConfirm(owner, secondOrganiser, ev.Id);
+        await owner.PostAsync($"/api/v1/events/{ev.Id}/attendees/{secondOrgInfo.Id}/promote", null);
+
+        var attendeeInfo = await JoinAndConfirm(owner, attendee, ev.Id);
+
+        var response = await secondOrganiser.PostAsync(
+            $"/api/v1/events/{ev.Id}/attendees/{attendeeInfo.Id}/promote",
+            null
+        );
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Demote_ChangesOrganiserToAttendee()
+    {
+        var owner = api.CreateClientWithUser("discord|att-owner-demote");
+        var organiser = api.CreateClientWithUser("discord|att-org-demote");
+        var ev = await CreateOpenEvent(owner, "demote");
+
+        var orgInfo = await JoinAndConfirm(owner, organiser, ev.Id);
+        await owner.PostAsync($"/api/v1/events/{ev.Id}/attendees/{orgInfo.Id}/promote", null);
+
+        var response = await owner.PostAsync(
+            $"/api/v1/events/{ev.Id}/attendees/{orgInfo.Id}/demote",
+            null
+        );
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var attendees = await (
+            await owner.GetAsync($"/api/v1/events/{ev.Id}/attendees/")
+        ).Content.ReadFromJsonAsync<List<AttendeeResponse>>();
+        Assert.Contains(attendees!, a => a.UserId == orgInfo.Id && a.Role == "Attendee");
+    }
+
+    [Fact]
+    public async Task Demote_Returns403_ForNonOwner()
+    {
+        var owner = api.CreateClientWithUser("discord|att-owner-demote403");
+        var organiser = api.CreateClientWithUser("discord|att-org-demote403");
+        var ev = await CreateOpenEvent(owner, "demote403");
+
+        var orgInfo = await JoinAndConfirm(owner, organiser, ev.Id);
+        await owner.PostAsync($"/api/v1/events/{ev.Id}/attendees/{orgInfo.Id}/promote", null);
+
+        var response = await organiser.PostAsync(
+            $"/api/v1/events/{ev.Id}/attendees/{orgInfo.Id}/demote",
+            null
+        );
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RemoveAttendee_Returns403_WhenNonOwnerTargetsOrganiser()
+    {
+        var owner = api.CreateClientWithUser("discord|att-owner-removeorg");
+        var organiserA = api.CreateClientWithUser("discord|att-orga-removeorg");
+        var organiserB = api.CreateClientWithUser("discord|att-orgb-removeorg");
+        var ev = await CreateOpenEvent(owner, "removeorg");
+
+        await JoinAndConfirm(owner, organiserA, ev.Id);
+        var orgBInfo = await JoinAndConfirm(owner, organiserB, ev.Id);
+        var orgAInfo = await (
+            await organiserA.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
+        await owner.PostAsync($"/api/v1/events/{ev.Id}/attendees/{orgAInfo!.Id}/promote", null);
+        await owner.PostAsync($"/api/v1/events/{ev.Id}/attendees/{orgBInfo.Id}/promote", null);
+
+        var response = await organiserA.DeleteAsync(
+            $"/api/v1/events/{ev.Id}/attendees/{orgBInfo.Id}"
+        );
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RemoveAttendee_Returns409_WhenOwnerRemovesSelf()
+    {
+        var owner = api.CreateClientWithUser("discord|att-owner-selfleave");
+        var ev = await CreateOpenEvent(owner, "selfleave");
+        var ownerInfo = await (
+            await owner.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
+
+        var response = await owner.DeleteAsync($"/api/v1/events/{ev.Id}/attendees/{ownerInfo!.Id}");
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task TransferOwnership_MovesOwnershipToOrganiser()
+    {
+        var owner = api.CreateClientWithUser("discord|att-owner-transfer");
+        var organiser = api.CreateClientWithUser("discord|att-org-transfer");
+        var ev = await CreateOpenEvent(owner, "transfer");
+
+        var orgInfo = await JoinAndConfirm(owner, organiser, ev.Id);
+        await owner.PostAsync($"/api/v1/events/{ev.Id}/attendees/{orgInfo.Id}/promote", null);
+
+        var response = await owner.PostAsync(
+            $"/api/v1/events/{ev.Id}/attendees/{orgInfo.Id}/transfer-ownership",
+            null
+        );
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var updated = await (
+            await owner.GetAsync($"/api/v1/events/{ev.Id}/")
+        ).Content.ReadFromJsonAsync<EventResponse>();
+        Assert.Equal(orgInfo.Id, updated!.CreatedById);
+
+        // Old owner keeps their Organiser role after handing over ownership.
+        var attendees = await (
+            await owner.GetAsync($"/api/v1/events/{ev.Id}/attendees/")
+        ).Content.ReadFromJsonAsync<List<AttendeeResponse>>();
+        Assert.Contains(attendees!, a => a.UserId == ev.CreatedById && a.Role == "Organiser");
+    }
+
+    [Fact]
+    public async Task TransferOwnership_Returns409_WhenTargetIsNotOrganiser()
+    {
+        var owner = api.CreateClientWithUser("discord|att-owner-transfer409");
+        var attendee = api.CreateClientWithUser("discord|att-user-transfer409");
+        var ev = await CreateOpenEvent(owner, "transfer409");
+
+        var attendeeInfo = await JoinAndConfirm(owner, attendee, ev.Id);
+
+        var response = await owner.PostAsync(
+            $"/api/v1/events/{ev.Id}/attendees/{attendeeInfo.Id}/transfer-ownership",
+            null
+        );
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]

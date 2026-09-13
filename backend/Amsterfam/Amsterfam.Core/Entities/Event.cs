@@ -5,12 +5,12 @@ public class Event
     public int Id { get; set; }
     public required string Name { get; set; }
     public string? Description { get; set; }
-    public DateOnly StartDate { get; set; }
-    public DateOnly EndDate { get; set; }
+    public DateOnly? StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
     public required string Location { get; set; }
     public DateOnly? PollRangeStart { get; set; }
     public DateOnly? PollRangeEnd { get; set; }
-    public decimal CostPerNight { get; set; }
+    public decimal? CostPerNight { get; set; }
     public EventStatus Status { get; set; } = EventStatus.Draft;
     public int CreatedById { get; set; }
     public DateTime CreatedAt { get; set; }

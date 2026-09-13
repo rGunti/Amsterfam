@@ -1,3 +1,9 @@
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 24px 0;
+}
+
 .events-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -9,14 +15,42 @@
   cursor: pointer;
 }
 
-.dates {
+.dates,
+.location {
   color: var(--mat-sys-on-surface-variant);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-icon {
+  flex-shrink: 0;
+}
+
+.status-icon.status-draft {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.status-icon.status-open {
+  color: #4caf50;
+}
+
+.status-icon.status-closed {
+  color: var(--mat-sys-error);
+}
+
 .empty {
   padding: 24px;
   color: var(--mat-sys-on-surface-variant);
+}
+
+app-organiser-avatar-stack {
+  display: block;
+  margin-top: 12px;
 }

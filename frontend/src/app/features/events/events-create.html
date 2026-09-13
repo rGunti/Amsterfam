@@ -1,0 +1,38 @@
+<mat-card class="event-card">
+  <mat-card-header>
+    <mat-card-title>New trip</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="save()" class="create-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" rows="3"></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Location</mat-label>
+        <input matInput formControlName="location" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Start date (optional)</mat-label>
+        <input matInput type="date" formControlName="startDate" />
+        <mat-hint>Leave blank to decide later via a date poll</mat-hint>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>End date (optional)</mat-label>
+        <input matInput type="date" formControlName="endDate" />
+      </mat-form-field>
+
+      <div class="actions">
+        <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+          {{ saving() ? 'Creating…' : 'Create event' }}
+        </button>
+        <button mat-button type="button" routerLink="/" [disabled]="saving()">Cancel</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

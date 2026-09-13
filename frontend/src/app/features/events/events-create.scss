@@ -1,0 +1,19 @@
+.event-card {
+  max-width: 640px;
+  margin: 24px auto;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}

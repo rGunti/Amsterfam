@@ -18,6 +18,9 @@ public static class AttendanceEndpoints
         group.MapPost("/{userId:int}/confirm", Confirm);
         group.MapDelete("/{userId:int}", RemoveAttendee);
         group.MapPut("/{userId:int}", UpdateAttendee);
+        group.MapPost("/{userId:int}/promote", PromoteToOrganiser);
+        group.MapPost("/{userId:int}/demote", DemoteOrganiser);
+        group.MapPost("/{userId:int}/transfer-ownership", TransferOwnership);
 
         return app;
     }
@@ -33,11 +36,13 @@ public static class AttendanceEndpoints
             return TypedResults.NotFound();
 
         var user = await currentUser.GetOrCreateAsync();
-        if (!await IsMember(db, eventId, user.Id))
-            return TypedResults.Forbid();
+        var isMember = await IsMember(db, eventId, user.Id);
 
-        var attendees = await db
-            .EventAttendances.Where(a => a.EventId == eventId)
+        var query = db.EventAttendances.Where(a => a.EventId == eventId);
+        if (!isMember)
+            query = query.Where(a => a.Role == AttendanceRole.Organiser);
+
+        var attendees = await query
             .Include(a => a.User)
             .Select(a => new AttendeeResponse(
                 a.UserId,
@@ -131,7 +136,108 @@ public static class AttendanceEndpoints
         if (attendance is null)
             return TypedResults.NotFound();
 
+        var isOwner = await IsOwner(db, eventId, requestingUser.Id);
+
+        if (isSelf && isOwner)
+            return TypedResults.Conflict(
+                new { error = "Transfer ownership to another organiser before leaving the event." }
+            );
+
+        if (!isSelf && attendance.Role == AttendanceRole.Organiser && !isOwner)
+            return TypedResults.Forbid();
+
         db.EventAttendances.Remove(attendance);
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> PromoteToOrganiser(
+        int eventId,
+        int userId,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var requestingUser = await currentUser.GetOrCreateAsync();
+        if (!await IsOwner(db, eventId, requestingUser.Id))
+            return TypedResults.Forbid();
+
+        var attendance = await db.EventAttendances.FirstOrDefaultAsync(a =>
+            a.EventId == eventId && a.UserId == userId
+        );
+
+        if (attendance is null)
+            return TypedResults.NotFound();
+
+        if (attendance.Role != AttendanceRole.Attendee)
+            return TypedResults.Conflict(
+                new { error = "Only confirmed attendees can be promoted to organiser." }
+            );
+
+        attendance.Role = AttendanceRole.Organiser;
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> DemoteOrganiser(
+        int eventId,
+        int userId,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var requestingUser = await currentUser.GetOrCreateAsync();
+        if (!await IsOwner(db, eventId, requestingUser.Id))
+            return TypedResults.Forbid();
+
+        if (userId == requestingUser.Id)
+            return TypedResults.Conflict(new { error = "The owner cannot demote themselves." });
+
+        var attendance = await db.EventAttendances.FirstOrDefaultAsync(a =>
+            a.EventId == eventId && a.UserId == userId
+        );
+
+        if (attendance is null)
+            return TypedResults.NotFound();
+
+        if (attendance.Role != AttendanceRole.Organiser)
+            return TypedResults.Conflict(new { error = "This attendee is not an organiser." });
+
+        attendance.Role = AttendanceRole.Attendee;
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> TransferOwnership(
+        int eventId,
+        int userId,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var requestingUser = await currentUser.GetOrCreateAsync();
+        if (!await IsOwner(db, eventId, requestingUser.Id))
+            return TypedResults.Forbid();
+
+        if (userId == requestingUser.Id)
+            return TypedResults.Conflict(
+                new { error = "You are already the owner of this event." }
+            );
+
+        var attendance = await db.EventAttendances.FirstOrDefaultAsync(a =>
+            a.EventId == eventId && a.UserId == userId
+        );
+
+        if (attendance is null || attendance.Role != AttendanceRole.Organiser)
+            return TypedResults.Conflict(
+                new { error = "Ownership can only be transferred to an existing organiser." }
+            );
+
+        var ev = await db.Events.FindAsync(eventId);
+        if (ev is null)
+            return TypedResults.NotFound();
+
+        ev.CreatedById = userId;
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }
@@ -175,4 +281,7 @@ public static class AttendanceEndpoints
 
     private static Task<bool> IsMember(AmsterfamDbContext db, int eventId, int userId) =>
         db.EventAttendances.AnyAsync(a => a.EventId == eventId && a.UserId == userId);
+
+    private static Task<bool> IsOwner(AmsterfamDbContext db, int eventId, int userId) =>
+        db.Events.AnyAsync(e => e.Id == eventId && e.CreatedById == userId);
 }
