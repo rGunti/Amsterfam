@@ -11,6 +11,13 @@ updates:
       aspnetcore:
         patterns:
           - "Microsoft.AspNetCore*"
+      entityframework:
+        patterns:
+          - "Microsoft.EntityFrameworkCore*"
+          - "Npgsql.EntityFrameworkCore*"
+      testcontainers:
+        patterns:
+          - "Testcontainers*"
     ignore:
       - dependency-name: "*"
         update-types:
