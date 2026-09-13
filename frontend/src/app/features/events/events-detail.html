@@ -256,7 +256,7 @@
               </button>
               @if (isOwner && ma.role === 'Attendee') {
                 <button mat-menu-item (click)="promoteToOrganiser(ma.userId, ma.displayName)">
-                  <mat-icon>military_tech</mat-icon> Promote to organiser
+                  <mat-icon>workspace_premium</mat-icon> Promote to organiser
                 </button>
               }
               @if (isOwner && ma.role === 'Organiser' && ma.userId !== currentUserId()) {

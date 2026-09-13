@@ -2,8 +2,12 @@
   <div class="organisers-row">
     <span class="organisers-label">Organised by</span>
     <div class="organisers-stack">
-      @for (organiser of visible().avatars; track organiser.userId) {
-        <span class="organiser-avatar-wrap" [matTooltip]="tooltipFor(organiser)">
+      @for (organiser of visible().avatars; track organiser.userId; let i = $index) {
+        <span
+          class="organiser-avatar-wrap"
+          [style.z-index]="visible().avatars.length - i"
+          [matTooltip]="tooltipFor(organiser)"
+        >
           @if (organiser.avatarUrl) {
             <img [src]="organiser.avatarUrl" alt="" class="organiser-avatar" />
           } @else {
@@ -14,6 +18,7 @@
       @if (visible().overflowCount > 0) {
         <span
           class="organiser-avatar-wrap organiser-overflow"
+          style="z-index: 0"
           [matTooltip]="visible().overflowCount + ' more organisers'"
         >
           +{{ visible().overflowCount }}
