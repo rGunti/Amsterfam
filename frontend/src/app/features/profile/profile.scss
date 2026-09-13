@@ -19,7 +19,7 @@
 
 .profile-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   padding: 16px;
 }
@@ -82,20 +82,33 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.avatar-frame {
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  transition:
+    width 0.15s ease,
+    height 0.15s ease;
+}
+
 .avatar,
 .avatar-placeholder {
-  flex-shrink: 0;
-  height: 40px;
-  width: 40px;
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
 }
 
 .avatar {
-  border-radius: 50%;
   object-fit: cover;
 }
 
 .avatar-placeholder {
-  font-size: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
 }
 
 .method-row {

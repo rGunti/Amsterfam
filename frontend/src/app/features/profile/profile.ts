@@ -1,4 +1,13 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   FormBuilder,
   FormControl,
@@ -42,6 +51,7 @@ export class Profile implements OnInit {
   private readonly paymentMethodApi = inject(PaymentMethodApi);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly user = signal<User | null>(null);
   readonly saving = signal(false);
@@ -50,10 +60,29 @@ export class Profile implements OnInit {
   readonly paymentMethods = signal<PaymentMethod[]>([]);
   readonly paymentMethodsLoading = signal(true);
 
+  readonly headerText = viewChild<ElementRef<HTMLElement>>('headerText');
+  readonly avatarSize = signal(40);
+
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
       displayName: ['', [Validators.maxLength(100)]],
     });
+
+    let resizeObserver: ResizeObserver | undefined;
+    effect(() => {
+      resizeObserver?.disconnect();
+      const el = this.headerText()?.nativeElement;
+      if (!el) {
+        return;
+      }
+      resizeObserver = new ResizeObserver(([entry]) => {
+        if (entry) {
+          this.avatarSize.set(entry.contentRect.height);
+        }
+      });
+      resizeObserver.observe(el);
+    });
+    this.destroyRef.onDestroy(() => resizeObserver?.disconnect());
   }
 
   ngOnInit(): void {

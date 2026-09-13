@@ -1,12 +1,14 @@
 @if (user(); as currentUser) {
   <mat-card class="profile-card">
     <div class="profile-header">
-      @if (currentUser.avatarUrl) {
-        <img [src]="currentUser.avatarUrl" alt="" class="avatar" />
-      } @else {
-        <mat-icon class="avatar-placeholder">account_circle</mat-icon>
-      }
-      <div class="profile-header-text">
+      <div class="avatar-frame" [style.width.px]="avatarSize()" [style.height.px]="avatarSize()">
+        @if (currentUser.avatarUrl) {
+          <img [src]="currentUser.avatarUrl" alt="" class="avatar" />
+        } @else {
+          <mat-icon class="avatar-placeholder">account_circle</mat-icon>
+        }
+      </div>
+      <div class="profile-header-text" #headerText>
         @if (editingName()) {
           <form class="name-edit-form" [formGroup]="form" (ngSubmit)="save()">
             <mat-form-field appearance="outline" class="name-edit-field" subscriptSizing="dynamic">
@@ -45,10 +47,12 @@
           </div>
         }
         <p class="handle">&#64;{{ currentUser.handle }}</p>
-        <p class="email">
-          <mat-icon>email</mat-icon>
-          {{ currentUser.email }}
-        </p>
+        @if (currentUser.email) {
+          <p class="email">
+            <mat-icon>email</mat-icon>
+            {{ currentUser.email }}
+          </p>
+        }
       </div>
     </div>
   </mat-card>
