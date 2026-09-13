@@ -1,30 +1,60 @@
 @if (user(); as currentUser) {
   <mat-card class="profile-card">
-    <mat-card-header>
-      @if (currentUser.avatarUrl) {
-        <img mat-card-avatar [src]="currentUser.avatarUrl" alt="" class="avatar" />
-      } @else {
-        <mat-icon mat-card-avatar>account_circle</mat-icon>
-      }
-      <mat-card-title>Your profile</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <p class="email">{{ currentUser.email }}</p>
-
-      <form [formGroup]="form" (ngSubmit)="save()">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Display name</mat-label>
-          <input matInput formControlName="displayName" />
-          @if (form.controls.displayName.hasError('required')) {
-            <mat-error>Display name is required</mat-error>
-          }
-        </mat-form-field>
-
-        <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
-          {{ saving() ? 'Saving…' : 'Save' }}
-        </button>
-      </form>
-    </mat-card-content>
+    <div class="profile-header">
+      <div class="avatar-frame" [style.width.px]="avatarSize()" [style.height.px]="avatarSize()">
+        @if (currentUser.avatarUrl) {
+          <img [src]="currentUser.avatarUrl" alt="" class="avatar" />
+        } @else {
+          <mat-icon class="avatar-placeholder">account_circle</mat-icon>
+        }
+      </div>
+      <div class="profile-header-text" #headerText>
+        @if (editingName()) {
+          <form class="name-edit-form" [formGroup]="form" (ngSubmit)="save()">
+            <mat-form-field appearance="outline" class="name-edit-field" subscriptSizing="dynamic">
+              <input
+                matInput
+                formControlName="displayName"
+                [placeholder]="currentUser.handle"
+                (keydown.escape)="cancelEditingName()"
+              />
+              <button
+                matSuffix
+                mat-icon-button
+                type="submit"
+                aria-label="Save display name"
+                [disabled]="form.invalid || saving()"
+              >
+                <mat-icon>check</mat-icon>
+              </button>
+              @if (form.controls.displayName.hasError('maxlength')) {
+                <mat-error>Display name is too long</mat-error>
+              }
+            </mat-form-field>
+          </form>
+        } @else {
+          <div class="name-view">
+            <mat-card-title>{{ displayNameFor(currentUser) }}</mat-card-title>
+            <button
+              mat-icon-button
+              type="button"
+              aria-label="Edit display name"
+              matTooltip="Edit display name"
+              (click)="startEditingName()"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+          </div>
+        }
+        <p class="handle">&#64;{{ currentUser.handle }}</p>
+        @if (currentUser.email) {
+          <p class="email">
+            <mat-icon>email</mat-icon>
+            {{ currentUser.email }}
+          </p>
+        }
+      </div>
+    </div>
   </mat-card>
 
   <mat-card class="profile-card">

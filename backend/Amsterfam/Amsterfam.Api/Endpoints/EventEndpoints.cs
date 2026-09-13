@@ -56,7 +56,7 @@ public static class EventEndpoints
                 e.Attendances.Where(a => a.Role == AttendanceRole.Organiser)
                     .Select(a => new OrganiserSummary(
                         a.UserId,
-                        a.User.DisplayName,
+                        a.User.DisplayName ?? a.User.Handle,
                         a.User.AvatarUrl
                     ))
                     .ToList()
@@ -116,7 +116,7 @@ public static class EventEndpoints
         await db.SaveChangesAsync();
         var organisers = new List<OrganiserSummary>
         {
-            new(user.Id, user.DisplayName, user.AvatarUrl),
+            new(user.Id, user.DisplayName ?? user.Handle, user.AvatarUrl),
         };
         return TypedResults.Created(
             $"/api/v1/events/{ev.Id}",
@@ -308,7 +308,11 @@ public static class EventEndpoints
     private static List<OrganiserSummary> OrganisersFrom(Event ev) =>
         ev
             .Attendances.Where(a => a.Role == AttendanceRole.Organiser)
-            .Select(a => new OrganiserSummary(a.UserId, a.User.DisplayName, a.User.AvatarUrl))
+            .Select(a => new OrganiserSummary(
+                a.UserId,
+                a.User.DisplayName ?? a.User.Handle,
+                a.User.AvatarUrl
+            ))
             .ToList();
 
     private static EventResponse ToResponse(

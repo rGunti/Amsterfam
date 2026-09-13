@@ -19,7 +19,7 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor, Amster
             ?? principal.FindFirstValue("sub")
             ?? throw new InvalidOperationException("Token missing sub claim.");
 
-        var displayName =
+        var handle =
             principal.FindFirstValue("preferred_username")
             ?? principal.FindFirstValue(ClaimTypes.Name)
             ?? externalId;
@@ -34,13 +34,9 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor, Amster
         var user = await db.Users.FirstOrDefaultAsync(u => u.ExternalId == externalId, ct);
         if (user is not null)
         {
-            if (
-                user.DisplayName != displayName
-                || user.Email != email
-                || user.AvatarUrl != avatarUrl
-            )
+            if (user.Handle != handle || user.Email != email || user.AvatarUrl != avatarUrl)
             {
-                user.DisplayName = displayName;
+                user.Handle = handle;
                 user.Email = email;
                 user.AvatarUrl = avatarUrl;
                 await db.SaveChangesAsync(ct);
@@ -52,7 +48,7 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor, Amster
         user = new User
         {
             ExternalId = externalId,
-            DisplayName = displayName,
+            Handle = handle,
             Email = email,
             AvatarUrl = avatarUrl,
         };

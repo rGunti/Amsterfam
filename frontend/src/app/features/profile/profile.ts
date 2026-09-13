@@ -1,4 +1,13 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   FormBuilder,
   FormControl,
@@ -11,6 +20,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -18,6 +28,7 @@ import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/co
 import { PaymentMethodDialog, PaymentMethodDialogData } from './payment-method-dialog';
 
 import { UserApi } from '../../core/api/user.api';
+import { CurrentUserService } from '../../core/api/current-user.service';
 import { PaymentMethodApi } from '../../core/api/payment-method.api';
 import { User } from '../../core/models/user';
 import { PaymentMethod } from '../../core/models/payment-method';
@@ -31,34 +42,81 @@ import { PaymentMethod } from '../../core/models/payment-method';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
 export class Profile implements OnInit {
   private readonly userApi = inject(UserApi);
+  private readonly currentUserService = inject(CurrentUserService);
   private readonly paymentMethodApi = inject(PaymentMethodApi);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
 
-  readonly user = signal<User | null>(null);
+  readonly user = this.currentUserService.user;
   readonly saving = signal(false);
+  readonly editingName = signal(false);
   readonly form: FormGroup<{ displayName: FormControl<string> }>;
   readonly paymentMethods = signal<PaymentMethod[]>([]);
   readonly paymentMethodsLoading = signal(true);
 
+  readonly headerText = viewChild<ElementRef<HTMLElement>>('headerText');
+  readonly avatarSize = signal(40);
+
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
-      displayName: ['', [Validators.required, Validators.maxLength(100)]],
+      displayName: ['', [Validators.maxLength(100)]],
+    });
+
+    let resizeObserver: ResizeObserver | undefined;
+    effect(() => {
+      resizeObserver?.disconnect();
+      const el = this.headerText()?.nativeElement;
+      if (!el) {
+        return;
+      }
+      resizeObserver = new ResizeObserver(([entry]) => {
+        if (entry) {
+          this.avatarSize.set(entry.contentRect.height);
+        }
+      });
+      resizeObserver.observe(el);
+    });
+    this.destroyRef.onDestroy(() => resizeObserver?.disconnect());
+
+    effect(() => {
+      const currentUser = this.user();
+      if (currentUser && !this.editingName()) {
+        this.form.setValue({ displayName: currentUser.displayName ?? '' });
+      }
     });
   }
 
   ngOnInit(): void {
-    this.userApi.getMe().subscribe((user) => {
-      this.user.set(user);
-      this.form.setValue({ displayName: user.displayName });
-    });
     this.loadPaymentMethods();
+  }
+
+  displayNameFor(user: User): string {
+    return user.displayName ?? user.handle;
+  }
+
+  startEditingName(): void {
+    const currentUser = this.user();
+    if (!currentUser) {
+      return;
+    }
+    this.form.setValue({ displayName: currentUser.displayName ?? '' });
+    this.editingName.set(true);
+  }
+
+  cancelEditingName(): void {
+    const currentUser = this.user();
+    if (currentUser) {
+      this.form.setValue({ displayName: currentUser.displayName ?? '' });
+    }
+    this.editingName.set(false);
   }
 
   private loadPaymentMethods(): void {
@@ -145,15 +203,17 @@ export class Profile implements OnInit {
     }
 
     this.saving.set(true);
+    const trimmedDisplayName = this.form.getRawValue().displayName.trim();
     this.userApi
       .updateMe({
-        displayName: this.form.getRawValue().displayName.trim(),
+        displayName: trimmedDisplayName.length > 0 ? trimmedDisplayName : null,
         avatarUrl: currentUser.avatarUrl,
       })
       .subscribe({
         next: (updated) => {
-          this.user.set(updated);
+          this.currentUserService.setUser(updated);
           this.saving.set(false);
+          this.editingName.set(false);
           this.snackBar.open('Profile updated', 'Dismiss', { duration: 3000 });
         },
         error: () => {
