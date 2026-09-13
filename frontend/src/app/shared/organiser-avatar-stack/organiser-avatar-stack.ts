@@ -8,7 +8,7 @@ export interface OrganiserAvatar {
   avatarUrl: string | null;
 }
 
-const MAX_VISIBLE_ORGANISERS = 6;
+const DEFAULT_MAX_VISIBLE_ORGANISERS = 6;
 
 @Component({
   selector: 'app-organiser-avatar-stack',
@@ -19,6 +19,7 @@ const MAX_VISIBLE_ORGANISERS = 6;
 export class OrganiserAvatarStack {
   readonly organisers = input<readonly OrganiserAvatar[]>([]);
   readonly ownerId = input<number | null>(null);
+  readonly maxVisible = input(DEFAULT_MAX_VISIBLE_ORGANISERS);
 
   readonly sorted = computed(() => {
     const ownerId = this.ownerId();
@@ -33,12 +34,13 @@ export class OrganiserAvatarStack {
 
   readonly visible = computed(() => {
     const all = this.sorted();
-    if (all.length <= MAX_VISIBLE_ORGANISERS) {
+    const max = this.maxVisible();
+    if (all.length <= max) {
       return { avatars: all, overflowCount: 0 };
     }
     return {
-      avatars: all.slice(0, MAX_VISIBLE_ORGANISERS - 1),
-      overflowCount: all.length - (MAX_VISIBLE_ORGANISERS - 1),
+      avatars: all.slice(0, max - 1),
+      overflowCount: all.length - (max - 1),
     };
   });
 
