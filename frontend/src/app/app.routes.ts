@@ -27,4 +27,8 @@ export const routes: Routes = [
     path: 'auth/callback',
     redirectTo: '',
   },
+  {
+    path: 'offline',
+    loadComponent: () => import('./features/offline/offline').then((m) => m.Offline),
+  },
 ];

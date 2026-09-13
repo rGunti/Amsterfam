@@ -1,6 +1,6 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -13,6 +13,7 @@ import { environment } from '../environments/environment';
 import { AuthService } from './core/auth/auth.service';
 import { CurrentUserService } from './core/api/current-user.service';
 import { VersionApi } from './core/api/version.api';
+import { InstallPromptService } from './core/install-prompt/install-prompt.service';
 
 @Component({
   selector: 'app-root',
@@ -33,7 +34,10 @@ export class App {
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly authService = inject(AuthService);
   private readonly versionApi = inject(VersionApi);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly currentUserService = inject(CurrentUserService);
+  protected readonly installPromptService = inject(InstallPromptService);
 
   protected readonly title = signal('Amsterfam');
 
@@ -55,6 +59,19 @@ export class App {
 
   constructor() {
     effect(() => this.navOpen.set(!this.isHandset().matches));
+
+    const goOffline = () => this.router.navigateByUrl('/offline');
+    const goOnline = () => {
+      if (this.router.url === '/offline') {
+        this.router.navigateByUrl('/');
+      }
+    };
+    window.addEventListener('offline', goOffline);
+    window.addEventListener('online', goOnline);
+    this.destroyRef.onDestroy(() => {
+      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online', goOnline);
+    });
   }
 
   protected onNavLinkClick(): void {
