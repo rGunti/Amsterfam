@@ -1,0 +1,59 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E5A8A"/>
+      <stop offset="100%" stop-color="#0F3A5F"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2E7CB5"/>
+      <stop offset="100%" stop-color="#1E5A8A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- canal water -->
+  <rect x="0" y="360" width="512" height="152" fill="url(#water)"/>
+
+  <!-- house 1: bell gable, left, orange -->
+  <g>
+    <path d="M96 360 V240 Q96 200 128 200 Q160 200 160 240 V360 Z" fill="#D9622B"/>
+    <rect x="96" y="240" width="64" height="120" fill="#D9622B"/>
+    <rect x="112" y="280" width="12" height="16" fill="#0F3A5F"/>
+    <rect x="132" y="280" width="12" height="16" fill="#0F3A5F"/>
+    <rect x="112" y="312" width="32" height="14" fill="#0F3A5F"/>
+  </g>
+
+  <!-- house 2: step gable, center, cream, taller -->
+  <g>
+    <path d="M176 200 h96 v-20 h-16 v-16 h-16 v-16 h-16 v16 h-16 v16 h-16 v20 v160 h64 z" fill="#F2E4C8"/>
+    <rect x="176" y="200" width="96" height="160" fill="#F2E4C8"/>
+    <rect x="196" y="230" width="16" height="20" fill="#0F3A5F"/>
+    <rect x="220" y="230" width="16" height="20" fill="#0F3A5F"/>
+    <rect x="244" y="230" width="16" height="20" fill="#0F3A5F"/>
+    <rect x="196" y="270" width="16" height="20" fill="#0F3A5F"/>
+    <rect x="244" y="270" width="16" height="20" fill="#0F3A5F"/>
+    <rect x="216" y="312" width="24" height="48" fill="#0F3A5F"/>
+  </g>
+
+  <!-- house 3: bell gable, right, red -->
+  <g>
+    <path d="M288 360 V232 Q288 188 324 188 Q360 188 360 232 V360 Z" fill="#B7402A"/>
+    <rect x="288" y="232" width="72" height="128" fill="#B7402A"/>
+    <rect x="306" y="256" width="14" height="18" fill="#0F3A5F"/>
+    <rect x="330" y="256" width="14" height="18" fill="#0F3A5F"/>
+    <rect x="306" y="292" width="14" height="18" fill="#0F3A5F"/>
+    <rect x="330" y="292" width="14" height="18" fill="#0F3A5F"/>
+    <rect x="316" y="328" width="24" height="32" fill="#0F3A5F"/>
+  </g>
+
+  <!-- house 4: narrow, far right, muted teal -->
+  <g>
+    <rect x="368" y="264" width="48" height="96" fill="#3E7A6E"/>
+    <path d="M368 264 h48 v-14 l-24 -18 l-24 18 z" fill="#3E7A6E"/>
+    <rect x="380" y="288" width="24" height="20" fill="#0F3A5F"/>
+  </g>
+
+  <!-- sun / friendship dot -->
+  <circle cx="416" cy="112" r="30" fill="#F4B740"/>
+</svg>
