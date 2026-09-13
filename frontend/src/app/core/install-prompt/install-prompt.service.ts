@@ -24,13 +24,14 @@ export class InstallPromptService {
     });
   }
 
-  async promptInstall(): Promise<void> {
+  async promptInstall(): Promise<'accepted' | 'dismissed' | null> {
     if (!this.deferredEvent) {
-      return;
+      return null;
     }
     await this.deferredEvent.prompt();
-    await this.deferredEvent.userChoice;
+    const { outcome } = await this.deferredEvent.userChoice;
     this.deferredEvent = null;
     this.canInstall.set(false);
+    return outcome;
   }
 }

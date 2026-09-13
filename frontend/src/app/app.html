@@ -40,8 +40,8 @@
         }
         <span matListItemTitle>Profile</span>
       </a>
-      @if (installPromptService.canInstall()) {
-        <button mat-list-item (click)="installPromptService.promptInstall()">
+      @if (canInstall()) {
+        <button mat-list-item (click)="promptInstall()">
           <mat-icon matListItemIcon>install_mobile</mat-icon>
           <span matListItemTitle>Install app</span>
         </button>

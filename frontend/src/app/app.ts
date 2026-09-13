@@ -1,12 +1,13 @@
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarRef, TextOnlySnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { catchError, map, of } from 'rxjs';
 import { environment } from '../environments/environment';
@@ -34,10 +35,11 @@ export class App {
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly authService = inject(AuthService);
   private readonly versionApi = inject(VersionApi);
-  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly installPromptService = inject(InstallPromptService);
   protected readonly currentUserService = inject(CurrentUserService);
-  protected readonly installPromptService = inject(InstallPromptService);
+  protected readonly canInstall = this.installPromptService.canInstall;
 
   protected readonly title = signal('Amsterfam');
 
@@ -57,20 +59,28 @@ export class App {
   protected readonly sidenavMode = computed(() => (this.isHandset().matches ? 'over' : 'side'));
   protected readonly navOpen = signal(true);
 
+  private offlineSnackBarRef: MatSnackBarRef<TextOnlySnackBar> | null = null;
+
   constructor() {
     effect(() => this.navOpen.set(!this.isHandset().matches));
 
-    const goOffline = () => this.router.navigateByUrl('/offline');
-    const goOnline = () => {
-      if (this.router.url === '/offline') {
-        this.router.navigateByUrl('/');
-      }
+    const showOfflineNotice = () => {
+      this.offlineSnackBarRef ??= this.snackBar.open("You're offline");
     };
-    window.addEventListener('offline', goOffline);
-    window.addEventListener('online', goOnline);
+    const dismissOfflineNotice = () => {
+      this.offlineSnackBarRef?.dismiss();
+      this.offlineSnackBarRef = null;
+    };
+
+    if (!navigator.onLine) {
+      showOfflineNotice();
+    }
+    window.addEventListener('offline', showOfflineNotice);
+    window.addEventListener('online', dismissOfflineNotice);
     this.destroyRef.onDestroy(() => {
-      window.removeEventListener('offline', goOffline);
-      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', showOfflineNotice);
+      window.removeEventListener('online', dismissOfflineNotice);
+      dismissOfflineNotice();
     });
   }
 
@@ -82,5 +92,14 @@ export class App {
 
   protected logout(): void {
     this.authService.logout();
+  }
+
+  protected async promptInstall(): Promise<void> {
+    const outcome = await this.installPromptService.promptInstall();
+    if (outcome === 'accepted') {
+      this.snackBar.open('Amsterfam installed', undefined, { duration: 3000 });
+    } else if (outcome === 'dismissed') {
+      this.snackBar.open('Install dismissed', undefined, { duration: 3000 });
+    }
   }
 }

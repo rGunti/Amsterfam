@@ -21,5 +21,17 @@
         ]
       }
     }
+  ],
+  "dataGroups": [
+    {
+      "name": "current-user",
+      "urls": ["http://localhost:5293/api/v1/me"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 1,
+        "maxAge": "3d",
+        "timeout": "3s"
+      }
+    }
   ]
 }

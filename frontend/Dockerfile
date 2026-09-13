@@ -15,7 +15,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN sed -i "s|http://localhost:5293|${API_ADDRESS}|" src/environments/environment.ts && \
+RUN sed -i "s|http://localhost:5293|${API_ADDRESS}|" src/environments/environment.ts ngsw-config.json && \
     sed -i "s|http://localhost:9000/application/o/amsterfam/|${OIDC_ISSUER}|" src/app/core/auth/auth.config.ts
 RUN pnpm run build
 

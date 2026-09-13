@@ -6,7 +6,7 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideOAuthClient } from 'angular-oauth2-oidc';
 
@@ -19,7 +19,16 @@ import { environment } from '../environments/environment';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      withNavigationErrorHandler((event) => {
+        if (!navigator.onLine) {
+          inject(Router).navigateByUrl('/offline');
+        } else {
+          console.error(event.error);
+        }
+      }),
+    ),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideOAuthClient(),
     provideEnvironment(environment),
