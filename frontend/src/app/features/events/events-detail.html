@@ -68,7 +68,7 @@
         </p>
         <p class="detail-row"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
         @if (ev.isMember) {
-          @if (ev.costPerNight != null) {
+          @if (ev.costPerNight !== null) {
             <p class="detail-row">
               <mat-icon inline>payments</mat-icon> {{ ev.costPerNight | currency: 'EUR' }} / night
             </p>
@@ -222,14 +222,8 @@
                 type="button"
                 class="avatar-cell"
                 [class.is-organiser]="attendee.role === 'Organiser'"
-                [matTooltip]="
-                  attendee.displayName +
-                  (attendee.userId === ev.createdById
-                    ? ' · Event owner'
-                    : attendee.role === 'Organiser'
-                      ? ' · Organiser'
-                      : '')
-                "
+                [matTooltip]="attendeeLabel(attendee)"
+                [attr.aria-label]="attendeeLabel(attendee)"
                 [matMenuTriggerFor]="attendeeMenu"
                 (click)="menuAttendee.set(attendee)"
               >

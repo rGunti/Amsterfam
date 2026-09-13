@@ -62,7 +62,7 @@ test('organiser confirms a pending attendee', async ({ page, request }) => {
   await expect(page.getByText('Attendee confirmed')).toBeVisible();
 
   const rosterCard = page.locator('mat-card', { hasText: "Who's coming" });
-  await expect(rosterCard.getByText(`Test User ${joiner}`)).toBeVisible();
+  await expect(rosterCard.getByRole('button', { name: `Test User ${joiner}` })).toBeVisible();
 });
 
 test('organiser removes a pending attendee', async ({ page, request }) => {

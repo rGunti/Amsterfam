@@ -101,8 +101,8 @@ test.describe('payment methods', () => {
     await page.goto(`/events/${eventId}`);
 
     const rosterCard = page.locator('mat-card', { hasText: "Who's coming" });
-    const otherRow = rosterCard.locator('mat-list-item', { hasText: `Test User ${other}` });
-    await otherRow.getByRole('button', { name: 'View payment methods' }).click();
+    await rosterCard.getByRole('button', { name: `Test User ${other}` }).click();
+    await page.getByRole('menuitem', { name: 'View payment methods' }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('PayPal')).toBeVisible();

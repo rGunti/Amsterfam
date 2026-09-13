@@ -133,6 +133,17 @@ export class EventsDetail implements OnInit {
     return role === 'Attendee' || role === 'Organiser';
   }
 
+  attendeeLabel(attendee: AttendeeResponse): string {
+    const ev = this.event();
+    if (attendee.userId === ev?.createdById) {
+      return `${attendee.displayName} · Event owner`;
+    }
+    if (attendee.role === 'Organiser') {
+      return `${attendee.displayName} · Organiser`;
+    }
+    return attendee.displayName;
+  }
+
   private loadEvent(id: number): void {
     this.eventApi.getEvent(id).subscribe({
       next: (event) => {

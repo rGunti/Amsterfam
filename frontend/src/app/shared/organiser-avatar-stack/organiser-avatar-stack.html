@@ -7,6 +7,7 @@
           class="organiser-avatar-wrap"
           [style.z-index]="visible().avatars.length - i"
           [matTooltip]="tooltipFor(organiser)"
+          [attr.aria-label]="tooltipFor(organiser)"
         >
           @if (organiser.avatarUrl) {
             <img [src]="organiser.avatarUrl" alt="" class="organiser-avatar" />
