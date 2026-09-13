@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { EventResponse, UpdateEventRequest } from '../models/event';
+import { CreateEventRequest, EventResponse, UpdateEventRequest } from '../models/event';
 import { ENVIRONMENT } from '../../../environments/environment.model';
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +16,10 @@ export class EventApi {
 
   getEvents(): Observable<EventResponse[]> {
     return this.http.get<EventResponse[]>(this.getUrl('/api/v1/events'));
+  }
+
+  createEvent(request: CreateEventRequest): Observable<EventResponse> {
+    return this.http.post<EventResponse>(this.getUrl('/api/v1/events'), request);
   }
 
   getEvent(id: number): Observable<EventResponse> {
@@ -40,5 +44,9 @@ export class EventApi {
 
   reopenEvent(id: number): Observable<EventResponse> {
     return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/reopen`), null);
+  }
+
+  deleteEvent(id: number): Observable<void> {
+    return this.http.delete<void>(this.getUrl(`/api/v1/events/${id}`));
   }
 }

@@ -1,3 +1,9 @@
+<div class="toolbar">
+  <button mat-flat-button color="primary" routerLink="/events/new">
+    <mat-icon>add</mat-icon> New trip
+  </button>
+</div>
+
 @if (loading()) {
   <p>Loading…</p>
 } @else if (events().length === 0) {
@@ -7,19 +13,35 @@
     @for (event of events(); track event.id) {
       <mat-card class="event-card" [routerLink]="['/events', event.id]">
         <mat-card-header>
-          <mat-card-title>{{ event.name }}</mat-card-title>
-          <mat-card-subtitle>
+          <mat-card-title class="title-row">
+            <mat-icon
+              inline
+              [class]="'status-icon status-' + event.status.toLowerCase()"
+              [matTooltip]="event.status"
+              >{{ statusIcon(event.status) }}</mat-icon
+            >
+            {{ event.name }}
+          </mat-card-title>
+          <mat-card-subtitle class="location">
             <mat-icon inline>place</mat-icon> {{ event.location }}
           </mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           <p class="dates">
             <mat-icon inline>event</mat-icon>
-            {{ event.startDate }} – {{ event.endDate }}
+            @if (event.startDate && event.endDate) {
+              {{ event.startDate }} – {{ event.endDate }}
+            } @else {
+              Dates TBD
+            }
           </p>
           <mat-chip-set>
             <mat-chip [class]="'status-' + event.status.toLowerCase()">{{ event.status }}</mat-chip>
           </mat-chip-set>
+          <app-organiser-avatar-stack
+            [organisers]="event.organisers"
+            [ownerId]="event.createdById"
+          />
         </mat-card-content>
       </mat-card>
     }

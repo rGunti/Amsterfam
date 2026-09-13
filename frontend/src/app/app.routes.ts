@@ -9,6 +9,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'events/new',
+    loadComponent: () => import('./features/events/events-create').then((m) => m.EventsCreate),
+    canActivate: [authGuard],
+  },
+  {
     path: 'events/:id',
     loadComponent: () => import('./features/events/events-detail').then((m) => m.EventsDetail),
     canActivate: [authGuard],

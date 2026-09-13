@@ -1,0 +1,24 @@
+@if (sorted().length > 0) {
+  <div class="organisers-row">
+    <span class="organisers-label">Organised by</span>
+    <div class="organisers-stack">
+      @for (organiser of visible().avatars; track organiser.userId) {
+        <span class="organiser-avatar-wrap" [matTooltip]="tooltipFor(organiser)">
+          @if (organiser.avatarUrl) {
+            <img [src]="organiser.avatarUrl" alt="" class="organiser-avatar" />
+          } @else {
+            <mat-icon class="organiser-avatar-fallback">account_circle</mat-icon>
+          }
+        </span>
+      }
+      @if (visible().overflowCount > 0) {
+        <span
+          class="organiser-avatar-wrap organiser-overflow"
+          [matTooltip]="visible().overflowCount + ' more organisers'"
+        >
+          +{{ visible().overflowCount }}
+        </span>
+      }
+    </div>
+  </div>
+}
