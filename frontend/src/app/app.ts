@@ -8,8 +8,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { catchError, map, of } from 'rxjs';
+import { environment } from '../environments/environment';
 import { AuthService } from './core/auth/auth.service';
 import { CurrentUserService } from './core/api/current-user.service';
+import { VersionApi } from './core/api/version.api';
 
 @Component({
   selector: 'app-root',
@@ -29,9 +32,19 @@ import { CurrentUserService } from './core/api/current-user.service';
 export class App {
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly authService = inject(AuthService);
+  private readonly versionApi = inject(VersionApi);
   protected readonly currentUserService = inject(CurrentUserService);
 
   protected readonly title = signal('Amsterfam');
+
+  protected readonly frontendVersion = `${environment.version}+${environment.sha}`;
+  protected readonly backendVersion = toSignal(
+    this.versionApi.getBackendVersion().pipe(
+      map((v) => `${v.version}+${v.sha}`),
+      catchError(() => of(null)),
+    ),
+    { initialValue: null },
+  );
 
   private readonly isHandset = toSignal(this.breakpointObserver.observe(Breakpoints.Handset), {
     initialValue: { matches: false, breakpoints: {} },
