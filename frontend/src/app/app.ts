@@ -6,8 +6,10 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { AuthService } from './core/auth/auth.service';
+import { CurrentUserService } from './core/api/current-user.service';
 
 @Component({
   selector: 'app-root',
@@ -19,6 +21,7 @@ import { AuthService } from './core/auth/auth.service';
     MatListModule,
     MatIconModule,
     MatButtonModule,
+    MatTooltipModule,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -26,6 +29,7 @@ import { AuthService } from './core/auth/auth.service';
 export class App {
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly authService = inject(AuthService);
+  protected readonly currentUserService = inject(CurrentUserService);
 
   protected readonly title = signal('Amsterfam');
 

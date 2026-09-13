@@ -28,6 +28,7 @@ import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/co
 import { PaymentMethodDialog, PaymentMethodDialogData } from './payment-method-dialog';
 
 import { UserApi } from '../../core/api/user.api';
+import { CurrentUserService } from '../../core/api/current-user.service';
 import { PaymentMethodApi } from '../../core/api/payment-method.api';
 import { User } from '../../core/models/user';
 import { PaymentMethod } from '../../core/models/payment-method';
@@ -48,12 +49,13 @@ import { PaymentMethod } from '../../core/models/payment-method';
 })
 export class Profile implements OnInit {
   private readonly userApi = inject(UserApi);
+  private readonly currentUserService = inject(CurrentUserService);
   private readonly paymentMethodApi = inject(PaymentMethodApi);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly user = signal<User | null>(null);
+  readonly user = this.currentUserService.user;
   readonly saving = signal(false);
   readonly editingName = signal(false);
   readonly form: FormGroup<{ displayName: FormControl<string> }>;
@@ -83,13 +85,16 @@ export class Profile implements OnInit {
       resizeObserver.observe(el);
     });
     this.destroyRef.onDestroy(() => resizeObserver?.disconnect());
+
+    effect(() => {
+      const currentUser = this.user();
+      if (currentUser && !this.editingName()) {
+        this.form.setValue({ displayName: currentUser.displayName ?? '' });
+      }
+    });
   }
 
   ngOnInit(): void {
-    this.userApi.getMe().subscribe((user) => {
-      this.user.set(user);
-      this.form.setValue({ displayName: user.displayName ?? '' });
-    });
     this.loadPaymentMethods();
   }
 
@@ -206,7 +211,7 @@ export class Profile implements OnInit {
       })
       .subscribe({
         next: (updated) => {
-          this.user.set(updated);
+          this.currentUserService.setUser(updated);
           this.saving.set(false);
           this.editingName.set(false);
           this.snackBar.open('Profile updated', 'Dismiss', { duration: 3000 });

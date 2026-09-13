@@ -7,6 +7,39 @@ mat-toolbar {
   }
 }
 
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-avatar {
+  display: flex;
+  height: 36px;
+  width: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  color: var(--mat-sys-on-primary);
+
+  img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  mat-icon {
+    height: 100%;
+    width: 100%;
+    font-size: 36px;
+  }
+}
+
+.nav-avatar {
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 :host {
   display: flex;
   flex-direction: column;
