@@ -5,6 +5,8 @@ export interface Environment {
   useFakeAuth: boolean;
   fakeAuthToken?: string;
   fakeAuthExternalId?: string;
+  version: string;
+  sha: string;
 }
 
 export const ENVIRONMENT = new InjectionToken<Environment>('appEnvironment');

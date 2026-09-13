@@ -53,6 +53,8 @@ mat-toolbar {
 
 .sidenav {
   width: 220px;
+  display: flex;
+  flex-direction: column;
 
   button[mat-list-item] {
     border: none;
@@ -60,6 +62,16 @@ mat-toolbar {
     width: 100%;
     text-align: left;
   }
+}
+
+.version-info {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .main-content {
