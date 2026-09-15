@@ -6,6 +6,12 @@ FROM node:26-alpine AS build
 ARG API_ADDRESS=http://localhost:5293
 ARG OIDC_ISSUER=http://localhost:9000/application/o/amsterfam/
 
+# The build context here doesn't include .git (it's a subdirectory of the
+# repo), so scripts/set-version.js's own `git rev-parse` fallback can't
+# work — the SHA is passed in from outside instead.
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
+
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN npm install -g pnpm@10.20.0

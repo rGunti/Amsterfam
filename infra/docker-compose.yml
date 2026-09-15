@@ -98,6 +98,8 @@ services:
     build:
       context: ../backend/Amsterfam
       dockerfile: Dockerfile
+      args:
+        SOURCE_REVISION_ID: ${GIT_SHA:-unknown}
     restart: unless-stopped
     environment:
       ConnectionStrings__Default: "Host=db;Database=amsterfam;Username=amsterfam;Password=${POSTGRES_PASSWORD:-amsterfam}"
@@ -119,6 +121,7 @@ services:
       args:
         API_ADDRESS: ${API_ADDRESS:-http://localhost:5293}
         OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:9000/application/o/amsterfam/}
+        GIT_SHA: ${GIT_SHA:-unknown}
     restart: unless-stopped
     profiles:
       - full
