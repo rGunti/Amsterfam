@@ -25,7 +25,7 @@ export const routes: Routes = [
   },
   {
     path: 'auth/callback',
-    redirectTo: '',
+    loadComponent: () => import('./features/auth/auth-callback').then((m) => m.AuthCallback),
   },
   {
     path: 'offline',

@@ -4,6 +4,8 @@ import { OAuthService } from 'angular-oauth2-oidc';
 import { environment } from '../../../environments/environment';
 import { authConfig } from './auth.config';
 
+export const RETURN_URL_KEY = 'auth.returnUrl';
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly oauthService = inject(OAuthService);
@@ -43,10 +45,14 @@ export class AuthService {
     this.isAuthenticated.set(this.oauthService.hasValidAccessToken());
   }
 
-  login(): void {
+  login(returnUrl?: string): void {
     if (environment.useFakeAuth) {
       this.isAuthenticated.set(true);
       return;
+    }
+
+    if (returnUrl && returnUrl !== '/auth/callback') {
+      sessionStorage.setItem(RETURN_URL_KEY, returnUrl);
     }
 
     this.oauthService.initCodeFlow();
