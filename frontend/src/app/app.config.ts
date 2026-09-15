@@ -8,7 +8,7 @@ import {
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Router, provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
-import { provideOAuthClient } from 'angular-oauth2-oidc';
+import { OAuthStorage, provideOAuthClient } from 'angular-oauth2-oidc';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
@@ -33,6 +33,10 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideOAuthClient(),
+    // Tokens default to sessionStorage otherwise, which is wiped whenever the
+    // PWA/tab is closed and forces a fresh interactive login on every launch
+    // even though the refresh token is still valid for days. See issue #85.
+    { provide: OAuthStorage, useFactory: () => localStorage },
     provideEnvironment(environment),
     provideAppInitializer(() => inject(AuthService).init()),
     provideServiceWorker('ngsw-worker.js', {

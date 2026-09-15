@@ -26,6 +26,20 @@ export class AuthService {
 
     this.oauthService.setupAutomaticSilentRefresh();
     await this.oauthService.loadDiscoveryDocumentAndTryLogin();
+
+    // setupAutomaticSilentRefresh() only arms a timer that fires before the
+    // currently loaded token's expiry — it does nothing for a token that is
+    // already expired by the time the app is opened (e.g. reopened the next
+    // day). If we still have a refresh token, try it eagerly before falling
+    // back to an interactive login.
+    if (!this.oauthService.hasValidAccessToken() && !!this.oauthService.getRefreshToken()) {
+      try {
+        await this.oauthService.refreshToken();
+      } catch {
+        // Refresh token expired/invalid — fall through to interactive login.
+      }
+    }
+
     this.isAuthenticated.set(this.oauthService.hasValidAccessToken());
   }
 
