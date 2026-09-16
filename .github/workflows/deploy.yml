@@ -33,12 +33,16 @@ jobs:
           echo "${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
       - name: Run deploy playbook
-        working-directory: infra/ansible
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 15
+          max_attempts: 2
+          command: |
+            cd infra/ansible
+            echo "$ANSIBLE_VAULT_PASSWORD" > /tmp/vault_pass
+            ansible-playbook deploy.yml \
+              --private-key ~/.ssh/deploy_key \
+              --vault-password-file /tmp/vault_pass
+            rm -f /tmp/vault_pass
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-        run: |
-          echo "$ANSIBLE_VAULT_PASSWORD" > /tmp/vault_pass
-          ansible-playbook deploy.yml \
-            --private-key ~/.ssh/deploy_key \
-            --vault-password-file /tmp/vault_pass
-          rm -f /tmp/vault_pass
