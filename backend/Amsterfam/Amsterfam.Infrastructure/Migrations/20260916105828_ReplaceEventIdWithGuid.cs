@@ -138,7 +138,10 @@ namespace Amsterfam.Infrastructure.Migrations
             migrationBuilder.DropPrimaryKey(name: "PK_Events", table: "Events");
 
             migrationBuilder.Sql(
-                """ALTER TABLE "Events" ALTER COLUMN "Id" TYPE integer USING 0;"""
+                """
+                ALTER TABLE "Events" ALTER COLUMN "Id" DROP DEFAULT;
+                ALTER TABLE "Events" ALTER COLUMN "Id" TYPE integer USING 0;
+                """
             );
 
             migrationBuilder.AddPrimaryKey(name: "PK_Events", table: "Events", column: "Id");
@@ -149,13 +152,14 @@ namespace Amsterfam.Infrastructure.Migrations
 
             foreach (var (table, index) in DependentTables)
             {
-                migrationBuilder.AddForeignKey(
-                    name: $"FK_{table}_Events_EventId",
-                    table: table,
-                    column: "EventId",
-                    principalTable: "Events",
-                    principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade
+                // Every zeroed EventId is now dangling (no Events.Id is ever 0), so the
+                // constraint is added NOT VALID: it applies to future writes without
+                // requiring the already-severed historical rows to satisfy it.
+                migrationBuilder.Sql(
+                    $"""
+                    ALTER TABLE "{table}" ADD CONSTRAINT "FK_{table}_Events_EventId"
+                    FOREIGN KEY ("EventId") REFERENCES "Events" ("Id") ON DELETE CASCADE NOT VALID;
+                    """
                 );
 
                 migrationBuilder.CreateIndex(
