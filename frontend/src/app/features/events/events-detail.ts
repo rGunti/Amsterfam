@@ -113,9 +113,13 @@ export class EventsDetail implements OnInit {
   }
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+    const id = this.route.snapshot.paramMap.get('id');
     this.userApi.getMe().subscribe((me) => this.currentUserId.set(me.id));
-    this.loadEvent(id);
+    if (id) {
+      this.loadEvent(id);
+    } else {
+      this.loading.set(false);
+    }
   }
 
   get isOrganiser(): boolean {
@@ -144,7 +148,7 @@ export class EventsDetail implements OnInit {
     return attendee.displayName;
   }
 
-  private loadEvent(id: number): void {
+  private loadEvent(id: string): void {
     this.eventApi.getEvent(id).subscribe({
       next: (event) => {
         this.setEvent(event);
@@ -156,7 +160,7 @@ export class EventsDetail implements OnInit {
     });
   }
 
-  private loadAttendees(eventId: number): void {
+  private loadAttendees(eventId: string): void {
     this.attendeesLoading.set(true);
     this.attendanceApi.getAttendees(eventId).subscribe({
       next: (attendees) => {

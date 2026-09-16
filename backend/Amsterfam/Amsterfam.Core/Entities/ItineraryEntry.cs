@@ -3,7 +3,7 @@ namespace Amsterfam.Core.Entities;
 public class ItineraryEntry
 {
     public int Id { get; set; }
-    public int EventId { get; set; }
+    public Guid EventId { get; set; }
     public DateOnly Date { get; set; }
     public TimeOnly? Time { get; set; }
     public required string Title { get; set; }

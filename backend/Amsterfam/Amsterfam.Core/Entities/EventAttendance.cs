@@ -3,7 +3,7 @@ namespace Amsterfam.Core.Entities;
 public class EventAttendance
 {
     public int Id { get; set; }
-    public int EventId { get; set; }
+    public Guid EventId { get; set; }
     public int UserId { get; set; }
     public AttendanceRole Role { get; set; } = AttendanceRole.Pending;
     public DateOnly? PlannedArrival { get; set; }

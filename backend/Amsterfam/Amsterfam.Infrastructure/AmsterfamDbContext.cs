@@ -34,6 +34,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
 
         modelBuilder.Entity<Event>(e =>
         {
+            e.Property(ev => ev.Id).ValueGeneratedNever();
             e.Property(ev => ev.Status).HasConversion<string>();
             e.Property(ev => ev.CreatedAt).HasDefaultValueSql("now()");
             e.HasOne(ev => ev.CreatedBy)

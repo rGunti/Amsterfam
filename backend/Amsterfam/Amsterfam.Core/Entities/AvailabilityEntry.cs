@@ -3,7 +3,7 @@ namespace Amsterfam.Core.Entities;
 public class AvailabilityEntry
 {
     public int Id { get; set; }
-    public int EventId { get; set; }
+    public Guid EventId { get; set; }
     public int UserId { get; set; }
     public DateOnly Date { get; set; }
     public AvailabilityStatus Status { get; set; }

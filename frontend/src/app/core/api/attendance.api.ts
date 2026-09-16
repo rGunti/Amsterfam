@@ -14,40 +14,40 @@ export class AttendanceApi {
     return `${this.env.apiAddress}${route}`;
   }
 
-  getAttendees(eventId: number): Observable<AttendeeResponse[]> {
+  getAttendees(eventId: string): Observable<AttendeeResponse[]> {
     return this.http.get<AttendeeResponse[]>(this.getUrl(`/api/v1/events/${eventId}/attendees`));
   }
 
-  join(eventId: number): Observable<void> {
+  join(eventId: string): Observable<void> {
     return this.http.post<void>(this.getUrl(`/api/v1/events/${eventId}/attendees/join`), null);
   }
 
-  confirm(eventId: number, userId: number): Observable<void> {
+  confirm(eventId: string, userId: number): Observable<void> {
     return this.http.post<void>(
       this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}/confirm`),
       null,
     );
   }
 
-  remove(eventId: number, userId: number): Observable<void> {
+  remove(eventId: string, userId: number): Observable<void> {
     return this.http.delete<void>(this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}`));
   }
 
-  promote(eventId: number, userId: number): Observable<void> {
+  promote(eventId: string, userId: number): Observable<void> {
     return this.http.post<void>(
       this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}/promote`),
       null,
     );
   }
 
-  demote(eventId: number, userId: number): Observable<void> {
+  demote(eventId: string, userId: number): Observable<void> {
     return this.http.post<void>(
       this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}/demote`),
       null,
     );
   }
 
-  transferOwnership(eventId: number, userId: number): Observable<void> {
+  transferOwnership(eventId: string, userId: number): Observable<void> {
     return this.http.post<void>(
       this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}/transfer-ownership`),
       null,

@@ -3,7 +3,7 @@ using Amsterfam.Core.Entities;
 namespace Amsterfam.Api.Dtos;
 
 public record EventResponse(
-    int Id,
+    Guid Id,
     string Name,
     string? Description,
     DateOnly? StartDate,

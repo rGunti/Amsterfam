@@ -7,6 +7,7 @@ REST with RPC-style endpoints (`POST` + verb in path) where actions don't map cl
 ## Design Notes
 
 - All event-scoped resources nested under `/api/v1/events/{id}` — event membership checked once at route group level
+- `{id}` in all event-scoped routes is a GUID (`Event.Id`), not a sequential integer — keeps event URLs from being guessable/enumerable. Child-entity ids not directly tied to Event stay plain integers
 - `/me` shortcuts for common self-service operations; frontend doesn't need to track current user ID
 - Superuser-only endpoints grouped under `/api/v1/admin/` — single policy applied to entire route group
 - URL versioning: `/api/v1/...`

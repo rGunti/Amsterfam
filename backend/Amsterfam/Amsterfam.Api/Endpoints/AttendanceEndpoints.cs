@@ -11,7 +11,7 @@ public static class AttendanceEndpoints
 {
     public static IEndpointRouteBuilder MapAttendanceEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/events/{eventId:int}/attendees").RequireAuthorization();
+        var group = app.MapGroup("/api/v1/events/{eventId:guid}/attendees").RequireAuthorization();
 
         group.MapGet("/", GetAttendees);
         group.MapPost("/join", Join);
@@ -26,7 +26,7 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> GetAttendees(
-        int eventId,
+        Guid eventId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -58,7 +58,7 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> Join(
-        int eventId,
+        Guid eventId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -93,7 +93,7 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> Confirm(
-        int eventId,
+        Guid eventId,
         int userId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -116,7 +116,7 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> RemoveAttendee(
-        int eventId,
+        Guid eventId,
         int userId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -152,7 +152,7 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> PromoteToOrganiser(
-        int eventId,
+        Guid eventId,
         int userId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -180,7 +180,7 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> DemoteOrganiser(
-        int eventId,
+        Guid eventId,
         int userId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -209,7 +209,7 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> TransferOwnership(
-        int eventId,
+        Guid eventId,
         int userId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -243,7 +243,7 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> UpdateAttendee(
-        int eventId,
+        Guid eventId,
         int userId,
         [FromBody] UpdateAttendanceRequest request,
         ICurrentUserService currentUser,
@@ -274,14 +274,14 @@ public static class AttendanceEndpoints
         return TypedResults.NoContent();
     }
 
-    private static Task<bool> IsOrganiser(AmsterfamDbContext db, int eventId, int userId) =>
+    private static Task<bool> IsOrganiser(AmsterfamDbContext db, Guid eventId, int userId) =>
         db.EventAttendances.AnyAsync(a =>
             a.EventId == eventId && a.UserId == userId && a.Role == AttendanceRole.Organiser
         );
 
-    private static Task<bool> IsMember(AmsterfamDbContext db, int eventId, int userId) =>
+    private static Task<bool> IsMember(AmsterfamDbContext db, Guid eventId, int userId) =>
         db.EventAttendances.AnyAsync(a => a.EventId == eventId && a.UserId == userId);
 
-    private static Task<bool> IsOwner(AmsterfamDbContext db, int eventId, int userId) =>
+    private static Task<bool> IsOwner(AmsterfamDbContext db, Guid eventId, int userId) =>
         db.Events.AnyAsync(e => e.Id == eventId && e.CreatedById == userId);
 }
