@@ -22,31 +22,31 @@ export class EventApi {
     return this.http.post<EventResponse>(this.getUrl('/api/v1/events'), request);
   }
 
-  getEvent(id: number): Observable<EventResponse> {
+  getEvent(id: string): Observable<EventResponse> {
     return this.http.get<EventResponse>(this.getUrl(`/api/v1/events/${id}`));
   }
 
-  updateEvent(id: number, request: UpdateEventRequest): Observable<EventResponse> {
+  updateEvent(id: string, request: UpdateEventRequest): Observable<EventResponse> {
     return this.http.put<EventResponse>(this.getUrl(`/api/v1/events/${id}`), request);
   }
 
-  publishEvent(id: number): Observable<EventResponse> {
+  publishEvent(id: string): Observable<EventResponse> {
     return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/publish`), null);
   }
 
-  unpublishEvent(id: number): Observable<EventResponse> {
+  unpublishEvent(id: string): Observable<EventResponse> {
     return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/unpublish`), null);
   }
 
-  closeEvent(id: number): Observable<EventResponse> {
+  closeEvent(id: string): Observable<EventResponse> {
     return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/close`), null);
   }
 
-  reopenEvent(id: number): Observable<EventResponse> {
+  reopenEvent(id: string): Observable<EventResponse> {
     return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/reopen`), null);
   }
 
-  deleteEvent(id: number): Observable<void> {
+  deleteEvent(id: string): Observable<void> {
     return this.http.delete<void>(this.getUrl(`/api/v1/events/${id}`));
   }
 }

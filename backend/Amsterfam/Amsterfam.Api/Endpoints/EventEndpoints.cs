@@ -15,13 +15,13 @@ public static class EventEndpoints
 
         group.MapGet("/", GetEvents);
         group.MapPost("/", CreateEvent);
-        group.MapGet("/{id:int}", GetEvent);
-        group.MapPut("/{id:int}", UpdateEvent);
-        group.MapDelete("/{id:int}", DeleteEvent);
-        group.MapPost("/{id:int}/publish", PublishEvent);
-        group.MapPost("/{id:int}/unpublish", UnpublishEvent);
-        group.MapPost("/{id:int}/close", CloseEvent);
-        group.MapPost("/{id:int}/reopen", ReopenEvent);
+        group.MapGet("/{id:guid}", GetEvent);
+        group.MapPut("/{id:guid}", UpdateEvent);
+        group.MapDelete("/{id:guid}", DeleteEvent);
+        group.MapPost("/{id:guid}/publish", PublishEvent);
+        group.MapPost("/{id:guid}/unpublish", UnpublishEvent);
+        group.MapPost("/{id:guid}/close", CloseEvent);
+        group.MapPost("/{id:guid}/reopen", ReopenEvent);
 
         return app;
     }
@@ -66,7 +66,7 @@ public static class EventEndpoints
     }
 
     private static async Task<IResult> GetEvent(
-        int id,
+        Guid id,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -125,7 +125,7 @@ public static class EventEndpoints
     }
 
     private static async Task<IResult> UpdateEvent(
-        int id,
+        Guid id,
         [FromBody] UpdateEventRequest request,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -153,7 +153,7 @@ public static class EventEndpoints
     }
 
     private static async Task<IResult> DeleteEvent(
-        int id,
+        Guid id,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -172,7 +172,7 @@ public static class EventEndpoints
     }
 
     private static async Task<IResult> PublishEvent(
-        int id,
+        Guid id,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -198,7 +198,7 @@ public static class EventEndpoints
     }
 
     private static async Task<IResult> UnpublishEvent(
-        int id,
+        Guid id,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -231,7 +231,7 @@ public static class EventEndpoints
     }
 
     private static async Task<IResult> CloseEvent(
-        int id,
+        Guid id,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -255,7 +255,7 @@ public static class EventEndpoints
     }
 
     private static async Task<IResult> ReopenEvent(
-        int id,
+        Guid id,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -282,7 +282,7 @@ public static class EventEndpoints
 
     private static async Task<bool> IsOrganiserOrSuperuser(
         AmsterfamDbContext db,
-        int eventId,
+        Guid eventId,
         int userId
     )
     {
@@ -291,7 +291,7 @@ public static class EventEndpoints
         );
     }
 
-    private static async Task<string?> GetUserRole(AmsterfamDbContext db, int eventId, int userId)
+    private static async Task<string?> GetUserRole(AmsterfamDbContext db, Guid eventId, int userId)
     {
         return await db
             .EventAttendances.Where(a => a.EventId == eventId && a.UserId == userId)
@@ -299,7 +299,7 @@ public static class EventEndpoints
             .FirstOrDefaultAsync();
     }
 
-    private static Task<Event?> LoadEventWithOrganisers(AmsterfamDbContext db, int eventId) =>
+    private static Task<Event?> LoadEventWithOrganisers(AmsterfamDbContext db, Guid eventId) =>
         db
             .Events.Include(e => e.Attendances)
                 .ThenInclude(a => a.User)

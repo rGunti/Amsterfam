@@ -3,7 +3,7 @@ namespace Amsterfam.Core.Entities;
 public class Accommodation
 {
     public int Id { get; set; }
-    public int EventId { get; set; }
+    public Guid EventId { get; set; }
     public required string Name { get; set; }
     public string? Notes { get; set; }
 

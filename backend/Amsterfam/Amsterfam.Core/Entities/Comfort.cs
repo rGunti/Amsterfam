@@ -16,7 +16,7 @@ public class ComfortQuestionTemplate
 public class EventComfortQuestion
 {
     public int Id { get; set; }
-    public int EventId { get; set; }
+    public Guid EventId { get; set; }
     public int TemplateId { get; set; }
     public int SortOrder { get; set; }
     public bool IsRequired { get; set; }

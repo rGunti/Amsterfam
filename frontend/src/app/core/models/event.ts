@@ -8,7 +8,7 @@ export interface OrganiserSummary {
 }
 
 export interface EventResponse {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   startDate: string | null; // DateOnly "yyyy-MM-dd"

@@ -45,7 +45,7 @@ Per user, list of preferred ways for others to pay them back (splitting costs). 
 - Readable by any authenticated user (not just the owner), so attendees can find how to pay each other; only the owner can create/update/delete their own methods
 
 ### Event
-- `Id`, `Name`, `Description`, `StartDate`, `EndDate`, `Location`
+- `Id` (Guid — external/URL identifier, not a sequential integer, to keep event URLs from being guessable), `Name`, `Description`, `StartDate`, `EndDate`, `Location`
 - `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable only while `Status` is `Draft`
 - `CostPerNight` (decimal)
 - `Status`: Draft | Open | Closed
@@ -53,7 +53,7 @@ Per user, list of preferred ways for others to pay them back (splitting costs). 
 
 ### EventAttendance
 Join between User and Event.
-- `Id`, `EventId`, `UserId`, `Role` (Organiser | Attendee | Pending)
+- `Id`, `EventId` (Guid, matches `Event.Id`), `UserId`, `Role` (Organiser | Attendee | Pending)
 - `PlannedArrival`, `PlannedDeparture`
 - `AmountPaid` (decimal)
 - `CostOverride` (decimal?) — null = use calculated value; set by organiser for edge cases (complimentary stays, special arrangements)

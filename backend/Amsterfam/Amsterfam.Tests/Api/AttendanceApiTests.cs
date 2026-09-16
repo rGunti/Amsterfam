@@ -203,7 +203,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     private async Task<UserResponse> JoinAndConfirm(
         HttpClient organiser,
         HttpClient attendee,
-        int eventId
+        Guid eventId
     )
     {
         await attendee.PostAsync($"/api/v1/events/{eventId}/attendees/join", null);

@@ -19,25 +19,25 @@ export class DatePollApi {
     return `${this.env.apiAddress}${route}`;
   }
 
-  setRange(eventId: number, request: UpdatePollRangeRequest): Observable<DatePollSummaryResponse> {
+  setRange(eventId: string, request: UpdatePollRangeRequest): Observable<DatePollSummaryResponse> {
     return this.http.put<DatePollSummaryResponse>(
       this.getUrl(`/api/v1/events/${eventId}/date-poll/range`),
       request,
     );
   }
 
-  getSummary(eventId: number): Observable<DatePollSummaryResponse> {
+  getSummary(eventId: string): Observable<DatePollSummaryResponse> {
     return this.http.get<DatePollSummaryResponse>(
       this.getUrl(`/api/v1/events/${eventId}/date-poll`),
     );
   }
 
-  getMyEntries(eventId: number): Observable<DatePollEntry[]> {
+  getMyEntries(eventId: string): Observable<DatePollEntry[]> {
     return this.http.get<DatePollEntry[]>(this.getUrl(`/api/v1/events/${eventId}/date-poll/me`));
   }
 
   updateMyEntries(
-    eventId: number,
+    eventId: string,
     request: UpdateDatePollEntriesRequest,
   ): Observable<DatePollEntry[]> {
     return this.http.put<DatePollEntry[]>(
@@ -46,7 +46,7 @@ export class DatePollApi {
     );
   }
 
-  deleteMyEntry(eventId: number, weekStart: string): Observable<void> {
+  deleteMyEntry(eventId: string, weekStart: string): Observable<void> {
     return this.http.delete<void>(
       this.getUrl(`/api/v1/events/${eventId}/date-poll/me/${weekStart}`),
     );

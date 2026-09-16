@@ -11,7 +11,7 @@ public static class DatePollEndpoints
 {
     public static IEndpointRouteBuilder MapDatePollEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/events/{eventId:int}/date-poll").RequireAuthorization();
+        var group = app.MapGroup("/api/v1/events/{eventId:guid}/date-poll").RequireAuthorization();
 
         group.MapPut("/range", SetPollRange);
         group.MapGet("/", GetSummary);
@@ -23,7 +23,7 @@ public static class DatePollEndpoints
     }
 
     private static async Task<IResult> SetPollRange(
-        int eventId,
+        Guid eventId,
         [FromBody] UpdatePollRangeRequest request,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -64,7 +64,7 @@ public static class DatePollEndpoints
     }
 
     private static async Task<IResult> GetSummary(
-        int eventId,
+        Guid eventId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -81,7 +81,7 @@ public static class DatePollEndpoints
     }
 
     private static async Task<IResult> GetMyEntries(
-        int eventId,
+        Guid eventId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
@@ -103,7 +103,7 @@ public static class DatePollEndpoints
     }
 
     private static async Task<IResult> UpdateMyEntries(
-        int eventId,
+        Guid eventId,
         [FromBody] UpdateDatePollEntriesRequest request,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -185,7 +185,7 @@ public static class DatePollEndpoints
     }
 
     private static async Task<IResult> DeleteMyEntry(
-        int eventId,
+        Guid eventId,
         string weekStart,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
@@ -277,7 +277,7 @@ public static class DatePollEndpoints
 
     private static async Task<bool> IsOrganiserOrSuperuser(
         AmsterfamDbContext db,
-        int eventId,
+        Guid eventId,
         int userId
     )
     {
@@ -288,7 +288,7 @@ public static class DatePollEndpoints
 
     private static async Task<bool> IsConfirmedMember(
         AmsterfamDbContext db,
-        int eventId,
+        Guid eventId,
         int userId
     )
     {
