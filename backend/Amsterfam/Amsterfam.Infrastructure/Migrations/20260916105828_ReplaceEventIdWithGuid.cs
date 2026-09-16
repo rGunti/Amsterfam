@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -9,50 +8,99 @@ namespace Amsterfam.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class ReplaceEventIdWithGuid : Migration
     {
-        private static readonly string[] DependentTables =
+        private sealed record EventIndex(string Name, string[] Columns, bool Unique);
+
+        private static readonly (string Table, EventIndex Index)[] DependentTables =
         [
-            "Accommodations",
-            "Activities",
-            "AvailabilityEntries",
-            "EventAttendances",
-            "EventComfortQuestions",
-            "ShoppingItems",
-            "ItineraryEntries",
-            "DatePollEntries",
+            ("Accommodations", new EventIndex("IX_Accommodations_EventId", ["EventId"], false)),
+            ("Activities", new EventIndex("IX_Activities_EventId", ["EventId"], false)),
+            (
+                "AvailabilityEntries",
+                new EventIndex(
+                    "IX_AvailabilityEntries_EventId_UserId_Date",
+                    ["EventId", "UserId", "Date"],
+                    true
+                )
+            ),
+            (
+                "EventAttendances",
+                new EventIndex("IX_EventAttendances_EventId_UserId", ["EventId", "UserId"], true)
+            ),
+            (
+                "EventComfortQuestions",
+                new EventIndex(
+                    "IX_EventComfortQuestions_EventId_TemplateId",
+                    ["EventId", "TemplateId"],
+                    true
+                )
+            ),
+            ("ShoppingItems", new EventIndex("IX_ShoppingItems_EventId", ["EventId"], false)),
+            ("ItineraryEntries", new EventIndex("IX_ItineraryEntries_EventId", ["EventId"], false)),
+            (
+                "DatePollEntries",
+                new EventIndex(
+                    "IX_DatePollEntries_EventId_UserId_WeekStart",
+                    ["EventId", "UserId", "WeekStart"],
+                    true
+                )
+            ),
         ];
 
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // Event.Id switches from a sequential int to a Guid so event URLs stop being
-            // guessable (see issue #93). This is a destructive migration: it has no
-            // meaningful int->uuid value mapping, and the app has no production data yet,
-            // so all event-scoped data is wiped rather than backfilled with disconnected
-            // random guids that would silently break existing relationships.
-            foreach (var table in DependentTables)
-                migrationBuilder.DropForeignKey(name: $"FK_{table}_Events_EventId", table: table);
-
-            migrationBuilder.Sql(
-                $"""TRUNCATE TABLE {string.Join(", ", DependentTables.Select(t => $"\"{t}\""))}, "Events" RESTART IDENTITY CASCADE;"""
+            // guessable (see issue #93). Existing rows and relationships are preserved:
+            // each Event gets a freshly generated Guid, and every dependent table's
+            // EventId is backfilled to match its (former) parent before the old int
+            // columns are dropped.
+            migrationBuilder.AddColumn<Guid>(
+                name: "IdNew",
+                table: "Events",
+                type: "uuid",
+                nullable: false,
+                defaultValueSql: "gen_random_uuid()"
             );
 
-            migrationBuilder.DropPrimaryKey(name: "PK_Events", table: "Events");
-
-            migrationBuilder.Sql(
-                """
-                ALTER TABLE "Events" ALTER COLUMN "Id" DROP IDENTITY IF EXISTS;
-                ALTER TABLE "Events" ALTER COLUMN "Id" TYPE uuid USING gen_random_uuid();
-                """
-            );
-
-            migrationBuilder.AddPrimaryKey(name: "PK_Events", table: "Events", column: "Id");
-
-            foreach (var table in DependentTables)
+            foreach (var (table, index) in DependentTables)
             {
-                migrationBuilder.Sql(
-                    $"""ALTER TABLE "{table}" ALTER COLUMN "EventId" TYPE uuid USING gen_random_uuid();"""
+                migrationBuilder.AddColumn<Guid>(
+                    name: "EventIdNew",
+                    table: table,
+                    type: "uuid",
+                    nullable: true
                 );
 
+                migrationBuilder.Sql(
+                    $"""
+                    UPDATE "{table}" t SET "EventIdNew" = e."IdNew"
+                    FROM "Events" e WHERE t."EventId" = e."Id";
+                    """
+                );
+
+                migrationBuilder.AlterColumn<Guid>(
+                    name: "EventIdNew",
+                    table: table,
+                    type: "uuid",
+                    nullable: false,
+                    oldClrType: typeof(Guid),
+                    oldType: "uuid",
+                    oldNullable: true
+                );
+
+                migrationBuilder.DropForeignKey(name: $"FK_{table}_Events_EventId", table: table);
+                migrationBuilder.DropIndex(name: index.Name, table: table);
+                migrationBuilder.DropColumn(name: "EventId", table: table);
+                migrationBuilder.RenameColumn(name: "EventIdNew", table: table, newName: "EventId");
+            }
+
+            migrationBuilder.DropPrimaryKey(name: "PK_Events", table: "Events");
+            migrationBuilder.DropColumn(name: "Id", table: "Events");
+            migrationBuilder.RenameColumn(name: "IdNew", table: "Events", newName: "Id");
+            migrationBuilder.AddPrimaryKey(name: "PK_Events", table: "Events", column: "Id");
+
+            foreach (var (table, index) in DependentTables)
+            {
                 migrationBuilder.AddForeignKey(
                     name: $"FK_{table}_Events_EventId",
                     table: table,
@@ -61,22 +109,31 @@ namespace Amsterfam.Infrastructure.Migrations
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade
                 );
+
+                migrationBuilder.CreateIndex(
+                    name: index.Name,
+                    table: table,
+                    columns: index.Columns,
+                    unique: index.Unique
+                );
             }
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Best-effort only: rolling back regenerates fresh serial ids with no
-            // relationship to the guids being discarded. Acceptable since Up() is
-            // itself destructive (see comment above) — there is nothing meaningful
-            // to restore.
-            foreach (var table in DependentTables)
+            // Best-effort only: there is no meaningful guid->sequential-int mapping to
+            // restore, so rows are kept but their EventId relationships are zeroed
+            // rather than the tables being wiped.
+            foreach (var (table, index) in DependentTables)
+            {
                 migrationBuilder.DropForeignKey(name: $"FK_{table}_Events_EventId", table: table);
+                migrationBuilder.DropIndex(name: index.Name, table: table);
 
-            migrationBuilder.Sql(
-                $"""TRUNCATE TABLE {string.Join(", ", DependentTables.Select(t => $"\"{t}\""))}, "Events" RESTART IDENTITY CASCADE;"""
-            );
+                migrationBuilder.Sql(
+                    $"""ALTER TABLE "{table}" ALTER COLUMN "EventId" TYPE integer USING 0;"""
+                );
+            }
 
             migrationBuilder.DropPrimaryKey(name: "PK_Events", table: "Events");
 
@@ -90,12 +147,8 @@ namespace Amsterfam.Infrastructure.Migrations
                 """ALTER TABLE "Events" ALTER COLUMN "Id" ADD GENERATED BY DEFAULT AS IDENTITY;"""
             );
 
-            foreach (var table in DependentTables)
+            foreach (var (table, index) in DependentTables)
             {
-                migrationBuilder.Sql(
-                    $"""ALTER TABLE "{table}" ALTER COLUMN "EventId" TYPE integer USING 0;"""
-                );
-
                 migrationBuilder.AddForeignKey(
                     name: $"FK_{table}_Events_EventId",
                     table: table,
@@ -103,6 +156,13 @@ namespace Amsterfam.Infrastructure.Migrations
                     principalTable: "Events",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade
+                );
+
+                migrationBuilder.CreateIndex(
+                    name: index.Name,
+                    table: table,
+                    columns: index.Columns,
+                    unique: index.Unique
                 );
             }
         }
