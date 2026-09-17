@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import {
   FormBuilder,
   FormControl,
@@ -30,6 +30,7 @@ import {
 import { EventApi } from '../../core/api/event.api';
 import { AttendanceApi } from '../../core/api/attendance.api';
 import { UserApi } from '../../core/api/user.api';
+import { CurrentEventService } from '../../core/event/current-event.service';
 import { EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
 import { DatePollRange } from '../date-poll/date-poll-range';
@@ -72,13 +73,13 @@ export class EventsDetail implements OnInit {
   private readonly eventApi = inject(EventApi);
   private readonly attendanceApi = inject(AttendanceApi);
   private readonly userApi = inject(UserApi);
-  private readonly route = inject(ActivatedRoute);
+  private readonly currentEventService = inject(CurrentEventService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
-  readonly event = signal<EventResponse | null>(null);
-  readonly loading = signal(true);
+  readonly event = this.currentEventService.event;
+  readonly loading = this.currentEventService.loading;
   readonly saving = signal(false);
   readonly editing = signal(false);
   readonly currentUserId = signal<number | null>(null);
@@ -113,12 +114,10 @@ export class EventsDetail implements OnInit {
   }
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
     this.userApi.getMe().subscribe((me) => this.currentUserId.set(me.id));
-    if (id) {
-      this.loadEvent(id);
-    } else {
-      this.loading.set(false);
+    const ev = this.event();
+    if (ev) {
+      this.loadAttendees(ev.id);
     }
   }
 
@@ -149,14 +148,14 @@ export class EventsDetail implements OnInit {
   }
 
   private loadEvent(id: string): void {
-    this.eventApi.getEvent(id).subscribe({
+    this.currentEventService.loadEvent(id).subscribe({
       next: (event) => {
-        this.setEvent(event);
-        this.loading.set(false);
         // Members see the full roster; non-members get organisers only (backend-enforced).
         this.loadAttendees(event.id);
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        // CurrentEventService already surfaces loading state; nothing else to do here.
+      },
     });
   }
 
@@ -366,6 +365,7 @@ export class EventsDetail implements OnInit {
       this.eventApi.deleteEvent(ev.id).subscribe({
         next: () => {
           this.saving.set(false);
+          this.currentEventService.clear();
           this.snackBar.open('Event deleted', 'Dismiss', { duration: 3000 });
           this.router.navigate(['/']);
         },
@@ -521,7 +521,7 @@ export class EventsDetail implements OnInit {
     if (!ev) {
       return;
     }
-    this.event.set({
+    this.currentEventService.setEvent({
       ...ev,
       pollRangeStart: summary.pollRangeStart,
       pollRangeEnd: summary.pollRangeEnd,
@@ -534,6 +534,6 @@ export class EventsDetail implements OnInit {
   }
 
   private setEvent(event: EventResponse): void {
-    this.event.set(event);
+    this.currentEventService.setEvent(event);
   }
 }
