@@ -60,7 +60,6 @@
     key_file: "/home/{{ deploy_user }}/.ssh/id_ed25519"
   become: true
   become_user: "{{ deploy_user }}"
-  register: repo_clone
 
 - name: Template production .env
   ansible.builtin.template:

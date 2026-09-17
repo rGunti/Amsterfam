@@ -25,7 +25,7 @@
   "dataGroups": [
     {
       "name": "current-user",
-      "urls": ["http://localhost:5293/api/v1/me"],
+      "urls": ["/api/v1/me"],
       "cacheConfig": {
         "strategy": "freshness",
         "maxSize": 1,

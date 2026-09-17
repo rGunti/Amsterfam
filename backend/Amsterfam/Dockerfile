@@ -5,6 +5,9 @@ WORKDIR /src
 # repo), so the csproj's own `git rev-parse` fallback can't work — the SHA
 # is passed in from outside instead.
 ARG SOURCE_REVISION_ID=unknown
+# Computed by CI from version.json via `nbgv get-version` (git height as the
+# real, orderable patch component) — see .github/workflows/{backend,frontend}.yml.
+ARG APP_VERSION=0.1.0
 
 COPY Amsterfam.slnx .
 COPY Amsterfam.Api/Amsterfam.Api.csproj Amsterfam.Api/
@@ -14,7 +17,7 @@ COPY Amsterfam.Tests/Amsterfam.Tests.csproj Amsterfam.Tests/
 RUN dotnet restore -p:HUSKY=0
 
 COPY . .
-RUN dotnet publish Amsterfam.Api/Amsterfam.Api.csproj -c Release -o /app/publish --no-restore -p:HUSKY=0 -p:SourceRevisionId=$SOURCE_REVISION_ID
+RUN dotnet publish Amsterfam.Api/Amsterfam.Api.csproj -c Release -o /app/publish --no-restore -p:HUSKY=0 -p:SourceRevisionId=$SOURCE_REVISION_ID -p:Version=$APP_VERSION
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app

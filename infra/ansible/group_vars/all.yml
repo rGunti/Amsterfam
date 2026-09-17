@@ -4,6 +4,12 @@ deploy_user: deploy
 git_repo_url: git@github.com:rGunti/Amsterfam.git # fill in the real remote
 git_repo_ref: main
 
+# Real deploys always override these via --extra-vars (see .github/workflows/deploy.yml),
+# pinning both to the exact commit that was just built — these :latest defaults only
+# cover manual/first-run playbook invocations.
+backend_image_tag: ghcr.io/rgunti/amsterfam-backend:latest
+frontend_image_tag: ghcr.io/rgunti/amsterfam-frontend:latest
+
 frontend_domain: dev.amsterfam.eu
 api_domain: api.dev.amsterfam.eu
 authentik_domain: a.dev.amsterfam.eu

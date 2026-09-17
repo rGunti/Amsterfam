@@ -3,24 +3,52 @@ name: Deploy
 on:
   # Triggers once per completed Backend/Frontend run on main — a PR touching
   # only one of them still redeploys, which is fine since app_deploy is
-  # idempotent (git pull + compose build/up is a no-op if nothing changed).
+  # idempotent (git pull + compose pull/up is a no-op if nothing changed).
   workflow_run:
     workflows: ["Backend", "Frontend"]
     branches: [main]
     types: [completed]
+  # Lets a deploy be triggered manually for any branch via the Actions tab's
+  # "Run workflow" button (e.g. to test this branch before merging) — the
+  # images for that branch's commit must already have been pushed to GHCR
+  # (run Backend/Frontend's workflow_dispatch first).
+  workflow_dispatch: {}
 
 jobs:
   deploy:
     name: Deploy to dev.amsterfam.eu
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     environment: dev
     concurrency:
       group: deploy-dev
       cancel-in-progress: false
 
     steps:
+      # Pinned to the exact commit the successful Backend/Frontend run built —
+      # not just "main" — so a push landing between that build finishing and
+      # this deploy running can't cause a code/image mismatch. On a manual
+      # dispatch there's no workflow_run event, so this falls back to
+      # whichever ref/branch was picked in the "Run workflow" dropdown.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Compute version
+        id: version
+        run: |
+          dotnet tool install --global nbgv
+          version=$(nbgv get-version -v SimpleVersion)
+          sha=$(nbgv get-version -v GitCommitIdShort)
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "backend_image=ghcr.io/$owner/amsterfam-backend:${version}-${sha}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=ghcr.io/$owner/amsterfam-frontend:${version}-${sha}" >> "$GITHUB_OUTPUT"
 
       - name: Install Ansible
         run: pipx install ansible-core
@@ -45,7 +73,8 @@ jobs:
             echo "$ANSIBLE_VAULT_PASSWORD" > /tmp/vault_pass
             ansible-playbook deploy.yml \
               --private-key ~/.ssh/deploy_key \
-              --vault-password-file /tmp/vault_pass
+              --vault-password-file /tmp/vault_pass \
+              --extra-vars "git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }} backend_image_tag=${{ steps.version.outputs.backend_image }} frontend_image_tag=${{ steps.version.outputs.frontend_image }}"
             rm -f /tmp/vault_pass
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}

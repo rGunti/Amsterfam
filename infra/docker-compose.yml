@@ -100,6 +100,7 @@ services:
       dockerfile: Dockerfile
       args:
         SOURCE_REVISION_ID: ${GIT_SHA:-unknown}
+        APP_VERSION: ${APP_VERSION:-0.1.0}
     restart: unless-stopped
     environment:
       ConnectionStrings__Default: "Host=db;Database=amsterfam;Username=amsterfam;Password=${POSTGRES_PASSWORD:-amsterfam}"
@@ -119,10 +120,11 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
       args:
-        API_ADDRESS: ${API_ADDRESS:-http://localhost:5293}
-        OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:9000/application/o/amsterfam/}
         GIT_SHA: ${GIT_SHA:-unknown}
+        APP_VERSION: ${APP_VERSION:-0.1.0}
     restart: unless-stopped
+    environment:
+      OIDC_ISSUER: "${OIDC_ISSUER:-http://localhost:9000/application/o/amsterfam/}"
     profiles:
       - full
 
