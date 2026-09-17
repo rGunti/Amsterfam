@@ -11,7 +11,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarRef, TextOnlySnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { catchError, map, of } from 'rxjs';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { catchError, filter, map, of } from 'rxjs';
 import { environment } from '../environments/environment';
 import { AuthService } from './core/auth/auth.service';
 import { CurrentUserService } from './core/api/current-user.service';
@@ -41,6 +42,7 @@ import { statusIcon } from './shared/event-status-icon';
 })
 export class App {
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly swUpdate = inject(SwUpdate);
   private readonly authService = inject(AuthService);
   private readonly versionApi = inject(VersionApi);
   private readonly eventApi = inject(EventApi);
@@ -127,6 +129,35 @@ export class App {
       window.removeEventListener('online', dismissOfflineNotice);
       dismissOfflineNotice();
     });
+
+    if (this.swUpdate.isEnabled) {
+      this.swUpdate.versionUpdates
+        .pipe(filter((event): event is VersionReadyEvent => event.type === 'VERSION_READY'))
+        .subscribe(() => {
+          const ref = this.snackBar.open('A new version is available', 'Reload');
+          ref.onAction().subscribe(() => {
+            this.swUpdate.activateUpdate().then(() => document.location.reload());
+          });
+        });
+
+      this.swUpdate.unrecoverable.subscribe(() => {
+        this.snackBar.open('Update failed, reloading…', undefined, { duration: 3000 });
+        document.location.reload();
+      });
+
+      // Installed PWAs are usually resumed from the background rather than
+      // freshly loaded, which skips the update check that normally happens
+      // on registration — check again whenever the app regains focus.
+      const checkForUpdateOnResume = () => {
+        if (document.visibilityState === 'visible') {
+          this.swUpdate.checkForUpdate();
+        }
+      };
+      document.addEventListener('visibilitychange', checkForUpdateOnResume);
+      this.destroyRef.onDestroy(() => {
+        document.removeEventListener('visibilitychange', checkForUpdateOnResume);
+      });
+    }
   }
 
   protected onNavLinkClick(): void {
