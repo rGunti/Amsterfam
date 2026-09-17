@@ -71,7 +71,7 @@ jobs:
       # that was never supposed to change here.
       - name: Resolve image tags
         id: images
-        timeout-minutes: 6
+        timeout-minutes: 1
         run: |
           set -e
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -79,7 +79,7 @@ jobs:
           for svc in backend frontend; do
             image="ghcr.io/$owner/amsterfam-$svc"
             resolved=latest
-            for i in $(seq 1 24); do
+            for i in $(seq 1 4); do
               if docker manifest inspect "$image:$tag" >/dev/null 2>&1; then
                 resolved="$tag"
                 break
