@@ -27,9 +27,11 @@ import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { PaymentMethodDialog, PaymentMethodDialogData } from './payment-method-dialog';
 
+import { AuthService } from '../../core/auth/auth.service';
 import { UserApi } from '../../core/api/user.api';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { PaymentMethodApi } from '../../core/api/payment-method.api';
+import { CurrentEventService } from '../../core/event/current-event.service';
 import { User } from '../../core/models/user';
 import { PaymentMethod } from '../../core/models/payment-method';
 
@@ -48,9 +50,11 @@ import { PaymentMethod } from '../../core/models/payment-method';
   styleUrl: './profile.scss',
 })
 export class Profile implements OnInit {
+  private readonly authService = inject(AuthService);
   private readonly userApi = inject(UserApi);
   private readonly currentUserService = inject(CurrentUserService);
   private readonly paymentMethodApi = inject(PaymentMethodApi);
+  private readonly currentEventService = inject(CurrentEventService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
@@ -179,6 +183,20 @@ export class Profile implements OnInit {
         error: () =>
           this.snackBar.open('Could not remove payment method', 'Dismiss', { duration: 3000 }),
       });
+    });
+  }
+
+  logout(): void {
+    this.confirmAction({
+      title: 'Log out',
+      message: 'Are you sure you want to log out?',
+      confirmLabel: 'Log out',
+    }).subscribe((ok) => {
+      if (!ok) {
+        return;
+      }
+      this.currentEventService.clear();
+      this.authService.logout();
     });
   }
 

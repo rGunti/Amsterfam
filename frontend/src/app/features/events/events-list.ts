@@ -7,14 +7,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { EventApi } from '../../core/api/event.api';
-import { EventResponse, EventStatus } from '../../core/models/event';
+import { CurrentEventService } from '../../core/event/current-event.service';
+import { EventResponse } from '../../core/models/event';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
-
-const STATUS_ICONS: Record<EventStatus, string> = {
-  Draft: 'edit_note',
-  Open: 'check_circle',
-  Closed: 'lock',
-};
+import { statusIcon } from '../../shared/event-status-icon';
 
 @Component({
   selector: 'app-events-list',
@@ -32,11 +28,13 @@ const STATUS_ICONS: Record<EventStatus, string> = {
 })
 export class EventsList implements OnInit {
   private readonly eventApi = inject(EventApi);
+  private readonly currentEventService = inject(CurrentEventService);
 
   readonly events = signal<EventResponse[]>([]);
   readonly loading = signal(true);
 
   ngOnInit(): void {
+    this.currentEventService.clear();
     this.eventApi.getEvents().subscribe({
       next: (events) => {
         this.events.set(events);
@@ -46,7 +44,5 @@ export class EventsList implements OnInit {
     });
   }
 
-  statusIcon(status: EventStatus): string {
-    return STATUS_ICONS[status];
-  }
+  readonly statusIcon = statusIcon;
 }

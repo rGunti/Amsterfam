@@ -3,6 +3,38 @@
     <mat-icon>menu</mat-icon>
   </button>
   <span>{{ title() }}</span>
+  @if (
+    showToolbarEventSwitcher() && inEventContext() && currentEventService.event();
+    as currentEvent
+  ) {
+    <button mat-button [matMenuTriggerFor]="eventMenu" class="event-switcher">
+      {{ currentEvent.name }}
+      <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #eventMenu="matMenu">
+      <button mat-menu-item disabled class="current-event-item">
+        <mat-icon
+          [class]="'status-icon status-' + currentEvent.status.toLowerCase()"
+          [matTooltip]="currentEvent.status"
+          >{{ statusIcon(currentEvent.status) }}</mat-icon
+        >
+        {{ currentEvent.name }}
+      </button>
+      <mat-divider />
+      @for (ev of otherEvents(); track ev.id) {
+        <button mat-menu-item (click)="switchEvent(ev.id)">
+          <mat-icon
+            [class]="'status-icon status-' + ev.status.toLowerCase()"
+            [matTooltip]="ev.status"
+            >{{ statusIcon(ev.status) }}</mat-icon
+          >
+          {{ ev.name }}
+        </button>
+      }
+      <mat-divider />
+      <button mat-menu-item routerLink="/">All events</button>
+    </mat-menu>
+  }
   <span class="toolbar-spacer"></span>
   @if (currentUserService.user(); as currentUser) {
     <a
@@ -28,31 +60,58 @@
     class="sidenav"
   >
     <mat-nav-list>
-      <a mat-list-item routerLink="/" (click)="onNavLinkClick()">
-        <mat-icon matListItemIcon>event</mat-icon>
-        <span matListItemTitle>Events</span>
-      </a>
-      <a mat-list-item routerLink="/profile" (click)="onNavLinkClick()">
-        @if (currentUserService.user()?.avatarUrl; as avatarUrl) {
-          <img matListItemIcon [src]="avatarUrl" alt="" class="nav-avatar" />
-        } @else {
-          <mat-icon matListItemIcon>account_circle</mat-icon>
-        }
-        <span matListItemTitle>Profile</span>
-      </a>
+      @if (inEventContext() && currentEventService.event(); as currentEvent) {
+        <div class="nav-event-switcher-wrap">
+          <button mat-list-item [matMenuTriggerFor]="mobileEventMenu" class="nav-event-switcher">
+            <mat-icon matListItemIcon>event</mat-icon>
+            <span matListItemTitle>{{ currentEvent.name }}</span>
+          </button>
+          <mat-icon class="nav-event-switcher-arrow">arrow_drop_down</mat-icon>
+        </div>
+        <mat-menu #mobileEventMenu="matMenu">
+          <button mat-menu-item disabled class="current-event-item">
+            <mat-icon
+              [class]="'status-icon status-' + currentEvent.status.toLowerCase()"
+              [matTooltip]="currentEvent.status"
+              >{{ statusIcon(currentEvent.status) }}</mat-icon
+            >
+            {{ currentEvent.name }}
+          </button>
+          <mat-divider />
+          @for (ev of otherEvents(); track ev.id) {
+            <button mat-menu-item (click)="switchEvent(ev.id); onNavLinkClick()">
+              <mat-icon
+                [class]="'status-icon status-' + ev.status.toLowerCase()"
+                [matTooltip]="ev.status"
+                >{{ statusIcon(ev.status) }}</mat-icon
+              >
+              {{ ev.name }}
+            </button>
+          }
+          <mat-divider />
+          <button mat-menu-item routerLink="/" (click)="onNavLinkClick()">All events</button>
+        </mat-menu>
+        <mat-divider />
+
+        <a mat-list-item [routerLink]="['/events', currentEvent.id]" (click)="onNavLinkClick()">
+          <mat-icon matListItemIcon>dashboard</mat-icon>
+          <span matListItemTitle>Overview</span>
+        </a>
+      } @else {
+        <a mat-list-item routerLink="/" (click)="onNavLinkClick()">
+          <mat-icon matListItemIcon>event</mat-icon>
+          <span matListItemTitle>Events</span>
+        </a>
+      }
       @if (canInstall()) {
         <button mat-list-item (click)="promptInstall()">
           <mat-icon matListItemIcon>install_mobile</mat-icon>
           <span matListItemTitle>Install app</span>
         </button>
       }
-      <mat-divider />
-      <button mat-list-item (click)="logout(); onNavLinkClick()">
-        <mat-icon matListItemIcon>logout</mat-icon>
-        <span matListItemTitle>Log out</span>
-      </button>
     </mat-nav-list>
 
+    <mat-divider />
     <div class="version-info">
       <span>F {{ frontendVersion }} / B {{ backendVersion() ?? '…' }}</span>
     </div>
