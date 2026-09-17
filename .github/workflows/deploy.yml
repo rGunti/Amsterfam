@@ -64,31 +64,23 @@ jobs:
       # Deploy fires once per completed Backend/Frontend run, but each of
       # those only builds+pushes an image when its own path filter matched —
       # a frontend-only commit never gets a backend image at this tag (and
-      # never will). For each side: wait briefly in case it's genuinely still
-      # pushing (a real race between the two finishing), then fall back to
-      # ":latest" (which always exists and is exactly what that side is
-      # already running) rather than failing the whole deploy over a service
-      # that was never supposed to change here.
-      - name: Resolve image tags
-        id: images
-        timeout-minutes: 1
+      # never will). Only pass the tag for whichever side actually just
+      # rebuilt; the target host fills in the other from whatever it's
+      # already running (see clone.yml's docker_container_info lookup) —
+      # no guessing required, since that's the ground truth.
+      - name: Determine which image tag(s) to pin
+        id: pins
         run: |
-          set -e
-          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           tag="${{ steps.version.outputs.tag }}"
-          for svc in backend frontend; do
-            image="ghcr.io/$owner/amsterfam-$svc"
-            resolved=latest
-            for i in $(seq 1 4); do
-              if docker manifest inspect "$image:$tag" >/dev/null 2>&1; then
-                resolved="$tag"
-                break
-              fi
-              sleep 5
-            done
-            echo "$svc: using tag '$resolved'"
-            echo "${svc}_tag=$resolved" >> "$GITHUB_OUTPUT"
-          done
+          trigger="${{ github.event.workflow_run.name }}"
+          extra_vars="git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$trigger" = "Backend" ]; then
+            extra_vars="$extra_vars backend_image_tag=$tag"
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$trigger" = "Frontend" ]; then
+            extra_vars="$extra_vars frontend_image_tag=$tag"
+          fi
+          echo "extra_vars=$extra_vars" >> "$GITHUB_OUTPUT"
 
       - name: Run deploy playbook
         uses: nick-fields/retry@v3
@@ -103,6 +95,6 @@ jobs:
             ansible-playbook deploy.yml \
               --private-key ~/.ssh/deploy_key \
               --vault-password-file /tmp/vault_pass \
-              --extra-vars "git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }} backend_image_tag=${{ steps.images.outputs.backend_tag }} frontend_image_tag=${{ steps.images.outputs.frontend_tag }}"
+              --extra-vars "${{ steps.pins.outputs.extra_vars }}"
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}

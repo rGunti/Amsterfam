@@ -61,6 +61,40 @@
   become: true
   become_user: "{{ deploy_user }}"
 
+# Deploy fires once per completed Backend/Frontend CI run, and only the one
+# that actually changed gets a new extra-var from the workflow — the other
+# service's tag var is left at its group_vars default ("latest"). Rather
+# than trust that default (":latest" can drift ahead of what's actually
+# running), read the tag straight off the container that's already up:
+# extra-vars always win over set_fact, so this only takes effect for the
+# side that wasn't just explicitly pinned. Skips cleanly on a first-ever
+# deploy where the container doesn't exist yet.
+- name: Look up the currently running api container
+  community.docker.docker_container_info:
+    name: infra-api-1
+  register: current_api_container
+  failed_when: false
+  become: true
+  become_user: "{{ deploy_user }}"
+
+- name: Look up the currently running frontend container
+  community.docker.docker_container_info:
+    name: infra-frontend-1
+  register: current_frontend_container
+  failed_when: false
+  become: true
+  become_user: "{{ deploy_user }}"
+
+- name: Keep the api image tag that's already deployed, unless CI pinned a new one
+  ansible.builtin.set_fact:
+    backend_image_tag: "{{ current_api_container.container.Config.Image.split(':')[-1] }}"
+  when: current_api_container.exists | default(false)
+
+- name: Keep the frontend image tag that's already deployed, unless CI pinned a new one
+  ansible.builtin.set_fact:
+    frontend_image_tag: "{{ current_frontend_container.container.Config.Image.split(':')[-1] }}"
+  when: current_frontend_container.exists | default(false)
+
 - name: Template production .env
   ansible.builtin.template:
     src: env.j2
