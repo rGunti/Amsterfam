@@ -11,8 +11,17 @@ on:
   # Lets a deploy be triggered manually for any branch via the Actions tab's
   # "Run workflow" button (e.g. to test this branch before merging) — the
   # images for that branch's commit must already have been pushed to GHCR
-  # (run Backend/Frontend's workflow_dispatch first).
-  workflow_dispatch: {}
+  # (run Backend/Frontend's workflow_dispatch first), unless overridden below.
+  workflow_dispatch:
+    inputs:
+      backend_image_tag:
+        description: "Backend image tag to deploy (blank = this ref's computed tag)"
+        required: false
+        type: string
+      frontend_image_tag:
+        description: "Frontend image tag to deploy (blank = this ref's computed tag)"
+        required: false
+        type: string
 
 jobs:
   deploy:
@@ -67,19 +76,30 @@ jobs:
       # never will). Only pass the tag for whichever side actually just
       # rebuilt; the target host fills in the other from whatever it's
       # already running (see clone.yml's docker_container_info lookup) —
-      # no guessing required, since that's the ground truth.
+      # no guessing required, since that's the ground truth. A manual run
+      # can override either tag explicitly via the "Run workflow" inputs.
       - name: Determine which image tag(s) to pin
         id: pins
         run: |
           tag="${{ steps.version.outputs.tag }}"
           trigger="${{ github.event.workflow_run.name }}"
           extra_vars="git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }}"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$trigger" = "Backend" ]; then
+
+          backend_override="${{ github.event.inputs.backend_image_tag }}"
+          frontend_override="${{ github.event.inputs.frontend_image_tag }}"
+
+          if [ -n "$backend_override" ]; then
+            extra_vars="$extra_vars backend_image_tag=$backend_override"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$trigger" = "Backend" ]; then
             extra_vars="$extra_vars backend_image_tag=$tag"
           fi
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$trigger" = "Frontend" ]; then
+
+          if [ -n "$frontend_override" ]; then
+            extra_vars="$extra_vars frontend_image_tag=$frontend_override"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$trigger" = "Frontend" ]; then
             extra_vars="$extra_vars frontend_image_tag=$tag"
           fi
+
           echo "extra_vars=$extra_vars" >> "$GITHUB_OUTPUT"
 
       - name: Run deploy playbook
