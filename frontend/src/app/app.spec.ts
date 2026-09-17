@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { SwUpdate } from '@angular/service-worker';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { App } from './app';
@@ -9,6 +10,10 @@ import { CurrentUserService } from './core/api/current-user.service';
 import { VersionApi } from './core/api/version.api';
 import { EventApi } from './core/api/event.api';
 import { CurrentEventService } from './core/event/current-event.service';
+
+// Matches production behavior in dev/test — the service worker itself is
+// only enabled outside isDevMode() (see app.config.ts).
+const swUpdateMock: Partial<SwUpdate> = { isEnabled: false };
 
 const authServiceMock: Partial<AuthService> = { logout: vi.fn() };
 const currentUserServiceMock: Partial<CurrentUserService> = { user: signal(null) };
@@ -29,6 +34,7 @@ describe('App', () => {
       imports: [App],
       providers: [
         provideRouter([]),
+        { provide: SwUpdate, useValue: swUpdateMock },
         { provide: AuthService, useValue: authServiceMock },
         { provide: CurrentUserService, useValue: currentUserServiceMock },
         { provide: VersionApi, useValue: versionApiMock },
