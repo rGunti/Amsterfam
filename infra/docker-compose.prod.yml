@@ -23,14 +23,30 @@ services:
 
   api:
     ports: !reset []
+    build: !reset null
+    image: ${BACKEND_IMAGE}:${BACKEND_IMAGE_TAG}
+    pull_policy: always
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=le"
       - "traefik.http.services.api.loadbalancer.server.port=8080"
+      # Same-origin route on the frontend's own domain, so the browser never
+      # needs to know the API's real host (see the frontend's relative
+      # apiAddress and ngsw-config.json's relative /api/v1/me cache rule).
+      # A second router sharing the "api" service above — Traefik picks this
+      # one over the frontend's Host-only router because PathPrefix makes
+      # the rule more specific (higher default priority).
+      - "traefik.http.routers.api-same-origin.rule=Host(`${FRONTEND_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api-same-origin.entrypoints=websecure"
+      - "traefik.http.routers.api-same-origin.tls.certresolver=le"
+      - "traefik.http.routers.api-same-origin.service=api"
 
   frontend:
+    build: !reset null
+    image: ${FRONTEND_IMAGE}:${FRONTEND_IMAGE_TAG}
+    pull_policy: always
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN}`)"

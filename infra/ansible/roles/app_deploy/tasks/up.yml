@@ -1,16 +1,4 @@
 ---
-- name: Build images
-  community.docker.docker_compose_v2:
-    project_src: "{{ deploy_dir }}/infra"
-    files:
-      - docker-compose.yml
-      - docker-compose.prod.yml
-    profiles: [full]
-    build: always
-    state: present
-  become: true
-  become_user: "{{ deploy_user }}"
-
 - name: Bring the stack up
   community.docker.docker_compose_v2:
     project_src: "{{ deploy_dir }}/infra"
@@ -19,6 +7,16 @@
       - docker-compose.prod.yml
     profiles: [full]
     state: present
-    pull: missing
+    pull: always
   become: true
   become_user: "{{ deploy_user }}"
+
+# Every deploy pulls a new, uniquely-tagged image — without this, the old
+# ones just pile up on disk forever. Only removes images no longer
+# referenced by any container, so the ones just pulled above are untouched.
+- name: Remove unused images left over from previous deploys
+  community.docker.docker_prune:
+    images: true
+    images_filters:
+      dangling: false
+  become: true

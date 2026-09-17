@@ -11,8 +11,10 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { OAuthStorage, provideOAuthClient } from 'angular-oauth2-oidc';
 
 import { routes } from './app.routes';
+import { authConfig } from './core/auth/auth.config';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
+import { loadRuntimeConfig } from './core/config/runtime-config';
 import { provideEnvironment } from '../environments/environment.model';
 import { environment } from '../environments/environment';
 
@@ -38,7 +40,15 @@ export const appConfig: ApplicationConfig = {
     // even though the refresh token is still valid for days. See issue #85.
     { provide: OAuthStorage, useFactory: () => localStorage },
     provideEnvironment(environment),
-    provideAppInitializer(() => inject(AuthService).init()),
+    provideAppInitializer(async () => {
+      // Must resolve before AuthService is injected below — its constructor
+      // reads authConfig synchronously to configure the OAuth client.
+      if (!environment.useFakeAuth) {
+        const config = await loadRuntimeConfig();
+        authConfig.issuer = config.oidcIssuer;
+      }
+      return inject(AuthService).init();
+    }),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
