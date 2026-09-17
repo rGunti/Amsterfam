@@ -11,8 +11,17 @@ on:
   # Lets a deploy be triggered manually for any branch via the Actions tab's
   # "Run workflow" button (e.g. to test this branch before merging) — the
   # images for that branch's commit must already have been pushed to GHCR
-  # (run Backend/Frontend's workflow_dispatch first).
-  workflow_dispatch: {}
+  # (run Backend/Frontend's workflow_dispatch first), unless overridden below.
+  workflow_dispatch:
+    inputs:
+      backend_image_tag:
+        description: "Backend image tag to deploy (blank = this ref's computed tag)"
+        required: false
+        type: string
+      frontend_image_tag:
+        description: "Frontend image tag to deploy (blank = this ref's computed tag)"
+        required: false
+        type: string
 
 jobs:
   deploy:
@@ -61,18 +70,51 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           echo "${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
+      # Deploy fires once per completed Backend/Frontend run, but each of
+      # those only builds+pushes an image when its own path filter matched —
+      # a frontend-only commit never gets a backend image at this tag (and
+      # never will). Only pass the tag for whichever side actually just
+      # rebuilt; the target host fills in the other from whatever it's
+      # already running (see clone.yml's docker_container_info lookup) —
+      # no guessing required, since that's the ground truth. A manual run
+      # can override either tag explicitly via the "Run workflow" inputs.
+      - name: Determine which image tag(s) to pin
+        id: pins
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          trigger="${{ github.event.workflow_run.name }}"
+          extra_vars="git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }}"
+
+          backend_override="${{ github.event.inputs.backend_image_tag }}"
+          frontend_override="${{ github.event.inputs.frontend_image_tag }}"
+
+          if [ -n "$backend_override" ]; then
+            extra_vars="$extra_vars backend_image_tag=$backend_override"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$trigger" = "Backend" ]; then
+            extra_vars="$extra_vars backend_image_tag=$tag"
+          fi
+
+          if [ -n "$frontend_override" ]; then
+            extra_vars="$extra_vars frontend_image_tag=$frontend_override"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$trigger" = "Frontend" ]; then
+            extra_vars="$extra_vars frontend_image_tag=$tag"
+          fi
+
+          echo "extra_vars=$extra_vars" >> "$GITHUB_OUTPUT"
+
       - name: Run deploy playbook
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 15
           max_attempts: 2
           command: |
+            set -e
             cd infra/ansible
             echo "$ANSIBLE_VAULT_PASSWORD" > /tmp/vault_pass
+            trap 'rm -f /tmp/vault_pass' EXIT
             ansible-playbook deploy.yml \
               --private-key ~/.ssh/deploy_key \
               --vault-password-file /tmp/vault_pass \
-              --extra-vars "git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }} backend_image_tag=${{ steps.version.outputs.tag }} frontend_image_tag=${{ steps.version.outputs.tag }}"
-            rm -f /tmp/vault_pass
+              --extra-vars "${{ steps.pins.outputs.extra_vars }}"
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
