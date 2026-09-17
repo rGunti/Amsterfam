@@ -10,3 +10,13 @@
     pull: always
   become: true
   become_user: "{{ deploy_user }}"
+
+# Every deploy pulls a new, uniquely-tagged image — without this, the old
+# ones just pile up on disk forever. Only removes images no longer
+# referenced by any container, so the ones just pulled above are untouched.
+- name: Remove unused images left over from previous deploys
+  community.docker.docker_prune:
+    images: true
+    images_filters:
+      dangling: false
+  become: true

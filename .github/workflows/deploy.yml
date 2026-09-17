@@ -46,9 +46,7 @@ jobs:
           dotnet tool install --global nbgv
           version=$(nbgv get-version -v SimpleVersion)
           sha=$(nbgv get-version -v GitCommitIdShort)
-          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "backend_image=ghcr.io/$owner/amsterfam-backend:${version}-${sha}" >> "$GITHUB_OUTPUT"
-          echo "frontend_image=ghcr.io/$owner/amsterfam-frontend:${version}-${sha}" >> "$GITHUB_OUTPUT"
+          echo "tag=${version}-${sha}" >> "$GITHUB_OUTPUT"
 
       - name: Install Ansible
         run: pipx install ansible-core
@@ -74,7 +72,7 @@ jobs:
             ansible-playbook deploy.yml \
               --private-key ~/.ssh/deploy_key \
               --vault-password-file /tmp/vault_pass \
-              --extra-vars "git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }} backend_image_tag=${{ steps.version.outputs.backend_image }} frontend_image_tag=${{ steps.version.outputs.frontend_image }}"
+              --extra-vars "git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }} backend_image_tag=${{ steps.version.outputs.tag }} frontend_image_tag=${{ steps.version.outputs.tag }}"
             rm -f /tmp/vault_pass
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}

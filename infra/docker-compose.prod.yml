@@ -24,7 +24,7 @@ services:
   api:
     ports: !reset []
     build: !reset null
-    image: ${BACKEND_IMAGE_TAG}
+    image: ${BACKEND_IMAGE}:${BACKEND_IMAGE_TAG}
     pull_policy: always
     labels:
       - "traefik.enable=true"
@@ -45,7 +45,7 @@ services:
 
   frontend:
     build: !reset null
-    image: ${FRONTEND_IMAGE_TAG}
+    image: ${FRONTEND_IMAGE}:${FRONTEND_IMAGE_TAG}
     pull_policy: always
     labels:
       - "traefik.enable=true"
