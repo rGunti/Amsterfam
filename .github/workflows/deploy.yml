@@ -61,22 +61,33 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           echo "${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
-      # Deploy is triggered once per completed Backend/Frontend run — whichever
-      # of the two finishes first can fire before the other's image has
-      # finished pushing to GHCR. Wait for both tags to actually resolve
-      # before handing off to Ansible, instead of letting the pull fail.
-      - name: Wait for both images to be pushed
-        timeout-minutes: 10
+      # Deploy fires once per completed Backend/Frontend run, but each of
+      # those only builds+pushes an image when its own path filter matched —
+      # a frontend-only commit never gets a backend image at this tag (and
+      # never will). For each side: wait briefly in case it's genuinely still
+      # pushing (a real race between the two finishing), then fall back to
+      # ":latest" (which always exists and is exactly what that side is
+      # already running) rather than failing the whole deploy over a service
+      # that was never supposed to change here.
+      - name: Resolve image tags
+        id: images
+        timeout-minutes: 6
         run: |
           set -e
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          for image in "ghcr.io/$owner/amsterfam-backend:${{ steps.version.outputs.tag }}" \
-                       "ghcr.io/$owner/amsterfam-frontend:${{ steps.version.outputs.tag }}"; do
-            echo "Waiting for $image ..."
-            until docker manifest inspect "$image" >/dev/null 2>&1; do
-              sleep 10
+          tag="${{ steps.version.outputs.tag }}"
+          for svc in backend frontend; do
+            image="ghcr.io/$owner/amsterfam-$svc"
+            resolved=latest
+            for i in $(seq 1 24); do
+              if docker manifest inspect "$image:$tag" >/dev/null 2>&1; then
+                resolved="$tag"
+                break
+              fi
+              sleep 5
             done
-            echo "$image is available"
+            echo "$svc: using tag '$resolved'"
+            echo "${svc}_tag=$resolved" >> "$GITHUB_OUTPUT"
           done
 
       - name: Run deploy playbook
@@ -92,6 +103,6 @@ jobs:
             ansible-playbook deploy.yml \
               --private-key ~/.ssh/deploy_key \
               --vault-password-file /tmp/vault_pass \
-              --extra-vars "git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }} backend_image_tag=${{ steps.version.outputs.tag }} frontend_image_tag=${{ steps.version.outputs.tag }}"
+              --extra-vars "git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }} backend_image_tag=${{ steps.images.outputs.backend_tag }} frontend_image_tag=${{ steps.images.outputs.frontend_tag }}"
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
