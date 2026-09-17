@@ -61,18 +61,37 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           echo "${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
+      # Deploy is triggered once per completed Backend/Frontend run — whichever
+      # of the two finishes first can fire before the other's image has
+      # finished pushing to GHCR. Wait for both tags to actually resolve
+      # before handing off to Ansible, instead of letting the pull fail.
+      - name: Wait for both images to be pushed
+        timeout-minutes: 10
+        run: |
+          set -e
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          for image in "ghcr.io/$owner/amsterfam-backend:${{ steps.version.outputs.tag }}" \
+                       "ghcr.io/$owner/amsterfam-frontend:${{ steps.version.outputs.tag }}"; do
+            echo "Waiting for $image ..."
+            until docker manifest inspect "$image" >/dev/null 2>&1; do
+              sleep 10
+            done
+            echo "$image is available"
+          done
+
       - name: Run deploy playbook
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 15
           max_attempts: 2
           command: |
+            set -e
             cd infra/ansible
             echo "$ANSIBLE_VAULT_PASSWORD" > /tmp/vault_pass
+            trap 'rm -f /tmp/vault_pass' EXIT
             ansible-playbook deploy.yml \
               --private-key ~/.ssh/deploy_key \
               --vault-password-file /tmp/vault_pass \
               --extra-vars "git_repo_ref=${{ github.event.workflow_run.head_sha || github.sha }} backend_image_tag=${{ steps.version.outputs.tag }} frontend_image_tag=${{ steps.version.outputs.tag }}"
-            rm -f /tmp/vault_pass
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
