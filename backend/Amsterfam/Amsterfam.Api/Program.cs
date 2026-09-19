@@ -32,6 +32,27 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IEventBalanceCheck, NoOpEventBalanceCheck>();
+builder.Services.AddScoped<EventAutoTransitioner>();
+
+builder
+    .Services.AddOptions<AutoTransitionOptions>()
+    .Bind(builder.Configuration.GetSection(AutoTransitionOptions.SectionName))
+    .Validate(
+        o => o.HasValidSchedule(),
+        $"{AutoTransitionOptions.SectionName}:Schedule is not a valid cron expression."
+    )
+    .ValidateOnStart();
+
+if (
+    builder
+        .Configuration.GetSection(AutoTransitionOptions.SectionName)
+        .GetValue(nameof(AutoTransitionOptions.Enabled), true)
+)
+{
+    builder.Services.AddHostedService<EventAutoTransitionService>();
+}
 
 // In E2E test runs, swap real Authentik JWT validation for a header-based test
 // scheme (mirrors Amsterfam.Tests' TestAuthHandler) so Playwright can authenticate

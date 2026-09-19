@@ -36,6 +36,9 @@ public static class AttendanceEndpoints
             return TypedResults.NotFound();
 
         var user = await currentUser.GetOrCreateAsync();
+        if (await EventGuards.EnsureVisibleAsync(db, eventId, user.Id) is { } hidden)
+            return hidden;
+
         var isMember = await IsMember(db, eventId, user.Id);
 
         var query = db.EventAttendances.Where(a => a.EventId == eventId);
@@ -67,7 +70,7 @@ public static class AttendanceEndpoints
         if (ev is null)
             return TypedResults.NotFound();
 
-        if (ev.Status != EventStatus.Open)
+        if (!EventStateMachine.AcceptsJoins(ev.Status))
             return TypedResults.Conflict(new { error = "Event is not open for RSVPs." });
 
         var user = await currentUser.GetOrCreateAsync();
@@ -99,6 +102,9 @@ public static class AttendanceEndpoints
         AmsterfamDbContext db
     )
     {
+        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
+            return notWritable;
+
         var requestingUser = await currentUser.GetOrCreateAsync();
         if (!await IsOrganiser(db, eventId, requestingUser.Id))
             return TypedResults.Forbid();
@@ -122,6 +128,9 @@ public static class AttendanceEndpoints
         AmsterfamDbContext db
     )
     {
+        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
+            return notWritable;
+
         var requestingUser = await currentUser.GetOrCreateAsync();
         var isSelf = requestingUser.Id == userId;
         var isOrganiser = await IsOrganiser(db, eventId, requestingUser.Id);
@@ -158,6 +167,9 @@ public static class AttendanceEndpoints
         AmsterfamDbContext db
     )
     {
+        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
+            return notWritable;
+
         var requestingUser = await currentUser.GetOrCreateAsync();
         if (!await IsOwner(db, eventId, requestingUser.Id))
             return TypedResults.Forbid();
@@ -186,6 +198,9 @@ public static class AttendanceEndpoints
         AmsterfamDbContext db
     )
     {
+        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
+            return notWritable;
+
         var requestingUser = await currentUser.GetOrCreateAsync();
         if (!await IsOwner(db, eventId, requestingUser.Id))
             return TypedResults.Forbid();
@@ -215,6 +230,9 @@ public static class AttendanceEndpoints
         AmsterfamDbContext db
     )
     {
+        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
+            return notWritable;
+
         var requestingUser = await currentUser.GetOrCreateAsync();
         if (!await IsOwner(db, eventId, requestingUser.Id))
             return TypedResults.Forbid();
@@ -250,6 +268,9 @@ public static class AttendanceEndpoints
         AmsterfamDbContext db
     )
     {
+        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
+            return notWritable;
+
         var requestingUser = await currentUser.GetOrCreateAsync();
         var isSelf = requestingUser.Id == userId;
         var isOrganiser = await IsOrganiser(db, eventId, requestingUser.Id);

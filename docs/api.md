@@ -37,12 +37,14 @@ GET    /api/v1/events
 POST   /api/v1/events
 GET    /api/v1/events/{id}
 PUT    /api/v1/events/{id}
-DELETE /api/v1/events/{id}
-POST   /api/v1/events/{id}/publish          (RPC – Draft → Open)
-POST   /api/v1/events/{id}/unpublish        (RPC – Open → Draft)
-POST   /api/v1/events/{id}/close            (RPC – Open → Closed)
-POST   /api/v1/events/{id}/reopen           (RPC – Closed → Open)
+DELETE /api/v1/events/{id}                 (owner only; event must be Archived or Cancelled)
+POST   /api/v1/events/{id}/status          (RPC – body { "target": "<EventStatus>" })
 ```
+
+`POST /status` runs the event state machine (see `domain.md` → Event lifecycle):
+400 unknown status, 403 not permitted for the caller's role, 409 transition not possible from the
+current state or a guard failed (`{ "error": "..." }`). `EventResponse.allowedTransitions` lists
+the targets the current user may move the event to right now.
 
 ### Attendance
 ```

@@ -26,6 +26,9 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Tests drive auto-transitions directly via EventAutoTransitioner.
+        builder.UseSetting("AutoTransitions:Enabled", "false");
+
         builder.ConfigureServices(services =>
         {
             var descriptor = services.SingleOrDefault(d =>

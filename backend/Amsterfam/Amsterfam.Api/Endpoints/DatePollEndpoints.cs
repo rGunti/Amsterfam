@@ -37,9 +37,12 @@ public static class DatePollEndpoints
         if (!await IsOrganiserOrSuperuser(db, eventId, user.Id))
             return TypedResults.Forbid();
 
-        if (ev.Status != EventStatus.Draft)
+        if (!EventStateMachine.CanSetPollRange(ev.Status))
             return TypedResults.Conflict(
-                new { error = "Poll range can only be set while the event is in Draft status." }
+                new
+                {
+                    error = "Poll range can only be set while the event is in Draft or Looking for Date status.",
+                }
             );
 
         if (request.PollRangeStart is null != request.PollRangeEnd is null)
@@ -77,6 +80,14 @@ public static class DatePollEndpoints
         if (!await IsConfirmedMember(db, eventId, user.Id))
             return TypedResults.Forbid();
 
+        if (
+            EventStateMachine.IsHiddenFrom(
+                ev.Status,
+                await IsOrganiserOrSuperuser(db, eventId, user.Id)
+            )
+        )
+            return TypedResults.Forbid();
+
         return TypedResults.Ok(await BuildSummary(db, ev));
     }
 
@@ -92,6 +103,14 @@ public static class DatePollEndpoints
 
         var user = await currentUser.GetOrCreateAsync();
         if (!await IsConfirmedMember(db, eventId, user.Id))
+            return TypedResults.Forbid();
+
+        if (
+            EventStateMachine.IsHiddenFrom(
+                ev.Status,
+                await IsOrganiserOrSuperuser(db, eventId, user.Id)
+            )
+        )
             return TypedResults.Forbid();
 
         var entries = await db
@@ -117,11 +136,11 @@ public static class DatePollEndpoints
         if (!await IsConfirmedMember(db, eventId, user.Id))
             return TypedResults.Forbid();
 
-        if (ev.Status != EventStatus.Draft)
+        if (!EventStateMachine.IsPollActive(ev.Status))
             return TypedResults.Conflict(
                 new
                 {
-                    error = "Poll entries can only be changed while the event is in Draft status.",
+                    error = "Poll entries can only be changed while the event is looking for a date.",
                 }
             );
 
@@ -199,11 +218,11 @@ public static class DatePollEndpoints
         if (!await IsConfirmedMember(db, eventId, user.Id))
             return TypedResults.Forbid();
 
-        if (ev.Status != EventStatus.Draft)
+        if (!EventStateMachine.IsPollActive(ev.Status))
             return TypedResults.Conflict(
                 new
                 {
-                    error = "Poll entries can only be changed while the event is in Draft status.",
+                    error = "Poll entries can only be changed while the event is looking for a date.",
                 }
             );
 

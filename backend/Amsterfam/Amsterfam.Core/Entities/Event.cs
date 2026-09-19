@@ -12,6 +12,7 @@ public class Event
     public DateOnly? PollRangeEnd { get; set; }
     public decimal? CostPerNight { get; set; }
     public EventStatus Status { get; set; } = EventStatus.Draft;
+    public bool AutoTransitionsPaused { get; set; }
     public int CreatedById { get; set; }
     public DateTime CreatedAt { get; set; }
 
@@ -29,6 +30,10 @@ public class Event
 public enum EventStatus
 {
     Draft,
+    LookingForDate,
     Open,
+    InProgress,
     Closed,
+    Archived,
+    Cancelled,
 }
