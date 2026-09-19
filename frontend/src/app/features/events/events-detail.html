@@ -64,6 +64,12 @@
             {{ ev.startDate }} – {{ ev.endDate }}
           } @else {
             Dates to be decided
+            @if (
+              ev.status === 'Draft' &&
+              (ev.currentUserRole === 'Organiser' || ev.currentUserRole === 'Attendee')
+            ) {
+              · <a [routerLink]="['/events', ev.id, 'find-a-date']">Vote on dates</a>
+            }
           }
         </p>
         <p class="detail-row"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
@@ -290,33 +296,6 @@
               }
             }
           </mat-menu>
-        }
-      </mat-card-content>
-    </mat-card>
-  }
-
-  @if (
-    ev.status === 'Draft' &&
-    (ev.currentUserRole === 'Organiser' || ev.currentUserRole === 'Attendee')
-  ) {
-    <mat-card class="date-poll-card">
-      <mat-card-header>
-        <mat-card-title>Find a date</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        @if (isOrganiser) {
-          <app-date-poll-range [event]="ev" (rangeSaved)="onRangeSaved($event)" />
-        }
-
-        @if (ev.pollRangeStart && ev.pollRangeEnd) {
-          <app-date-poll-calendar [event]="ev" (saved)="onAvailabilitySaved()" />
-
-          @if (isOrganiser) {
-            <mat-card-title class="summary-title">Group availability</mat-card-title>
-            <app-date-poll-summary [event]="ev" />
-          }
-        } @else if (!isOrganiser) {
-          <p>The organiser hasn't set a candidate date range yet.</p>
         }
       </mat-card-content>
     </mat-card>

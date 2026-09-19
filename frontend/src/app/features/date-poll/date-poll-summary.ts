@@ -53,10 +53,21 @@ export class DatePollSummary implements OnInit {
   }
 
   bestAvailabilityRatio(summary: DatePollWeekSummary | undefined): number {
+    return this.ratio(summary, 'available');
+  }
+
+  unavailabilityRatio(summary: DatePollWeekSummary | undefined): number {
+    return this.ratio(summary, 'unavailable');
+  }
+
+  private ratio(
+    summary: DatePollWeekSummary | undefined,
+    key: 'available' | 'unavailable',
+  ): number {
     if (!summary) {
       return 0;
     }
     const total = summary.available + summary.unavailable + summary.partial + summary.noResponse;
-    return total === 0 ? 0 : summary.available / total;
+    return total === 0 ? 0 : summary[key] / total;
   }
 }

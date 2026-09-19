@@ -93,10 +93,35 @@
         </mat-menu>
         <mat-divider />
 
-        <a mat-list-item [routerLink]="['/events', currentEvent.id]" (click)="onNavLinkClick()">
+        <a
+          mat-list-item
+          [routerLink]="['/events', currentEvent.id]"
+          routerLinkActive
+          [routerLinkActiveOptions]="{ exact: true }"
+          #overviewActive="routerLinkActive"
+          [activated]="overviewActive.isActive"
+          (click)="onNavLinkClick()"
+        >
           <mat-icon matListItemIcon>dashboard</mat-icon>
           <span matListItemTitle>Overview</span>
         </a>
+        @if (
+          currentEvent.status === 'Draft' &&
+          (currentEvent.currentUserRole === 'Organiser' ||
+            currentEvent.currentUserRole === 'Attendee')
+        ) {
+          <a
+            mat-list-item
+            [routerLink]="['/events', currentEvent.id, 'find-a-date']"
+            routerLinkActive
+            #dateActive="routerLinkActive"
+            [activated]="dateActive.isActive"
+            (click)="onNavLinkClick()"
+          >
+            <mat-icon matListItemIcon>event_available</mat-icon>
+            <span matListItemTitle>Find a date</span>
+          </a>
+        }
       } @else {
         <a mat-list-item routerLink="/" (click)="onNavLinkClick()">
           <mat-icon matListItemIcon>event</mat-icon>

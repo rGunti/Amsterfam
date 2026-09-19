@@ -1,0 +1,31 @@
+@if (event(); as ev) {
+  <div class="date-poll-layout" [class.has-summary]="isOrganiser() && ev.pollRangeStart">
+    <mat-card class="date-poll-card">
+      <mat-card-header>
+        <mat-card-title>Find a date</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (isOrganiser()) {
+          <app-date-poll-range [event]="ev" (rangeSaved)="onRangeSaved($event)" />
+        }
+
+        @if (ev.pollRangeStart && ev.pollRangeEnd) {
+          <app-date-poll-calendar [event]="ev" (saved)="onAvailabilitySaved()" />
+        } @else if (!isOrganiser()) {
+          <p>The organiser hasn't set a candidate date range yet.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    @if (isOrganiser() && ev.pollRangeStart && ev.pollRangeEnd) {
+      <mat-card class="date-poll-card">
+        <mat-card-header>
+          <mat-card-title>Group availability</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <app-date-poll-summary [event]="ev" />
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+}

@@ -1,0 +1,22 @@
+.date-poll-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 640px;
+  margin: 24px auto;
+}
+
+.date-poll-card {
+  min-width: 0;
+}
+
+// Side by side once there's room for two full-width cards next to the sidenav.
+@media (min-width: 1200px) {
+  .date-poll-layout.has-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 640px));
+    justify-content: center;
+    align-items: start;
+    max-width: none;
+  }
+}

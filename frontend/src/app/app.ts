@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -28,6 +28,7 @@ import { statusIcon } from './shared/event-status-icon';
   imports: [
     RouterOutlet,
     RouterLink,
+    RouterLinkActive,
     MatToolbarModule,
     MatSidenavModule,
     MatListModule,
