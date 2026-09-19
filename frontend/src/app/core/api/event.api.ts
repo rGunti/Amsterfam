@@ -2,7 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { CreateEventRequest, EventResponse, UpdateEventRequest } from '../models/event';
+import {
+  CreateEventRequest,
+  EventResponse,
+  EventStatus,
+  UpdateEventRequest,
+} from '../models/event';
 import { ENVIRONMENT } from '../../../environments/environment.model';
 
 @Injectable({ providedIn: 'root' })
@@ -30,20 +35,8 @@ export class EventApi {
     return this.http.put<EventResponse>(this.getUrl(`/api/v1/events/${id}`), request);
   }
 
-  publishEvent(id: string): Observable<EventResponse> {
-    return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/publish`), null);
-  }
-
-  unpublishEvent(id: string): Observable<EventResponse> {
-    return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/unpublish`), null);
-  }
-
-  closeEvent(id: string): Observable<EventResponse> {
-    return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/close`), null);
-  }
-
-  reopenEvent(id: string): Observable<EventResponse> {
-    return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/reopen`), null);
+  transitionEvent(id: string, target: EventStatus): Observable<EventResponse> {
+    return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/status`), { target });
   }
 
   deleteEvent(id: string): Observable<void> {

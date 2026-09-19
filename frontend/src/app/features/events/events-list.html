@@ -9,41 +9,60 @@
 } @else if (events().length === 0) {
   <p class="empty">You're not part of any trips yet.</p>
 } @else {
-  <div class="events-grid">
-    @for (event of events(); track event.id) {
-      <mat-card class="event-card" [routerLink]="['/events', event.id]">
-        <mat-card-header>
-          <mat-card-title class="title-row">
-            <mat-icon
-              inline
-              [class]="'status-icon status-' + event.status.toLowerCase()"
-              [matTooltip]="event.status"
-              >{{ statusIcon(event.status) }}</mat-icon
-            >
-            {{ event.name }}
-          </mat-card-title>
-          <mat-card-subtitle class="location">
-            <mat-icon inline>place</mat-icon> {{ event.location }}
-          </mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="dates">
-            <mat-icon inline>event</mat-icon>
-            @if (event.startDate && event.endDate) {
-              {{ event.startDate }} – {{ event.endDate }}
-            } @else {
-              Dates TBD
-            }
-          </p>
-          <mat-chip-set>
-            <mat-chip [class]="'status-' + event.status.toLowerCase()">{{ event.status }}</mat-chip>
-          </mat-chip-set>
-          <app-organiser-avatar-stack
-            [organisers]="event.organisers"
-            [ownerId]="event.createdById"
-          />
-        </mat-card-content>
-      </mat-card>
-    }
-  </div>
+  @if (activeEvents().length > 0) {
+    <div class="events-grid">
+      @for (event of activeEvents(); track event.id) {
+        <ng-container *ngTemplateOutlet="eventCard; context: { $implicit: event }" />
+      }
+    </div>
+  } @else {
+    <p class="empty">No upcoming trips.</p>
+  }
+
+  @if (pastEvents().length > 0) {
+    <mat-expansion-panel class="past-events">
+      <mat-expansion-panel-header>
+        <mat-panel-title>Past events ({{ pastEvents().length }})</mat-panel-title>
+        <mat-panel-description>Archived and cancelled</mat-panel-description>
+      </mat-expansion-panel-header>
+      <div class="events-grid">
+        @for (event of pastEvents(); track event.id) {
+          <ng-container *ngTemplateOutlet="eventCard; context: { $implicit: event }" />
+        }
+      </div>
+    </mat-expansion-panel>
+  }
 }
+
+<ng-template #eventCard let-event>
+  <mat-card class="event-card" [routerLink]="['/events', event.id]">
+    <mat-card-header>
+      <mat-card-title class="title-row">
+        <mat-icon
+          inline
+          [class]="'status-icon ' + statusClass(event.status)"
+          [matTooltip]="statusLabel(event.status)"
+          >{{ statusIcon(event.status) }}</mat-icon
+        >
+        {{ event.name }}
+      </mat-card-title>
+      <mat-card-subtitle class="location">
+        <mat-icon inline>place</mat-icon> {{ event.location }}
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="dates">
+        <mat-icon inline>event</mat-icon>
+        @if (event.startDate && event.endDate) {
+          {{ event.startDate }} – {{ event.endDate }}
+        } @else {
+          Dates TBD
+        }
+      </p>
+      <mat-chip-set>
+        <mat-chip [class]="statusClass(event.status)">{{ statusLabel(event.status) }}</mat-chip>
+      </mat-chip-set>
+      <app-organiser-avatar-stack [organisers]="event.organisers" [ownerId]="event.createdById" />
+    </mat-card-content>
+  </mat-card>
+</ng-template>

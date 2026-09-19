@@ -1,4 +1,11 @@
-export type EventStatus = 'Draft' | 'Open' | 'Closed';
+export type EventStatus =
+  | 'Draft'
+  | 'LookingForDate'
+  | 'Open'
+  | 'InProgress'
+  | 'Closed'
+  | 'Archived'
+  | 'Cancelled';
 export type AttendanceRole = 'Pending' | 'Attendee' | 'Organiser';
 
 export interface OrganiserSummary {
@@ -23,6 +30,10 @@ export interface EventResponse {
   isMember: boolean;
   createdById: number;
   organisers: OrganiserSummary[];
+  /** Statuses the current user may move this event to right now (server-computed). */
+  allowedTransitions: EventStatus[];
+  /** True after an owner reset; automatic start/close is skipped until the next manual move. */
+  autoTransitionsPaused: boolean;
 }
 
 export interface UpdatePollRangeRequest {

@@ -14,8 +14,8 @@
     <mat-menu #eventMenu="matMenu">
       <button mat-menu-item disabled class="current-event-item">
         <mat-icon
-          [class]="'status-icon status-' + currentEvent.status.toLowerCase()"
-          [matTooltip]="currentEvent.status"
+          [class]="'status-icon ' + statusClass(currentEvent.status)"
+          [matTooltip]="statusLabel(currentEvent.status)"
           >{{ statusIcon(currentEvent.status) }}</mat-icon
         >
         {{ currentEvent.name }}
@@ -24,8 +24,8 @@
       @for (ev of otherEvents(); track ev.id) {
         <button mat-menu-item (click)="switchEvent(ev.id)">
           <mat-icon
-            [class]="'status-icon status-' + ev.status.toLowerCase()"
-            [matTooltip]="ev.status"
+            [class]="'status-icon ' + statusClass(ev.status)"
+            [matTooltip]="statusLabel(ev.status)"
             >{{ statusIcon(ev.status) }}</mat-icon
           >
           {{ ev.name }}
@@ -71,8 +71,8 @@
         <mat-menu #mobileEventMenu="matMenu">
           <button mat-menu-item disabled class="current-event-item">
             <mat-icon
-              [class]="'status-icon status-' + currentEvent.status.toLowerCase()"
-              [matTooltip]="currentEvent.status"
+              [class]="'status-icon ' + statusClass(currentEvent.status)"
+              [matTooltip]="statusLabel(currentEvent.status)"
               >{{ statusIcon(currentEvent.status) }}</mat-icon
             >
             {{ currentEvent.name }}
@@ -81,8 +81,8 @@
           @for (ev of otherEvents(); track ev.id) {
             <button mat-menu-item (click)="switchEvent(ev.id); onNavLinkClick()">
               <mat-icon
-                [class]="'status-icon status-' + ev.status.toLowerCase()"
-                [matTooltip]="ev.status"
+                [class]="'status-icon ' + statusClass(ev.status)"
+                [matTooltip]="statusLabel(ev.status)"
                 >{{ statusIcon(ev.status) }}</mat-icon
               >
               {{ ev.name }}
@@ -105,11 +105,7 @@
           <mat-icon matListItemIcon>dashboard</mat-icon>
           <span matListItemTitle>Overview</span>
         </a>
-        @if (
-          currentEvent.status === 'Draft' &&
-          (currentEvent.currentUserRole === 'Organiser' ||
-            currentEvent.currentUserRole === 'Attendee')
-        ) {
+        @if (canUseDatePoll(currentEvent)) {
           <a
             mat-list-item
             [routerLink]="['/events', currentEvent.id, 'find-a-date']"

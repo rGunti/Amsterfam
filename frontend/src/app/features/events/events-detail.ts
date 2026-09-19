@@ -20,6 +20,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CurrencyPipe } from '@angular/common';
+import { of } from 'rxjs';
 
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import {
@@ -34,6 +35,17 @@ import { CurrentEventService } from '../../core/event/current-event.service';
 import { EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
+import {
+  TransitionAction,
+  acceptsJoins,
+  areDatesLocked,
+  canUseDatePoll,
+  isReadOnly,
+  statusClass,
+  statusLabel,
+  transitionActions,
+} from '../../shared/event-status';
+import { localIsoDate } from '../../shared/local-date';
 
 interface EventForm {
   name: FormControl<string>;
@@ -93,6 +105,23 @@ export class EventsDetail implements OnInit {
   });
   readonly organisers = computed(() => this.attendees().filter((a) => a.role === 'Organiser'));
   readonly menuAttendee = signal<AttendeeResponse | null>(null);
+  private readonly transitions = computed(() => {
+    const ev = this.event();
+    return ev ? transitionActions(ev) : [];
+  });
+  readonly regularActions = computed(() =>
+    this.transitions().filter((a) => !a.danger && !a.secondary),
+  );
+  readonly secondaryActions = computed(() =>
+    this.transitions().filter((a) => !a.danger && a.secondary),
+  );
+  readonly dangerActions = computed(() => this.transitions().filter((a) => a.danger));
+  readonly statusLabel = statusLabel;
+  readonly statusClass = statusClass;
+  readonly canUseDatePoll = canUseDatePoll;
+  readonly acceptsJoins = acceptsJoins;
+  /** Local "yyyy-MM-dd", the earliest start date the backend accepts. */
+  readonly today = localIsoDate();
   readonly form: FormGroup<EventForm>;
 
   constructor() {
@@ -122,6 +151,30 @@ export class EventsDetail implements OnInit {
     const ev = this.event();
     const userId = this.currentUserId();
     return ev !== null && userId !== null && ev.createdById === userId;
+  }
+
+  get readOnly(): boolean {
+    const ev = this.event();
+    return ev !== null && isReadOnly(ev.status);
+  }
+
+  get datesLocked(): boolean {
+    const ev = this.event();
+    return ev !== null && areDatesLocked(ev.status);
+  }
+
+  get canDelete(): boolean {
+    return this.readOnly;
+  }
+
+  /** Draft / Looking for date events that can't be opened yet because dates are missing. */
+  get needsDatesToOpen(): boolean {
+    const ev = this.event();
+    return (
+      ev !== null &&
+      (ev.status === 'Draft' || ev.status === 'LookingForDate') &&
+      !ev.allowedTransitions.includes('Open')
+    );
   }
 
   get isConfirmed(): boolean {
@@ -396,6 +449,15 @@ export class EventsDetail implements OnInit {
       location: ev.location,
       costPerNight: ev.costPerNight ?? 0,
     });
+    // Disabled controls still come back through getRawValue(), so locked dates round-trip
+    // unchanged and the backend's date lock never trips.
+    for (const control of [this.form.controls.startDate, this.form.controls.endDate]) {
+      if (areDatesLocked(ev.status)) {
+        control.disable();
+      } else {
+        control.enable();
+      }
+    }
     this.editing.set(true);
   }
 
@@ -426,86 +488,41 @@ export class EventsDetail implements OnInit {
           this.editing.set(false);
           this.snackBar.open('Event updated', 'Dismiss', { duration: 3000 });
         },
-        error: () => {
+        error: (err: HttpErrorResponse) => {
           this.saving.set(false);
-          this.snackBar.open('Could not update event', 'Dismiss', { duration: 3000 });
+          const message = err.error?.error ?? 'Could not update event';
+          this.snackBar.open(message, 'Dismiss', { duration: 3000 });
         },
       });
   }
 
-  publish(): void {
+  runTransition(action: TransitionAction): void {
     const ev = this.event();
     if (!ev) {
       return;
     }
-    this.saving.set(true);
-    this.eventApi.publishEvent(ev.id).subscribe({
-      next: (updated) => {
-        this.setEvent(updated);
-        this.saving.set(false);
-        this.snackBar.open('Event published', 'Dismiss', { duration: 3000 });
-      },
-      error: () => {
-        this.saving.set(false);
-        this.snackBar.open('Could not publish event', 'Dismiss', { duration: 3000 });
-      },
-    });
-  }
-
-  unpublish(): void {
-    const ev = this.event();
-    if (!ev) {
-      return;
-    }
-    this.saving.set(true);
-    this.eventApi.unpublishEvent(ev.id).subscribe({
-      next: (updated) => {
-        this.setEvent(updated);
-        this.saving.set(false);
-        this.snackBar.open('Event moved back to draft', 'Dismiss', { duration: 3000 });
-      },
-      error: () => {
-        this.saving.set(false);
-        this.snackBar.open('Could not unpublish event', 'Dismiss', { duration: 3000 });
-      },
-    });
-  }
-
-  close(): void {
-    const ev = this.event();
-    if (!ev) {
-      return;
-    }
-    this.saving.set(true);
-    this.eventApi.closeEvent(ev.id).subscribe({
-      next: (updated) => {
-        this.setEvent(updated);
-        this.saving.set(false);
-        this.snackBar.open('Event closed', 'Dismiss', { duration: 3000 });
-      },
-      error: () => {
-        this.saving.set(false);
-        this.snackBar.open('Could not close event', 'Dismiss', { duration: 3000 });
-      },
-    });
-  }
-
-  reopen(): void {
-    const ev = this.event();
-    if (!ev) {
-      return;
-    }
-    this.saving.set(true);
-    this.eventApi.reopenEvent(ev.id).subscribe({
-      next: (updated) => {
-        this.setEvent(updated);
-        this.saving.set(false);
-        this.snackBar.open('Event reopened', 'Dismiss', { duration: 3000 });
-      },
-      error: () => {
-        this.saving.set(false);
-        this.snackBar.open('Could not reopen event', 'Dismiss', { duration: 3000 });
-      },
+    const confirmed$ = action.confirm ? this.confirmAction(action.confirm) : of(true);
+    confirmed$.subscribe((ok) => {
+      if (!ok) {
+        return;
+      }
+      this.saving.set(true);
+      this.eventApi.transitionEvent(ev.id, action.target).subscribe({
+        next: (updated) => {
+          this.saving.set(false);
+          this.snackBar.open(action.done, 'Dismiss', { duration: 3000 });
+          if (updated.status === 'Cancelled' && updated.currentUserRole !== 'Organiser') {
+            this.router.navigate(['/events', updated.id, 'cancelled']);
+            return;
+          }
+          this.setEvent(updated);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.saving.set(false);
+          const message = err.error?.error ?? 'Could not change the event status';
+          this.snackBar.open(message, 'Dismiss', { duration: 3000 });
+        },
+      });
     });
   }
 

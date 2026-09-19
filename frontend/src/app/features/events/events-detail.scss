@@ -142,3 +142,34 @@ app-organiser-avatar-stack {
     line-height: 14px;
   }
 }
+
+.hint {
+  font-size: 0.875rem;
+}
+
+.lifecycle-actions {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.danger-zone {
+  border: 1px solid var(--mat-sys-error);
+}
+
+.danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+
+  // Text takes the slack so buttons line up on the right across rows.
+  > span {
+    flex: 1 1 240px;
+  }
+
+  & + & {
+    border-top: 1px solid var(--mat-sys-outline-variant);
+  }
+}
