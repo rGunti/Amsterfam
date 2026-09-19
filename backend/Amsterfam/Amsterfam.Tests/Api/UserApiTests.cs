@@ -18,6 +18,26 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task FirstRequests_InParallel_CreateTheUserOnce()
+    {
+        // The app shell fires /me and /events at the same time on first sign-in.
+        var client = api.CreateClientWithUser("discord|parallel-first-login");
+
+        var responses = await Task.WhenAll(
+            Enumerable
+                .Range(0, 8)
+                .Select(i => client.GetAsync(i % 2 == 0 ? "/api/v1/me/" : "/api/v1/events/"))
+        );
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+        await using var db = await api.CreateDbContextAsync();
+        Assert.Equal(
+            1,
+            await db.Users.CountAsync(u => u.ExternalId == "discord|parallel-first-login")
+        );
+    }
+
+    [Fact]
     public async Task GetMe_AutoCreatesUser_OnFirstRequest()
     {
         var client = api.CreateClientWithUser("discord|new-user-1");

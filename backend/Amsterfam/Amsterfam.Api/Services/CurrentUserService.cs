@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Amsterfam.Core.Entities;
 using Amsterfam.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Amsterfam.Api.Services;
 
@@ -54,7 +55,21 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor, Amster
         };
 
         db.Users.Add(user);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException
+                    is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation }
+            )
+        {
+            // A parallel request for the same new user (the app fires /me and /events at
+            // once on first sign-in) inserted the row first. Use theirs.
+            db.Entry(user).State = EntityState.Detached;
+            return await db.Users.FirstAsync(u => u.ExternalId == externalId, ct);
+        }
+
         return user;
     }
 }
