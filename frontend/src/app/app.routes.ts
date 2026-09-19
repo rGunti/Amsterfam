@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from './core/auth/auth.guard';
 import { eventGuard } from './core/event/event.guard';
+import { datePollGuard } from './features/date-poll/date-poll.guard';
 
 export const routes: Routes = [
   {
@@ -21,6 +22,12 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () => import('./features/events/events-detail').then((m) => m.EventsDetail),
+      },
+      {
+        path: 'find-a-date',
+        loadComponent: () =>
+          import('./features/date-poll/date-poll-page').then((m) => m.DatePollPage),
+        canActivate: [datePollGuard],
       },
     ],
   },

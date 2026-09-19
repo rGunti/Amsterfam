@@ -86,7 +86,9 @@ test.describe('date-finding poll', () => {
     createdEventId = ev.id;
     await page.goto(`/events/${ev.id}`);
 
-    await expect(page.getByText('Find a date', { exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Find a date' }).click();
+    await expect(page).toHaveURL(new RegExp(`/events/${ev.id}/find-a-date$`));
+    await expect(page.getByText('Find a date', { exact: true }).first()).toBeVisible();
 
     await page.getByLabel('Earliest possible week').fill('2031-06-01');
     await page.getByLabel('Latest possible week').fill('2031-06-15');
@@ -120,7 +122,7 @@ test.describe('date-finding poll', () => {
     createdEventId = ev.id;
     await setPollRange(request, ev.id, '2031-06-01', '2031-06-15');
 
-    await page.goto(`/events/${ev.id}`);
+    await page.goto(`/events/${ev.id}/find-a-date`);
     const week = weekRows(page).first();
 
     await week.click();
@@ -166,7 +168,7 @@ test.describe('date-finding poll', () => {
     createdEventId = ev.id;
     await setPollRange(request, ev.id, rangeStart, rangeEnd);
 
-    await page.goto(`/events/${ev.id}`);
+    await page.goto(`/events/${ev.id}/find-a-date`);
 
     await expect(weekRows(page)).toHaveCount(expectedSelectableWeekCount(rangeStart, rangeEnd));
   });
@@ -178,11 +180,11 @@ test.describe('date-finding poll', () => {
 
     await page.getByRole('button', { name: 'Publish' }).click();
     await expect(page.locator('mat-chip[class*="status-"]')).toHaveText('Open');
-    await expect(page.getByText('Find a date', { exact: true })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: 'Find a date' })).not.toBeVisible();
 
     await page.getByRole('button', { name: 'Unpublish' }).click();
     await expect(page.getByText('Event moved back to draft')).toBeVisible();
     await expect(page.locator('mat-chip[class*="status-"]')).toHaveText('Draft');
-    await expect(page.getByText('Find a date', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Find a date' })).toBeVisible();
   });
 });

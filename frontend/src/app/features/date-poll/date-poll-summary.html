@@ -1,7 +1,9 @@
 @if (loading()) {
   <p>Loading…</p>
 } @else {
-  <p class="hint">Darker green = more people available that week.</p>
+  <p class="hint">
+    Darker green = more people available that week. Red = people unavailable that week.
+  </p>
 
   @for (month of months(); track month.label) {
     <div class="month">
@@ -14,7 +16,9 @@
       @for (week of month.weeks; track week[0].weekStart) {
         <div
           class="week-row"
+          [class.has-unavailable]="unavailabilityRatio(summaryFor(week[0].weekStart)) > 0"
           [style.--availability]="bestAvailabilityRatio(summaryFor(week[0].weekStart))"
+          [style.--unavailability]="unavailabilityRatio(summaryFor(week[0].weekStart))"
         >
           @for (day of week; track day.dateStr) {
             <span class="day-cell" [class.dimmed]="!day.inPollRange || !day.inCurrentMonth">

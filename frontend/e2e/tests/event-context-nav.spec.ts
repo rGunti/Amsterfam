@@ -42,6 +42,8 @@ test('opening an event shows the toolbar switcher and event-scoped nav', async (
 
   await expect(page.locator('.event-switcher')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Overview' })).toBeVisible();
+  // New events are drafts and the browser user owns them, so the poll page is offered.
+  await expect(page.getByRole('link', { name: 'Find a date' })).toBeVisible();
 });
 
 test('switching events via the toolbar dropdown navigates to the selected event', async ({

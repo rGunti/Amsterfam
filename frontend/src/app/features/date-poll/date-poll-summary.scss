@@ -29,6 +29,24 @@
   background-color: color-mix(in srgb, #4caf50 calc(var(--availability, 0) * 100%), transparent);
 }
 
+// Weeks with unavailable votes split in two: green on top, red below, each
+// shaded by its share of the group. Weeks without red keep the full-row green.
+.week-row.has-unavailable {
+  background-color: transparent;
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, #4caf50 calc(var(--availability, 0) * 100%), transparent),
+      color-mix(in srgb, #4caf50 calc(var(--availability, 0) * 100%), transparent)
+    ),
+    linear-gradient(
+      color-mix(in srgb, #e53935 calc(var(--unavailability, 0) * 100%), transparent),
+      color-mix(in srgb, #e53935 calc(var(--unavailability, 0) * 100%), transparent)
+    );
+  background-size: 100% 50%;
+  background-position: top, bottom;
+  background-repeat: no-repeat;
+}
+
 .day-cell {
   text-align: center;
   padding: 8px 0;

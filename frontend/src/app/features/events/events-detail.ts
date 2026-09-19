@@ -1,5 +1,5 @@
-import { Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import {
   FormBuilder,
   FormControl,
@@ -33,9 +33,6 @@ import { UserApi } from '../../core/api/user.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
-import { DatePollRange } from '../date-poll/date-poll-range';
-import { DatePollCalendar } from '../date-poll/date-poll-calendar';
-import { DatePollSummary } from '../date-poll/date-poll-summary';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 
 interface EventForm {
@@ -51,6 +48,7 @@ interface EventForm {
   selector: 'app-events-detail',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     MatCardModule,
     MatChipsModule,
     MatFormFieldModule,
@@ -61,9 +59,6 @@ interface EventForm {
     MatMenuModule,
     MatTooltipModule,
     CurrencyPipe,
-    DatePollRange,
-    DatePollCalendar,
-    DatePollSummary,
     OrganiserAvatarStack,
   ],
   templateUrl: './events-detail.html',
@@ -99,8 +94,6 @@ export class EventsDetail implements OnInit {
   readonly organisers = computed(() => this.attendees().filter((a) => a.role === 'Organiser'));
   readonly menuAttendee = signal<AttendeeResponse | null>(null);
   readonly form: FormGroup<EventForm>;
-
-  @ViewChild(DatePollSummary) private datePollSummary?: DatePollSummary;
 
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
@@ -514,23 +507,6 @@ export class EventsDetail implements OnInit {
         this.snackBar.open('Could not reopen event', 'Dismiss', { duration: 3000 });
       },
     });
-  }
-
-  onRangeSaved(summary: { pollRangeStart: string | null; pollRangeEnd: string | null }): void {
-    const ev = this.event();
-    if (!ev) {
-      return;
-    }
-    this.currentEventService.setEvent({
-      ...ev,
-      pollRangeStart: summary.pollRangeStart,
-      pollRangeEnd: summary.pollRangeEnd,
-    });
-    this.datePollSummary?.load();
-  }
-
-  onAvailabilitySaved(): void {
-    this.datePollSummary?.load();
   }
 
   private setEvent(event: EventResponse): void {
