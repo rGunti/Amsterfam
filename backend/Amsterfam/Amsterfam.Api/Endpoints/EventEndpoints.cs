@@ -18,57 +18,36 @@ public static class EventEndpoints
         group.MapGet("/{id:guid}", GetEvent);
         group.MapPut("/{id:guid}", UpdateEvent);
         group.MapDelete("/{id:guid}", DeleteEvent);
-        group.MapPost("/{id:guid}/publish", PublishEvent);
-        group.MapPost("/{id:guid}/unpublish", UnpublishEvent);
-        group.MapPost("/{id:guid}/close", CloseEvent);
-        group.MapPost("/{id:guid}/reopen", ReopenEvent);
+        group.MapPost("/{id:guid}/status", TransitionEvent);
 
         return app;
     }
 
     private static async Task<IResult> GetEvents(
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        TimeProvider time
     )
     {
         var user = await currentUser.GetOrCreateAsync();
+        var today = time.Today();
 
         var events = await db
-            .Events.Where(e => e.Attendances.Any(a => a.UserId == user.Id))
+            .Events.Include(e => e.Attendances)
+                .ThenInclude(a => a.User)
+            .Where(e => e.Attendances.Any(a => a.UserId == user.Id))
             .OrderByDescending(e => e.CreatedAt)
-            .Select(e => new EventResponse(
-                e.Id,
-                e.Name,
-                e.Description,
-                e.StartDate,
-                e.EndDate,
-                e.Location,
-                e.PollRangeStart,
-                e.PollRangeEnd,
-                e.CostPerNight,
-                e.Status.ToString(),
-                e.CreatedAt,
-                e.Attendances.Where(a => a.UserId == user.Id)
-                    .Select(a => a.Role.ToString())
-                    .FirstOrDefault(),
-                true,
-                e.CreatedById,
-                e.Attendances.Where(a => a.Role == AttendanceRole.Organiser)
-                    .Select(a => new OrganiserSummary(
-                        a.UserId,
-                        a.User.DisplayName ?? a.User.Handle,
-                        a.User.AvatarUrl
-                    ))
-                    .ToList()
-            ))
+            .AsSplitQuery()
             .ToListAsync();
-        return TypedResults.Ok(events);
+
+        return TypedResults.Ok(events.Select(ev => BuildResponse(ev, user.Id, today)).ToList());
     }
 
     private static async Task<IResult> GetEvent(
         Guid id,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        TimeProvider time
     )
     {
         var ev = await LoadEventWithOrganisers(db, id);
@@ -76,19 +55,25 @@ public static class EventEndpoints
             return TypedResults.NotFound();
 
         var user = await currentUser.GetOrCreateAsync();
-        var role = await GetUserRole(db, id, user.Id);
-        var organisers = OrganisersFrom(ev);
-        return TypedResults.Ok(
-            role is null ? ToPreviewResponse(ev, organisers) : ToResponse(ev, role, organisers)
-        );
+        return TypedResults.Ok(BuildResponse(ev, user.Id, time.Today()));
     }
 
     private static async Task<IResult> CreateEvent(
         [FromBody] CreateEventRequest request,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        TimeProvider time
     )
     {
+        var today = time.Today();
+        var dateError = EventStateMachine.ValidateTentativeDates(
+            request.StartDate,
+            request.EndDate,
+            today
+        );
+        if (dateError is not null)
+            return TypedResults.BadRequest(new { error = dateError });
+
         var user = await currentUser.GetOrCreateAsync();
 
         var ev = new Event
@@ -108,27 +93,21 @@ public static class EventEndpoints
             new EventAttendance
             {
                 Event = ev,
-                UserId = user.Id,
+                User = user,
                 Role = AttendanceRole.Organiser,
             }
         );
 
         await db.SaveChangesAsync();
-        var organisers = new List<OrganiserSummary>
-        {
-            new(user.Id, user.DisplayName ?? user.Handle, user.AvatarUrl),
-        };
-        return TypedResults.Created(
-            $"/api/v1/events/{ev.Id}",
-            ToResponse(ev, AttendanceRole.Organiser.ToString(), organisers)
-        );
+        return TypedResults.Created($"/api/v1/events/{ev.Id}", BuildResponse(ev, user.Id, today));
     }
 
     private static async Task<IResult> UpdateEvent(
         Guid id,
         [FromBody] UpdateEventRequest request,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        TimeProvider time
     )
     {
         var ev = await LoadEventWithOrganisers(db, id);
@@ -136,8 +115,32 @@ public static class EventEndpoints
             return TypedResults.NotFound();
 
         var user = await currentUser.GetOrCreateAsync();
-        if (!await IsOrganiserOrSuperuser(db, id, user.Id))
+        if (!IsOrganiser(ev, user.Id))
             return TypedResults.Forbid();
+
+        if (EventStateMachine.IsReadOnly(ev.Status))
+            return EventGuards.ReadOnlyConflict(ev.Status);
+
+        var today = time.Today();
+        var datesChanged = request.StartDate != ev.StartDate || request.EndDate != ev.EndDate;
+        if (datesChanged)
+        {
+            if (EventStateMachine.AreDatesLocked(ev.Status))
+                return TypedResults.Conflict(
+                    new
+                    {
+                        error = "Dates are fixed once an event is open. Move it back to Draft or Looking for Date to change them.",
+                    }
+                );
+
+            var dateError = EventStateMachine.ValidateTentativeDates(
+                request.StartDate,
+                request.EndDate,
+                today
+            );
+            if (dateError is not null)
+                return TypedResults.BadRequest(new { error = dateError });
+        }
 
         ev.Name = request.Name;
         ev.Description = request.Description;
@@ -147,9 +150,7 @@ public static class EventEndpoints
         ev.CostPerNight = request.CostPerNight;
 
         await db.SaveChangesAsync();
-        return TypedResults.Ok(
-            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
-        );
+        return TypedResults.Ok(BuildResponse(ev, user.Id, today));
     }
 
     private static async Task<IResult> DeleteEvent(
@@ -166,137 +167,70 @@ public static class EventEndpoints
         if (ev.CreatedById != user.Id)
             return TypedResults.Forbid();
 
+        if (!EventStateMachine.CanDelete(ev.Status))
+            return TypedResults.Conflict(
+                new { error = "Only archived or cancelled events can be deleted." }
+            );
+
         db.Events.Remove(ev);
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }
 
-    private static async Task<IResult> PublishEvent(
+    private static async Task<IResult> TransitionEvent(
         Guid id,
+        [FromBody] TransitionEventRequest request,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
-    )
-    {
-        var ev = await LoadEventWithOrganisers(db, id);
-        if (ev is null)
-            return TypedResults.NotFound();
-
-        var user = await currentUser.GetOrCreateAsync();
-        if (!await IsOrganiserOrSuperuser(db, id, user.Id))
-            return TypedResults.Forbid();
-
-        if (ev.Status != EventStatus.Draft)
-            return TypedResults.Conflict(
-                new { error = "Event must be in Draft status to publish." }
-            );
-
-        ev.Status = EventStatus.Open;
-        await db.SaveChangesAsync();
-        return TypedResults.Ok(
-            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
-        );
-    }
-
-    private static async Task<IResult> UnpublishEvent(
-        Guid id,
-        ICurrentUserService currentUser,
-        AmsterfamDbContext db
-    )
-    {
-        var ev = await LoadEventWithOrganisers(db, id);
-        if (ev is null)
-            return TypedResults.NotFound();
-
-        var user = await currentUser.GetOrCreateAsync();
-        if (!await IsOrganiserOrSuperuser(db, id, user.Id))
-            return TypedResults.Forbid();
-
-        if (ev.Status != EventStatus.Open)
-            return TypedResults.Conflict(
-                new { error = "Event must be in Open status to unpublish." }
-            );
-
-        // Clear the prior poll round entirely rather than leaving stale
-        // PollRangeStart/PollRangeEnd and DatePollEntries around for a
-        // re-published range to silently mix responses with.
-        ev.Status = EventStatus.Draft;
-        ev.PollRangeStart = null;
-        ev.PollRangeEnd = null;
-        await db.DatePollEntries.Where(e => e.EventId == id).ExecuteDeleteAsync();
-
-        await db.SaveChangesAsync();
-        return TypedResults.Ok(
-            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
-        );
-    }
-
-    private static async Task<IResult> CloseEvent(
-        Guid id,
-        ICurrentUserService currentUser,
-        AmsterfamDbContext db
-    )
-    {
-        var ev = await LoadEventWithOrganisers(db, id);
-        if (ev is null)
-            return TypedResults.NotFound();
-
-        var user = await currentUser.GetOrCreateAsync();
-        if (!await IsOrganiserOrSuperuser(db, id, user.Id))
-            return TypedResults.Forbid();
-
-        if (ev.Status != EventStatus.Open)
-            return TypedResults.Conflict(new { error = "Event must be in Open status to close." });
-
-        ev.Status = EventStatus.Closed;
-        await db.SaveChangesAsync();
-        return TypedResults.Ok(
-            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
-        );
-    }
-
-    private static async Task<IResult> ReopenEvent(
-        Guid id,
-        ICurrentUserService currentUser,
-        AmsterfamDbContext db
-    )
-    {
-        var ev = await LoadEventWithOrganisers(db, id);
-        if (ev is null)
-            return TypedResults.NotFound();
-
-        var user = await currentUser.GetOrCreateAsync();
-        if (!await IsOrganiserOrSuperuser(db, id, user.Id))
-            return TypedResults.Forbid();
-
-        if (ev.Status != EventStatus.Closed)
-            return TypedResults.Conflict(
-                new { error = "Event must be in Closed status to reopen." }
-            );
-
-        ev.Status = EventStatus.Open;
-        await db.SaveChangesAsync();
-        return TypedResults.Ok(
-            ToResponse(ev, AttendanceRole.Organiser.ToString(), OrganisersFrom(ev))
-        );
-    }
-
-    private static async Task<bool> IsOrganiserOrSuperuser(
         AmsterfamDbContext db,
-        Guid eventId,
-        int userId
+        TimeProvider time,
+        IEventBalanceCheck balances
     )
     {
-        return await db.EventAttendances.AnyAsync(a =>
-            a.EventId == eventId && a.UserId == userId && a.Role == AttendanceRole.Organiser
-        );
+        // Enum.TryParse would also accept numeric strings, so match on names only.
+        if (!Enum.GetNames<EventStatus>().Contains(request.Target))
+            return TypedResults.BadRequest(new { error = $"Unknown status '{request.Target}'." });
+        var target = Enum.Parse<EventStatus>(request.Target);
+
+        var ev = await LoadEventWithOrganisers(db, id);
+        if (ev is null)
+            return TypedResults.NotFound();
+
+        var user = await currentUser.GetOrCreateAsync();
+        var actor = ActorFor(ev, user.Id);
+        if (!actor.IsOrganiser)
+            return TypedResults.Forbid();
+
+        if (
+            target == EventStatus.Archived
+            && ev.Status != EventStatus.Archived
+            && await balances.HasOpenBalancesAsync(ev.Id)
+        )
+            return TypedResults.Conflict(
+                new { error = "This event still has open balances. Settle them before archiving." }
+            );
+
+        var today = time.Today();
+        var result = EventStateMachine.TryTransition(ev, target, actor, today);
+        switch (result.Outcome)
+        {
+            case TransitionOutcome.Forbidden:
+                return TypedResults.Forbid();
+            case TransitionOutcome.NotAllowed:
+            case TransitionOutcome.GuardFailed:
+                return TypedResults.Conflict(new { error = result.Error });
+        }
+
+        await db.SaveChangesAsync();
+        return TypedResults.Ok(BuildResponse(ev, user.Id, today));
     }
 
-    private static async Task<string?> GetUserRole(AmsterfamDbContext db, Guid eventId, int userId)
+    private static bool IsOrganiser(Event ev, int userId) =>
+        ev.Attendances.Any(a => a.UserId == userId && a.Role == AttendanceRole.Organiser);
+
+    private static EventActor ActorFor(Event ev, int userId)
     {
-        return await db
-            .EventAttendances.Where(a => a.EventId == eventId && a.UserId == userId)
-            .Select(a => a.Role.ToString())
-            .FirstOrDefaultAsync();
+        var isOwner = ev.CreatedById == userId;
+        return new EventActor(isOwner || IsOrganiser(ev, userId), isOwner);
     }
 
     private static Task<Event?> LoadEventWithOrganisers(AmsterfamDbContext db, Guid eventId) =>
@@ -315,12 +249,26 @@ public static class EventEndpoints
             ))
             .ToList();
 
-    private static EventResponse ToResponse(
-        Event ev,
-        string? currentUserRole,
-        IReadOnlyList<OrganiserSummary> organisers
-    ) =>
-        new(
+    /// <summary>
+    /// Builds the response for the given user. Expects <paramref name="ev"/> to have its
+    /// attendances (with users) loaded. Non-members, and non-organisers of a cancelled
+    /// event, get a stripped-down preview.
+    /// </summary>
+    private static EventResponse BuildResponse(Event ev, int userId, DateOnly today)
+    {
+        var role = ev.Attendances.FirstOrDefault(a => a.UserId == userId)?.Role;
+        var organisers = OrganisersFrom(ev);
+        var isOrganiser = role == AttendanceRole.Organiser;
+
+        if (role is null || EventStateMachine.IsHiddenFrom(ev.Status, isOrganiser))
+            return ToPreviewResponse(ev, role?.ToString(), organisers);
+
+        var allowed = EventStateMachine
+            .GetAllowedTransitions(ev, ActorFor(ev, userId), today)
+            .Select(s => s.ToString())
+            .ToList();
+
+        return new(
             ev.Id,
             ev.Name,
             ev.Description,
@@ -332,14 +280,18 @@ public static class EventEndpoints
             ev.CostPerNight,
             ev.Status.ToString(),
             ev.CreatedAt,
-            currentUserRole,
+            role.ToString(),
             true,
             ev.CreatedById,
-            organisers
+            organisers,
+            allowed,
+            ev.AutoTransitionsPaused
         );
+    }
 
     private static EventResponse ToPreviewResponse(
         Event ev,
+        string? currentUserRole,
         IReadOnlyList<OrganiserSummary> organisers
     ) =>
         new(
@@ -354,9 +306,11 @@ public static class EventEndpoints
             null,
             ev.Status.ToString(),
             ev.CreatedAt,
-            null,
-            false,
+            currentUserRole,
+            currentUserRole is not null,
             ev.CreatedById,
-            organisers
+            organisers,
+            [],
+            false
         );
 }

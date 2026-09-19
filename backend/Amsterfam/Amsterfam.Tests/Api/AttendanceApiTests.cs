@@ -24,7 +24,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             )
         ).Content.ReadFromJsonAsync<EventResponse>();
 
-        await client.PostAsync($"/api/v1/events/{ev!.Id}/publish", null);
+        await client.TransitionThroughAsync(ev!.Id, "Open");
         return ev;
     }
 

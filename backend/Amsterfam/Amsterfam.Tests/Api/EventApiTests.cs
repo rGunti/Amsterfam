@@ -89,7 +89,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var created = await (
             await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-pending-full"))
         ).Content.ReadFromJsonAsync<EventResponse>();
-        await organiser.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
+        await organiser.TransitionThroughAsync(created!.Id, "Open");
 
         var pending = api.CreateClientWithUser("discord|pending-full-user");
         await pending.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null);
@@ -182,115 +182,313 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    [Fact]
-    public async Task PublishEvent_TransitionsDraftToOpen()
+    private async Task<(HttpClient Client, EventResponse Event)> CreateAs(
+        string user,
+        CreateEventRequest? request = null
+    )
     {
-        var client = api.CreateClientWithUser("discord|organiser-f");
+        var client = api.CreateClientWithUser(user);
         var created = await (
-            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-f"))
+            await client.PostAsJsonAsync("/api/v1/events/", request ?? SampleEvent($"-{user}"))
         ).Content.ReadFromJsonAsync<EventResponse>();
+        return (client, created!);
+    }
 
-        var response = await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
-        response.EnsureSuccessStatusCode();
-        var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
-        Assert.Equal("Open", ev!.Status);
+    private async Task<HttpClient> AddConfirmedAttendee(
+        HttpClient owner,
+        Guid eventId,
+        string user,
+        bool promote = false
+    )
+    {
+        var client = api.CreateClientWithUser(user);
+        await client.PostAsync($"/api/v1/events/{eventId}/attendees/join", null);
+        var info = await client.GetFromJsonAsync<UserResponse>("/api/v1/me/");
+        await owner.PostAsync($"/api/v1/events/{eventId}/attendees/{info!.Id}/confirm", null);
+        if (promote)
+            await owner.PostAsync($"/api/v1/events/{eventId}/attendees/{info.Id}/promote", null);
+        return client;
     }
 
     [Fact]
-    public async Task UnpublishEvent_TransitionsOpenToDraft()
+    public async Task Transition_WalksTheHappyPath()
     {
-        var client = api.CreateClientWithUser("discord|organiser-unpub");
-        var created = await (
-            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-unpub"))
-        ).Content.ReadFromJsonAsync<EventResponse>();
+        var (client, created) = await CreateAs("discord|sm-happy");
 
-        await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
-        var response = await client.PostAsync($"/api/v1/events/{created.Id}/unpublish", null);
-        response.EnsureSuccessStatusCode();
-        var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
-        Assert.Equal("Draft", ev!.Status);
+        foreach (
+            var target in new[] { "LookingForDate", "Open", "InProgress", "Closed", "Archived" }
+        )
+        {
+            var response = await client.TransitionAsync(created.Id, target);
+            response.EnsureSuccessStatusCode();
+            var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
+            Assert.Equal(target, ev!.Status);
+        }
     }
 
     [Fact]
-    public async Task UnpublishEvent_Returns409_WhenNotOpen()
+    public async Task Transition_Returns400_ForUnknownStatus()
     {
-        var client = api.CreateClientWithUser("discord|organiser-unpub2");
-        var created = await (
-            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-unpub2"))
-        ).Content.ReadFromJsonAsync<EventResponse>();
+        var (client, created) = await CreateAs("discord|sm-unknown");
 
-        var response = await client.PostAsync($"/api/v1/events/{created!.Id}/unpublish", null);
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            (await client.TransitionAsync(created.Id, "Bogus")).StatusCode
+        );
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            (await client.TransitionAsync(created.Id, "2")).StatusCode
+        );
+    }
+
+    [Fact]
+    public async Task Transition_Returns409_ForTransitionNotInStateMachine()
+    {
+        var (client, created) = await CreateAs("discord|sm-invalid");
+
+        var response = await client.TransitionAsync(created.Id, "Closed");
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
-    public async Task UnpublishEvent_Returns403_ForNonOrganiser()
+    public async Task Transition_Returns409_WhenOpeningWithoutDates()
     {
-        var organiser = api.CreateClientWithUser("discord|organiser-unpub3");
-        var other = api.CreateClientWithUser("discord|other-unpub3");
-        var created = await (
-            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-unpub3"))
-        ).Content.ReadFromJsonAsync<EventResponse>();
+        var (client, created) = await CreateAs(
+            "discord|sm-nodates",
+            new CreateEventRequest("No dates", null, null, null, "Amsterdam", null)
+        );
 
-        await organiser.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
-        var response = await other.PostAsync($"/api/v1/events/{created.Id}/unpublish", null);
+        var response = await client.TransitionAsync(created.Id, "Open");
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Transition_Returns403_ForNonOrganiser()
+    {
+        var (owner, created) = await CreateAs("discord|sm-403-owner");
+        await owner.TransitionThroughAsync(created.Id, "LookingForDate");
+        var attendee = await AddConfirmedAttendee(owner, created.Id, "discord|sm-403-att");
+
+        var response = await attendee.TransitionAsync(created.Id, "Open");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
-    public async Task PublishEvent_Returns409_WhenAlreadyOpen()
+    public async Task Transition_Cancel_IsOwnerOnly()
     {
-        var client = api.CreateClientWithUser("discord|organiser-g");
-        var created = await (
-            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-g"))
-        ).Content.ReadFromJsonAsync<EventResponse>();
+        var (owner, created) = await CreateAs("discord|sm-cancel-owner");
+        await owner.TransitionThroughAsync(created.Id, "LookingForDate");
+        var organiser = await AddConfirmedAttendee(
+            owner,
+            created.Id,
+            "discord|sm-cancel-org",
+            promote: true
+        );
 
-        await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
-        var response = await client.PostAsync($"/api/v1/events/{created.Id}/publish", null);
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            (await organiser.TransitionAsync(created.Id, "Cancelled")).StatusCode
+        );
+        var ev = await owner.TransitionThroughAsync(created.Id, "Cancelled");
+        Assert.Equal("Cancelled", ev.Status);
+    }
+
+    [Fact]
+    public async Task Transition_ResetToOpen_IsOwnerOnly_AndPausesAutoTransitions()
+    {
+        var (owner, created) = await CreateAs("discord|sm-reset-owner");
+        await owner.TransitionThroughAsync(created.Id, "Open");
+        var organiser = await AddConfirmedAttendee(
+            owner,
+            created.Id,
+            "discord|sm-reset-org",
+            promote: true
+        );
+        await owner.TransitionThroughAsync(created.Id, "InProgress", "Closed");
+
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            (await organiser.TransitionAsync(created.Id, "Open")).StatusCode
+        );
+
+        var ev = await owner.TransitionThroughAsync(created.Id, "Open");
+        Assert.Equal("Open", ev.Status);
+        Assert.True(ev.AutoTransitionsPaused);
+
+        ev = await owner.TransitionThroughAsync(created.Id, "InProgress");
+        Assert.False(ev.AutoTransitionsPaused);
+    }
+
+    [Fact]
+    public async Task AllowedTransitions_DependOnRoleAndState()
+    {
+        var (owner, created) = await CreateAs("discord|sm-allowed-owner");
+        Assert.Equal(
+            ["LookingForDate", "Open", "Archived", "Cancelled"],
+            created.AllowedTransitions
+        );
+
+        await owner.TransitionThroughAsync(created.Id, "LookingForDate");
+        var organiser = await AddConfirmedAttendee(
+            owner,
+            created.Id,
+            "discord|sm-allowed-org",
+            promote: true
+        );
+        var attendee = await AddConfirmedAttendee(owner, created.Id, "discord|sm-allowed-att");
+
+        var asOrganiser = await organiser.GetFromJsonAsync<EventResponse>(
+            $"/api/v1/events/{created.Id}"
+        );
+        Assert.Equal(["Draft", "Open"], asOrganiser!.AllowedTransitions);
+
+        var asAttendee = await attendee.GetFromJsonAsync<EventResponse>(
+            $"/api/v1/events/{created.Id}"
+        );
+        Assert.Empty(asAttendee!.AllowedTransitions);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_Returns409_WhenChangingDatesOfOpenEvent()
+    {
+        var (client, created) = await CreateAs("discord|sm-datelock");
+        await client.TransitionThroughAsync(created.Id, "Open");
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/events/{created.Id}",
+            new UpdateEventRequest(
+                created.Name,
+                null,
+                new DateOnly(2030, 7, 2),
+                new DateOnly(2030, 7, 9),
+                "Amsterdam",
+                35.00m
+            )
+        );
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+        var nameOnly = await client.PutAsJsonAsync(
+            $"/api/v1/events/{created.Id}",
+            new UpdateEventRequest(
+                "Renamed",
+                null,
+                created.StartDate,
+                created.EndDate,
+                "Amsterdam",
+                35.00m
+            )
+        );
+        nameOnly.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task UpdateEvent_Returns400_WhenStartIsInThePast()
+    {
+        var (client, created) = await CreateAs("discord|sm-past");
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/events/{created.Id}",
+            new UpdateEventRequest(
+                created.Name,
+                null,
+                new DateOnly(2000, 1, 1),
+                new DateOnly(2000, 1, 5),
+                "Amsterdam",
+                null
+            )
+        );
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_Returns409_WhenArchived()
+    {
+        var (client, created) = await CreateAs("discord|sm-ro");
+        await client.TransitionThroughAsync(created.Id, "Archived");
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/events/{created.Id}",
+            new UpdateEventRequest(
+                "Renamed",
+                null,
+                created.StartDate,
+                created.EndDate,
+                "Amsterdam",
+                null
+            )
+        );
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
-    public async Task CloseEvent_TransitionsOpenToClosed()
+    public async Task Attendance_Returns409_WhenArchived()
     {
-        var client = api.CreateClientWithUser("discord|organiser-h");
-        var created = await (
-            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-h"))
-        ).Content.ReadFromJsonAsync<EventResponse>();
+        var (owner, created) = await CreateAs("discord|sm-ro-att");
+        await owner.TransitionThroughAsync(created.Id, "Open");
+        var attendee = await AddConfirmedAttendee(owner, created.Id, "discord|sm-ro-att-user");
+        await owner.TransitionThroughAsync(created.Id, "Archived");
 
-        await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
-        var response = await client.PostAsync($"/api/v1/events/{created.Id}/close", null);
-        response.EnsureSuccessStatusCode();
-        var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
-        Assert.Equal("Closed", ev!.Status);
+        var info = await attendee.GetFromJsonAsync<UserResponse>("/api/v1/me/");
+        var response = await attendee.DeleteAsync(
+            $"/api/v1/events/{created.Id}/attendees/{info!.Id}"
+        );
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
-    public async Task ReopenEvent_TransitionsClosedToOpen()
+    public async Task Join_OnlyAllowed_WhileLookingForDateOrOpen()
     {
-        var client = api.CreateClientWithUser("discord|organiser-reopen");
-        var created = await (
-            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-reopen"))
-        ).Content.ReadFromJsonAsync<EventResponse>();
+        var (owner, created) = await CreateAs("discord|sm-join-owner");
+        var joiner = api.CreateClientWithUser("discord|sm-join-user");
 
-        await client.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
-        await client.PostAsync($"/api/v1/events/{created.Id}/close", null);
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            (await joiner.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null)).StatusCode
+        );
 
-        var response = await client.PostAsync($"/api/v1/events/{created.Id}/reopen", null);
-        response.EnsureSuccessStatusCode();
-        var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
-        Assert.Equal("Open", ev!.Status);
+        await owner.TransitionThroughAsync(created.Id, "LookingForDate");
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await joiner.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null)).StatusCode
+        );
+
+        await owner.TransitionThroughAsync(created.Id, "Open", "InProgress");
+        var late = api.CreateClientWithUser("discord|sm-join-late");
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            (await late.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null)).StatusCode
+        );
     }
 
     [Fact]
-    public async Task ReopenEvent_Returns409_WhenNotClosed()
+    public async Task CancelledEvent_IsHiddenFromNonOrganisers()
     {
-        var client = api.CreateClientWithUser("discord|organiser-reopen2");
-        var created = await (
-            await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-reopen2"))
-        ).Content.ReadFromJsonAsync<EventResponse>();
+        var (owner, created) = await CreateAs("discord|sm-hidden-owner");
+        await owner.TransitionThroughAsync(created.Id, "Open");
+        var attendee = await AddConfirmedAttendee(owner, created.Id, "discord|sm-hidden-att");
+        await owner.TransitionThroughAsync(created.Id, "Cancelled");
 
-        var response = await client.PostAsync($"/api/v1/events/{created!.Id}/reopen", null);
+        var asAttendee = await attendee.GetFromJsonAsync<EventResponse>(
+            $"/api/v1/events/{created.Id}"
+        );
+        Assert.Equal("Cancelled", asAttendee!.Status);
+        Assert.Equal("Attendee", asAttendee.CurrentUserRole);
+        Assert.Null(asAttendee.CostPerNight);
+        Assert.Empty(asAttendee.AllowedTransitions);
+
+        var attendees = await attendee.GetAsync($"/api/v1/events/{created.Id}/attendees/");
+        Assert.Equal(HttpStatusCode.Forbidden, attendees.StatusCode);
+
+        var asOwner = await owner.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created.Id}");
+        Assert.NotNull(asOwner!.CostPerNight);
+    }
+
+    [Fact]
+    public async Task DeleteEvent_Returns409_WhenNotArchivedOrCancelled()
+    {
+        var (client, created) = await CreateAs("discord|sm-del409");
+
+        var response = await client.DeleteAsync($"/api/v1/events/{created.Id}");
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
@@ -302,7 +500,8 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             await client.PostAsJsonAsync("/api/v1/events/", SampleEvent("-i"))
         ).Content.ReadFromJsonAsync<EventResponse>();
 
-        var response = await client.DeleteAsync($"/api/v1/events/{created!.Id}");
+        await client.TransitionThroughAsync(created!.Id, "Archived");
+        var response = await client.DeleteAsync($"/api/v1/events/{created.Id}");
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         var get = await client.GetAsync($"/api/v1/events/{created.Id}");
@@ -318,7 +517,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             await owner.PostAsJsonAsync("/api/v1/events/", SampleEvent("-delete403"))
         ).Content.ReadFromJsonAsync<EventResponse>();
 
-        await owner.PostAsync($"/api/v1/events/{created!.Id}/publish", null);
+        await owner.TransitionThroughAsync(created!.Id, "Open");
         await secondOrganiser.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null);
         var secondOrgInfo = await (
             await secondOrganiser.GetAsync("/api/v1/me/")
@@ -332,6 +531,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             null
         );
 
+        await owner.TransitionThroughAsync(created.Id, "Archived");
         var response = await secondOrganiser.DeleteAsync($"/api/v1/events/{created.Id}");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

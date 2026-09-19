@@ -46,10 +46,61 @@ Per user, list of preferred ways for others to pay them back (splitting costs). 
 
 ### Event
 - `Id` (Guid — external/URL identifier, not a sequential integer, to keep event URLs from being guessable), `Name`, `Description`, `StartDate`, `EndDate`, `Location`
-- `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable only while `Status` is `Draft`
+- `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable while `Status` is `Draft` or `LookingForDate`, voting only while `LookingForDate`
 - `CostPerNight` (decimal)
-- `Status`: Draft | Open | Closed
+- `Status`: Draft | LookingForDate | Open | InProgress | Closed | Archived | Cancelled — see *Event lifecycle* below
+- `AutoTransitionsPaused` (bool) — set when the owner resets an event back to Open; the scheduled job skips it until the next manual transition
 - `CreatedBy`, `CreatedAt`
+
+#### Event lifecycle
+Implemented in `Amsterfam.Core/Entities/EventStateMachine.cs` (issue #107).
+
+```mermaid
+stateDiagram-v2
+    direction TB
+    state "Looking for Date" as LookingForDate
+    state "In Progress" as InProgress
+
+    [*] --> Draft : event created
+    Draft --> LookingForDate
+    Draft --> Open
+    Draft --> Archived
+    Draft --> Cancelled
+    LookingForDate --> Draft
+    LookingForDate --> Open : date fixed
+    LookingForDate --> Cancelled
+    Open --> Draft
+    Open --> LookingForDate : date unfixed
+    Open --> InProgress : start date reached (auto) / manual start
+    Open --> Archived
+    Open --> Cancelled
+    InProgress --> Closed : end date passed (auto) / manual close
+    InProgress --> Archived
+    InProgress --> Cancelled
+    InProgress --> Open : owner reset
+    Closed --> Archived
+    Closed --> Open : owner reset
+    Archived --> [*]
+    Cancelled --> [*]
+```
+
+| Status | Meaning | Joins | Dates editable | Read-only |
+|---|---|---|---|---|
+| Draft | Owner sets things up | – | yes | – |
+| LookingForDate | Date poll open, non-committal joins | yes | yes | – |
+| Open | Date fixed, people confirm / drop out | yes | – | – |
+| InProgress | Trip is happening | – | – | – |
+| Closed | Wrapping up, settling expenses | – | – | – |
+| Archived | Done | – | – | yes |
+| Cancelled | Done; only visible to organisers | – | – | yes |
+
+Rules:
+- Organisers perform regular transitions. Cancel and the Danger Zone *reset to Open* (from InProgress / Closed) are **owner only**.
+- Entering Open (other than via reset) requires start and end date, end ≥ start, start ≥ today.
+- Moving backwards keeps all data (dates, poll range, votes).
+- Closed → Archived is blocked while balances are open (`IEventBalanceCheck`; a no-op until cost tracking lands).
+- Automatic transitions run on a cron schedule (`AutoTransitions:Schedule`, default `5 0 * * *`, server local time) and once at startup: Open → InProgress when `StartDate <= today`, InProgress → Closed when `EndDate < today`.
+- Deleting is a separate owner action, only for Archived or Cancelled events.
 
 ### EventAttendance
 Join between User and Event.

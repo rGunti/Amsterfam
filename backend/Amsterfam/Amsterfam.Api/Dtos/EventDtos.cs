@@ -17,7 +17,9 @@ public record EventResponse(
     string? CurrentUserRole,
     bool IsMember,
     int CreatedById,
-    IReadOnlyList<OrganiserSummary> Organisers
+    IReadOnlyList<OrganiserSummary> Organisers,
+    IReadOnlyList<string> AllowedTransitions,
+    bool AutoTransitionsPaused
 );
 
 public record OrganiserSummary(int UserId, string DisplayName, string? AvatarUrl);
@@ -39,3 +41,5 @@ public record UpdateEventRequest(
     string Location,
     decimal? CostPerNight
 );
+
+public record TransitionEventRequest(string Target);
