@@ -9,7 +9,12 @@
           <app-date-poll-range [event]="ev" (rangeSaved)="onRangeSaved($event)" />
         }
 
-        @if (ev.pollRangeStart && ev.pollRangeEnd) {
+        @if (ev.status === 'Draft') {
+          <p class="voting-hint">
+            Voting opens once the event is moved to <strong>Looking for date</strong>. Set up the
+            candidate range now so it's ready.
+          </p>
+        } @else if (ev.pollRangeStart && ev.pollRangeEnd) {
           <app-date-poll-calendar [event]="ev" (saved)="onAvailabilitySaved()" />
         } @else if (!isOrganiser()) {
           <p>The organiser hasn't set a candidate date range yet.</p>

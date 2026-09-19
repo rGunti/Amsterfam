@@ -21,12 +21,27 @@ async function createDraftEvent(request: APIRequestContext, suffix: string) {
     },
   });
   expect(response.ok()).toBeTruthy();
-  return response.json() as Promise<{ id: number }>;
+  return response.json() as Promise<{ id: string }>;
+}
+
+async function setStatus(request: APIRequestContext, eventId: string, target: string) {
+  const response = await request.post(`${API}/api/v1/events/${eventId}/status`, {
+    headers: { [TEST_USER_HEADER]: TEST_USER },
+    data: { target },
+  });
+  expect(response.ok()).toBeTruthy();
+}
+
+/** Voting on dates only works while the event is looking for a date. */
+async function createPollingEvent(request: APIRequestContext, suffix: string) {
+  const ev = await createDraftEvent(request, suffix);
+  await setStatus(request, ev.id, 'LookingForDate');
+  return ev;
 }
 
 async function setPollRange(
   request: APIRequestContext,
-  eventId: number,
+  eventId: string,
   pollRangeStart: string,
   pollRangeEnd: string,
 ) {
@@ -66,12 +81,18 @@ test.describe('date-finding poll', () => {
   // running concurrently (e.g. smoke.spec.ts's "no trips yet" assumption).
   // Deleting what we create keeps the shared user's event list clean once
   // this file's run finishes.
-  let createdEventId: number | undefined;
+  let createdEventId: string | undefined;
 
   test.afterEach(async ({ request }) => {
     if (createdEventId === undefined) {
       return;
     }
+    // Only cancelled/archived events can be deleted; cancelling works from any
+    // state these tests leave an event in.
+    await request.post(`${API}/api/v1/events/${createdEventId}/status`, {
+      headers: { [TEST_USER_HEADER]: TEST_USER },
+      data: { target: 'Cancelled' },
+    });
     await request.delete(`${API}/api/v1/events/${createdEventId}`, {
       headers: { [TEST_USER_HEADER]: TEST_USER },
     });
@@ -82,7 +103,7 @@ test.describe('date-finding poll', () => {
     page,
     request,
   }) => {
-    const ev = await createDraftEvent(request, `range-${test.info().testId}`);
+    const ev = await createPollingEvent(request, `range-${test.info().testId}`);
     createdEventId = ev.id;
     await page.goto(`/events/${ev.id}`);
 
@@ -118,7 +139,7 @@ test.describe('date-finding poll', () => {
     page,
     request,
   }) => {
-    const ev = await createDraftEvent(request, `cycle-${test.info().testId}`);
+    const ev = await createPollingEvent(request, `cycle-${test.info().testId}`);
     createdEventId = ev.id;
     await setPollRange(request, ev.id, '2031-06-01', '2031-06-15');
 
@@ -164,7 +185,7 @@ test.describe('date-finding poll', () => {
   test('only shows weeks that fall within the poll range', async ({ page, request }) => {
     const rangeStart = '2031-06-02';
     const rangeEnd = '2031-06-20';
-    const ev = await createDraftEvent(request, `bounds-${test.info().testId}`);
+    const ev = await createPollingEvent(request, `bounds-${test.info().testId}`);
     createdEventId = ev.id;
     await setPollRange(request, ev.id, rangeStart, rangeEnd);
 
@@ -173,18 +194,44 @@ test.describe('date-finding poll', () => {
     await expect(weekRows(page)).toHaveCount(expectedSelectableWeekCount(rangeStart, rangeEnd));
   });
 
-  test('organiser can unpublish a published event back to draft', async ({ page, request }) => {
-    const ev = await createDraftEvent(request, `unpub-${test.info().testId}`);
+  test('draft events only let organisers prepare the range, not vote', async ({
+    page,
+    request,
+  }) => {
+    const ev = await createDraftEvent(request, `draft-${test.info().testId}`);
+    createdEventId = ev.id;
+    await setPollRange(request, ev.id, '2031-06-01', '2031-06-15');
+
+    await page.goto(`/events/${ev.id}/find-a-date`);
+
+    await expect(page.getByText('Voting opens once the event is moved to')).toBeVisible();
+    await expect(weekRows(page)).toHaveCount(0);
+  });
+
+  test('organiser moves an event between draft, looking for date and open', async ({
+    page,
+    request,
+  }) => {
+    const ev = await createDraftEvent(request, `lfd-${test.info().testId}`);
     createdEventId = ev.id;
     await page.goto(`/events/${ev.id}`);
+    const chip = page.locator('mat-card-title mat-chip');
 
-    await page.getByRole('button', { name: 'Publish' }).click();
-    await expect(page.locator('mat-chip[class*="status-"]')).toHaveText('Open');
+    await page.getByRole('button', { name: 'Look for a date' }).click();
+    await expect(chip).toHaveText('Looking for date');
+    await expect(page.getByRole('link', { name: 'Find a date' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Open event' }).click();
+    await expect(chip).toHaveText('Open');
     await expect(page.getByRole('link', { name: 'Find a date' })).not.toBeVisible();
 
-    await page.getByRole('button', { name: 'Unpublish' }).click();
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('menuitem', { name: 'Unfix date' }).click();
+    await expect(chip).toHaveText('Looking for date');
+
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('menuitem', { name: 'Back to draft' }).click();
     await expect(page.getByText('Event moved back to draft')).toBeVisible();
-    await expect(page.locator('mat-chip[class*="status-"]')).toHaveText('Draft');
-    await expect(page.getByRole('link', { name: 'Find a date' })).toBeVisible();
+    await expect(chip).toHaveText('Draft');
   });
 });

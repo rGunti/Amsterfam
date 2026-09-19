@@ -117,18 +117,6 @@ mat-toolbar span:first-of-type {
   margin-right: 4px;
 }
 
-.status-icon.status-draft {
-  color: var(--mat-sys-on-surface-variant);
-}
-
-.status-icon.status-open {
-  color: #4caf50;
-}
-
-.status-icon.status-closed {
-  color: var(--mat-sys-error);
-}
-
 .current-event-item {
   opacity: 1;
   font-weight: 600;

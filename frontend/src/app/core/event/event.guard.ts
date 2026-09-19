@@ -17,7 +17,14 @@ export const eventGuard: CanActivateFn = (route) => {
   }
 
   return currentEventService.loadEvent(id).pipe(
-    map(() => true),
+    map((event) => {
+      // Cancelled events are only visible to organisers; everyone else gets a dead end.
+      if (event.status === 'Cancelled' && event.currentUserRole !== 'Organiser') {
+        currentEventService.clear();
+        return router.createUrlTree(['/events', id, 'cancelled']);
+      }
+      return true;
+    }),
     catchError(() => {
       snackBar.open('Event not found', 'Dismiss', { duration: 3000 });
       return of(router.createUrlTree(['/']));

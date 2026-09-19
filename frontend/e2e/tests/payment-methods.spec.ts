@@ -23,10 +23,11 @@ async function createOpenEvent(request: APIRequestContext, organiser: string): P
   expect(create.ok()).toBeTruthy();
   const eventId = (await create.json()).id as number;
 
-  const publish = await request.post(`${API}/api/v1/events/${eventId}/publish`, {
+  const open = await request.post(`${API}/api/v1/events/${eventId}/status`, {
     headers: asUser(organiser),
+    data: { target: 'Open' },
   });
-  expect(publish.ok()).toBeTruthy();
+  expect(open.ok()).toBeTruthy();
   return eventId;
 }
 

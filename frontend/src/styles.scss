@@ -37,3 +37,50 @@ body {
   height: 100%;
 }
 /* You can add global styles to this file, and also import other style files */
+
+// Event status colours, shared by status icons and chips (see shared/event-status.ts).
+.status-icon {
+  &.status-draft,
+  &.status-archived {
+    color: var(--mat-sys-on-surface-variant);
+  }
+  &.status-lookingfordate {
+    color: var(--mat-sys-tertiary);
+  }
+  &.status-open {
+    color: #4caf50;
+  }
+  &.status-inprogress {
+    color: var(--mat-sys-primary);
+  }
+  &.status-closed {
+    color: #ef8f00;
+  }
+  &.status-cancelled {
+    color: var(--mat-sys-error);
+  }
+}
+
+// Material 3 ignores `color="warn"` on its own. Map it onto the theme's error colours so
+// destructive actions (delete, cancel, remove) actually look destructive.
+.mat-mdc-button-base.mat-warn {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-error),
+      filled-label-text-color: var(--mat-sys-on-error),
+      filled-state-layer-color: var(--mat-sys-on-error),
+      protected-container-color: var(--mat-sys-error),
+      protected-label-text-color: var(--mat-sys-on-error),
+      text-label-text-color: var(--mat-sys-error),
+      text-state-layer-color: var(--mat-sys-error),
+      text-ripple-color: color-mix(in srgb, var(--mat-sys-error) 12%, transparent),
+      outlined-label-text-color: var(--mat-sys-error),
+      outlined-outline-color: var(--mat-sys-error),
+      outlined-state-layer-color: var(--mat-sys-error),
+    )
+  );
+}
+
+.mat-icon.mat-warn {
+  color: var(--mat-sys-error);
+}

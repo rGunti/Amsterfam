@@ -15,6 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { EventApi } from '../../core/api/event.api';
+import { localIsoDate } from '../../shared/local-date';
 
 interface EventForm {
   name: FormControl<string>;
@@ -38,6 +39,8 @@ interface EventForm {
   styleUrl: './events-create.scss',
 })
 export class EventsCreate {
+  /** Local "yyyy-MM-dd", the earliest start date the backend accepts. */
+  readonly today = localIsoDate();
   private readonly eventApi = inject(EventApi);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);

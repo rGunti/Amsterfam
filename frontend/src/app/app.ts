@@ -21,7 +21,7 @@ import { CurrentEventService } from './core/event/current-event.service';
 import { EventResponse } from './core/models/event';
 import { VersionApi } from './core/api/version.api';
 import { InstallPromptService } from './core/install-prompt/install-prompt.service';
-import { statusIcon } from './shared/event-status-icon';
+import { canUseDatePoll, statusClass, statusIcon, statusLabel } from './shared/event-status';
 
 @Component({
   selector: 'app-root',
@@ -66,6 +66,9 @@ export class App {
   });
   protected readonly inEventContext = computed(() => this.currentEventService.eventId() !== null);
   protected readonly statusIcon = statusIcon;
+  protected readonly statusLabel = statusLabel;
+  protected readonly statusClass = statusClass;
+  protected readonly canUseDatePoll = canUseDatePoll;
 
   protected readonly frontendVersion = `${environment.version}+${environment.sha}`;
   protected readonly backendVersion = toSignal(

@@ -33,18 +33,6 @@
   flex-shrink: 0;
 }
 
-.status-icon.status-draft {
-  color: var(--mat-sys-on-surface-variant);
-}
-
-.status-icon.status-open {
-  color: #4caf50;
-}
-
-.status-icon.status-closed {
-  color: var(--mat-sys-error);
-}
-
 .empty {
   padding: 24px;
   color: var(--mat-sys-on-surface-variant);
@@ -53,4 +41,12 @@
 app-organiser-avatar-stack {
   display: block;
   margin-top: 12px;
+}
+
+.past-events {
+  margin: 0 24px 24px;
+
+  .events-grid {
+    padding: 8px 0 0;
+  }
 }
