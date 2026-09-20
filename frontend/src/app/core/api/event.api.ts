@@ -39,6 +39,22 @@ export class EventApi {
     return this.http.post<EventResponse>(this.getUrl(`/api/v1/events/${id}/status`), { target });
   }
 
+  /** Absolute URL of the banner image endpoint; fetch it with auth (see EventBanner). */
+  bannerUrl(id: string): string {
+    return this.getUrl(`/api/v1/events/${id}/banner`);
+  }
+
+  uploadBanner(id: string, image: Blob, fileName: string): Observable<{ bannerFileId: string }> {
+    return this.http.put<{ bannerFileId: string }>(
+      this.getUrl(`/api/v1/events/${id}/banner?fileName=${encodeURIComponent(fileName)}`),
+      image,
+    );
+  }
+
+  deleteBanner(id: string): Observable<void> {
+    return this.http.delete<void>(this.getUrl(`/api/v1/events/${id}/banner`));
+  }
+
   deleteEvent(id: string): Observable<void> {
     return this.http.delete<void>(this.getUrl(`/api/v1/events/${id}`));
   }

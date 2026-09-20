@@ -61,7 +61,7 @@ pending attendee who joined via an organiser link is owner-only and grants Organ
 GET    /api/v1/events/{id}/join-links              (organiser; owner also sees organiser links)
 POST   /api/v1/events/{id}/join-links              (organiser; kind=Organiser is owner-only; body: kind, label?, expiresAt?, maxUses?)
 DELETE /api/v1/events/{id}/join-links/{linkId}     (revoke; owner, or the organiser who created an attendee link)
-GET    /api/v1/join-links/{token}                  (preview: event name/dates, kind; 404 if invalid/expired/revoked/full)
+GET    /api/v1/join-links/{token}                  (preview: event name/dates/location, kind, owner id, organisers (name + avatar), banner id; 404 if invalid/expired/revoked/full)
 POST   /api/v1/join-links/{token}/join             (RPC – current user requests to join; lands Pending)
 ```
 - `label` is optional (max 60 chars) and defaults to "Attendee link" / "Organiser link". Attendee rows returned to organisers include `joinLinkLabel`, the label of the link they joined through.
@@ -69,6 +69,18 @@ POST   /api/v1/join-links/{token}/join             (RPC – current user request
 - Invalid, revoked, expired and used-up tokens are indistinguishable (404).
 - Attendee links need an event that accepts joins; organiser links also work in Draft.
 - `GET /api/v1/events/{id}` returns 404 to non-members.
+
+### Event banner
+```
+GET    /api/v1/events/{id}/banner                  (members; image bytes, ETag = file id; 404 if none)
+PUT    /api/v1/events/{id}/banner?fileName=        (organiser; raw image body; replaces any existing banner)
+DELETE /api/v1/events/{id}/banner                  (organiser)
+GET    /api/v1/join-links/{token}/banner           (anyone signed in with a usable link; same rules as the preview)
+```
+- `EventResponse.bannerFileId` and `JoinLinkPreviewResponse.bannerFileId` are null when there is no banner and change whenever it is replaced; clients use them as a cache key.
+- JPEG, PNG and WebP only, max 5 MB (413 above that, 400 for anything else). The type is detected from the bytes, never taken from the client's `Content-Type`.
+- Blocked in read-only events (409). Cancelled events hide the banner from non-organisers.
+- The endpoints need the bearer token, so the frontend fetches them as blobs rather than via `<img src>`. See ADR-011.
 
 ### Availability
 ```

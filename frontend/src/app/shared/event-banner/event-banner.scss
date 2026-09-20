@@ -1,0 +1,50 @@
+:host {
+  display: block;
+}
+
+.banner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  aspect-ratio: 2 / 1;
+
+  // Taller on phones so the photo isn't mostly covered by the strip.
+  @media (max-width: 599.98px) {
+    aspect-ratio: 3 / 2;
+  }
+  // `clip` (unlike `hidden`) isn't a scroll container, so the aspect ratio only sets a minimum
+  // height and the banner grows when the caption is taller, e.g. an expanded long title.
+  overflow: clip;
+  background: var(--mat-sys-surface-container-high);
+  color: #fff;
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// The caption sizes to its content, and its ::before is the blurred, darkened strip behind
+// it: it covers the caption plus a fade-in zone above, so the strip grows with the content.
+// It's a separate layer so the mask that fades it in doesn't also fade the text.
+.caption {
+  position: relative;
+  // Own stacking context, so the strip (z-index -1) sits behind the caption's content but
+  // in front of the image.
+  isolation: isolate;
+  padding: 0 16px 12px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -40px 0 0;
+    background: rgb(0 0 0 / 55%);
+    backdrop-filter: blur(12px);
+    mask-image: linear-gradient(to bottom, transparent, #000 40px);
+  }
+}

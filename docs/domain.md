@@ -108,6 +108,10 @@ Unguessable, revocable link that lets a signed-in user request to join an event.
 - `CreatedById`, `CreatedAt`, `ExpiresAt?`, `MaxUses?`, `UseCount`, `RevokedAt?`
 - Organisers create Attendee links; only the owner creates Organiser links.
 
+### EventFile
+A binary file stored in Postgres (`bytea`) and owned by an event; deleted with it. Generic on purpose so other file kinds can reuse it; what a file is *for* is decided by whoever points at it. Today only `Event.BannerFileId` does.
+- `Id` (Guid), `EventId`, `FileName`, `ContentType`, `Size`, `Data`, `UploadedById`, `CreatedAt`
+
 ### EventAttendance
 Join between User and Event.
 - `Id`, `EventId` (Guid, matches `Event.Id`), `UserId`, `Role` (Organiser | Attendee | Pending)

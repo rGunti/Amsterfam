@@ -16,6 +16,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { EventApi } from '../../core/api/event.api';
 import { localIsoDate } from '../../shared/local-date';
+import { EVENT_NAME_MAX_LENGTH } from '../../core/models/event';
 
 interface EventForm {
   name: FormControl<string>;
@@ -46,11 +47,12 @@ export class EventsCreate {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly saving = signal(false);
+  readonly nameMaxLength = EVENT_NAME_MAX_LENGTH;
   readonly form: FormGroup<EventForm>;
 
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
-      name: ['', [Validators.required, Validators.maxLength(200)]],
+      name: ['', [Validators.required, Validators.maxLength(EVENT_NAME_MAX_LENGTH)]],
       description: [''],
       startDate: [''],
       endDate: [''],

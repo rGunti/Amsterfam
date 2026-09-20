@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
@@ -32,9 +33,13 @@ import { EventApi } from '../../core/api/event.api';
 import { AttendanceApi } from '../../core/api/attendance.api';
 import { UserApi } from '../../core/api/user.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
-import { EventResponse } from '../../core/models/event';
+import { EVENT_NAME_MAX_LENGTH, EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
 import { JoinLinkShareSheet } from './join-link-share-sheet';
+import { isCompactScreen } from '../../shared/compact-screen';
+import { BannerTitle } from '../../shared/event-banner/banner-title';
+import { EventBanner } from '../../shared/event-banner/event-banner';
+import { prepareBanner } from '../../shared/banner-image';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 import {
   TransitionAction,
@@ -72,6 +77,9 @@ interface EventForm {
     MatMenuModule,
     MatTooltipModule,
     OrganiserAvatarStack,
+    EventBanner,
+    BannerTitle,
+    NgTemplateOutlet,
   ],
   templateUrl: './events-detail.html',
   styleUrl: './events-detail.scss',
@@ -86,6 +94,9 @@ export class EventsDetail implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly bottomSheet = inject(MatBottomSheet);
 
+  /** Phone-sized screen: the banner has no room for the organisers, so they go below it. */
+  readonly compact = isCompactScreen();
+
   readonly event = this.currentEventService.event;
   readonly loading = this.currentEventService.loading;
   readonly saving = signal(false);
@@ -94,6 +105,7 @@ export class EventsDetail implements OnInit {
   readonly attendees = signal<AttendeeResponse[]>([]);
   readonly attendeesLoading = signal(false);
   readonly actioning = signal(false);
+  readonly bannerBusy = signal(false);
   readonly pending = computed(() => this.attendees().filter((a) => a.role === 'Pending'));
   readonly confirmed = computed(() => {
     const ownerId = this.event()?.createdById;
@@ -123,11 +135,12 @@ export class EventsDetail implements OnInit {
   readonly acceptsJoins = acceptsJoins;
   /** Local "yyyy-MM-dd", the earliest start date the backend accepts. */
   readonly today = localIsoDate();
+  readonly nameMaxLength = EVENT_NAME_MAX_LENGTH;
   readonly form: FormGroup<EventForm>;
 
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
-      name: ['', [Validators.required, Validators.maxLength(200)]],
+      name: ['', [Validators.required, Validators.maxLength(EVENT_NAME_MAX_LENGTH)]],
       description: [''],
       startDate: [''],
       endDate: [''],
@@ -439,6 +452,53 @@ export class EventsDetail implements OnInit {
       }
     }
     this.editing.set(true);
+  }
+
+  bannerUrl(eventId: string): string {
+    return this.eventApi.bannerUrl(eventId);
+  }
+
+  onBannerSelected(input: Event): void {
+    const el = input.target as HTMLInputElement;
+    const file = el.files?.[0];
+    // Clear so picking the same file again after a failure still fires (change).
+    el.value = '';
+    const ev = this.event();
+    if (!file || !ev) {
+      return;
+    }
+    this.bannerBusy.set(true);
+    prepareBanner(file)
+      .then((image) => {
+        this.eventApi.uploadBanner(ev.id, image, file.name).subscribe({
+          next: ({ bannerFileId }) => {
+            this.bannerBusy.set(false);
+            this.setEvent({ ...ev, bannerFileId });
+          },
+          error: (err: HttpErrorResponse) => this.bannerFailed(err.error?.error),
+        });
+      })
+      .catch(() => this.bannerFailed('That file could not be read as an image'));
+  }
+
+  removeBanner(): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.bannerBusy.set(true);
+    this.eventApi.deleteBanner(ev.id).subscribe({
+      next: () => {
+        this.bannerBusy.set(false);
+        this.setEvent({ ...ev, bannerFileId: null });
+      },
+      error: (err: HttpErrorResponse) => this.bannerFailed(err.error?.error),
+    });
+  }
+
+  private bannerFailed(message?: string): void {
+    this.bannerBusy.set(false);
+    this.snackBar.open(message ?? 'Could not update the banner', 'Dismiss', { duration: 3000 });
   }
 
   cancelEdit(): void {

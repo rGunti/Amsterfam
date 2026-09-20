@@ -295,6 +295,9 @@ public class JoinLinkApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         ).Content.ReadFromJsonAsync<JoinLinkPreviewResponse>();
         Assert.Equal(ev.Id, preview!.EventId);
         Assert.False(preview.AlreadyMember);
+        Assert.Equal(ev.CreatedById, preview.OwnerId);
+        var organiser = Assert.Single(preview.Organisers);
+        Assert.Equal(ev.CreatedById, organiser.UserId);
     }
 
     [Fact]

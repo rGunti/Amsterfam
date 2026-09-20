@@ -287,6 +287,7 @@ public static class EventEndpoints
             organisers,
             allowed,
             ev.AutoTransitionsPaused,
+            ev.BannerFileId,
             // Only organisers can act on pending requests, so only they get the count.
             isOrganiser ? ev.Attendances.Count(a => a.Role == AttendanceRole.Pending) : null
         );

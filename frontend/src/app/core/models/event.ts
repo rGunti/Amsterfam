@@ -6,6 +6,9 @@ export type EventStatus =
   | 'Closed'
   | 'Archived'
   | 'Cancelled';
+/** Keeps titles short enough to sit on the banner and in nav/list UI. */
+export const EVENT_NAME_MAX_LENGTH = 64;
+
 export type AttendanceRole = 'Pending' | 'Attendee' | 'Organiser';
 
 export interface OrganiserSummary {
@@ -33,6 +36,8 @@ export interface EventResponse {
   allowedTransitions: EventStatus[];
   /** True after an owner reset; automatic start/close is skipped until the next manual move. */
   autoTransitionsPaused: boolean;
+  /** Id of the banner image, or null. Changes when the image is replaced. */
+  bannerFileId: string | null;
   /** Requests waiting for approval; only sent to organisers. */
   pendingAttendeeCount: number | null;
 }

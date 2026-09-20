@@ -7,7 +7,11 @@
     <form [formGroup]="form" (ngSubmit)="save()" class="create-form">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Name</mat-label>
-        <input matInput formControlName="name" />
+        <input matInput formControlName="name" [attr.maxlength]="nameMaxLength" />
+        <mat-hint align="end">{{ form.controls.name.value.length }} / {{ nameMaxLength }}</mat-hint>
+        @if (form.controls.name.hasError('maxlength')) {
+          <mat-error>Name can be at most {{ nameMaxLength }} characters</mat-error>
+        }
       </mat-form-field>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Description</mat-label>

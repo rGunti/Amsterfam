@@ -1,25 +1,107 @@
 @if (loading()) {
   <p>Loading…</p>
 } @else if (event(); as ev) {
-  <mat-card class="event-card">
-    <mat-card-header>
-      <mat-card-title class="title-row">
-        {{ ev.name }}
-        <mat-chip-set>
-          <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
-        </mat-chip-set>
-      </mat-card-title>
-      <mat-card-subtitle>
-        <app-organiser-avatar-stack [organisers]="organisers()" [ownerId]="ev.createdById" />
-      </mat-card-subtitle>
-    </mat-card-header>
+  <ng-template #dates let-ev>
+    @if (ev.startDate && ev.endDate) {
+      {{ ev.startDate }} – {{ ev.endDate }}
+    } @else {
+      Dates to be decided
+      @if (canUseDatePoll(ev)) {
+        ·
+        <a [routerLink]="['/events', ev.id, 'find-a-date']">{{
+          ev.status === 'Draft' ? 'Set up date poll' : 'Vote on dates'
+        }}</a>
+      }
+    }
+  </ng-template>
+  <ng-template #statusChip>
+    <mat-chip-set>
+      <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
+    </mat-chip-set>
+  </ng-template>
+  <mat-card class="event-card" [class.has-banner]="!!ev.bannerFileId">
+    @if (ev.bannerFileId; as bannerVersion) {
+      <app-event-banner [src]="bannerUrl(ev.id)" [version]="bannerVersion">
+        <app-banner-title [chip]="statusChip">{{ ev.name }}</app-banner-title>
+        <div class="banner-footer">
+          <div>
+            <p class="banner-meta">
+              <mat-icon inline>event</mat-icon>
+              <span><ng-container *ngTemplateOutlet="dates; context: { $implicit: ev }" /></span>
+            </p>
+            <p class="banner-meta"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
+          </div>
+          @if (!compact()) {
+            <app-organiser-avatar-stack
+              class="banner-organisers"
+              [organisers]="organisers()"
+              [ownerId]="ev.createdById"
+            />
+          }
+        </div>
+      </app-event-banner>
+      @if (compact()) {
+        <mat-card-header>
+          <mat-card-subtitle>
+            <app-organiser-avatar-stack [organisers]="organisers()" [ownerId]="ev.createdById" />
+          </mat-card-subtitle>
+        </mat-card-header>
+      }
+    } @else {
+      <mat-card-header>
+        <mat-card-title class="title-row">
+          {{ ev.name }}
+          <mat-chip-set>
+            <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
+          </mat-chip-set>
+        </mat-card-title>
+        <mat-card-subtitle>
+          <app-organiser-avatar-stack [organisers]="organisers()" [ownerId]="ev.createdById" />
+        </mat-card-subtitle>
+      </mat-card-header>
+    }
 
     <mat-card-content>
       @if (editing()) {
         <form [formGroup]="form" (ngSubmit)="save()" class="edit-form">
+          <div class="banner-edit">
+            <input
+              #bannerInput
+              type="file"
+              accept="image/*"
+              hidden
+              (change)="onBannerSelected($event)"
+            />
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="bannerInput.click()"
+              [disabled]="bannerBusy()"
+            >
+              <mat-icon>image</mat-icon>
+              {{ ev.bannerFileId ? 'Change banner' : 'Add banner' }}
+            </button>
+            @if (ev.bannerFileId) {
+              <button
+                mat-button
+                type="button"
+                color="warn"
+                (click)="removeBanner()"
+                [disabled]="bannerBusy()"
+              >
+                <mat-icon>delete</mat-icon> Remove banner
+              </button>
+            }
+          </div>
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Name</mat-label>
-            <input matInput formControlName="name" />
+            <input matInput formControlName="name" [attr.maxlength]="nameMaxLength" />
+            <mat-hint align="end"
+              >{{ form.controls.name.value.length }} / {{ nameMaxLength }}</mat-hint
+            >
+            @if (form.controls.name.hasError('maxlength')) {
+              <mat-error>Name can be at most {{ nameMaxLength }} characters</mat-error>
+            }
           </mat-form-field>
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Description</mat-label>
@@ -61,21 +143,13 @@
           </div>
         </form>
       } @else {
-        <p class="detail-row">
-          <mat-icon inline>event</mat-icon>
-          @if (ev.startDate && ev.endDate) {
-            {{ ev.startDate }} – {{ ev.endDate }}
-          } @else {
-            Dates to be decided
-            @if (canUseDatePoll(ev)) {
-              ·
-              <a [routerLink]="['/events', ev.id, 'find-a-date']">{{
-                ev.status === 'Draft' ? 'Set up date poll' : 'Vote on dates'
-              }}</a>
-            }
-          }
-        </p>
-        <p class="detail-row"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
+        @if (!ev.bannerFileId) {
+          <p class="detail-row">
+            <mat-icon inline>event</mat-icon>
+            <span><ng-container *ngTemplateOutlet="dates; context: { $implicit: ev }" /></span>
+          </p>
+          <p class="detail-row"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
+        }
         @if (ev.isMember) {
           @if (ev.description) {
             <p class="description">{{ ev.description }}</p>

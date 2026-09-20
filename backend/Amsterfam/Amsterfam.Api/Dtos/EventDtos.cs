@@ -19,6 +19,7 @@ public record EventResponse(
     IReadOnlyList<OrganiserSummary> Organisers,
     IReadOnlyList<string> AllowedTransitions,
     bool AutoTransitionsPaused,
+    Guid? BannerFileId = null,
     int? PendingAttendeeCount = null
 );
 

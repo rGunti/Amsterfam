@@ -47,6 +47,10 @@ export class JoinLinkApi {
     );
   }
 
+  bannerUrl(token: string): string {
+    return this.getUrl(`/api/v1/join-links/${encodeURIComponent(token)}/banner`);
+  }
+
   join(token: string): Observable<{ eventId: string }> {
     return this.http.post<{ eventId: string }>(
       this.getUrl(`/api/v1/join-links/${encodeURIComponent(token)}/join`),

@@ -1,0 +1,55 @@
+:host {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.text {
+  // One-line clamp (ellipsis on the first line of normally wrapped text).
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  // Hugs a short title so the chip sits right beside it; shrinks a long one.
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  font: var(--mat-sys-headline-small);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+  outline: none;
+
+  &.open {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+  }
+}
+
+.side {
+  flex: none;
+  margin-left: 8px;
+  overflow: hidden;
+}
+
+.inline-chip {
+  display: none;
+  margin-left: 8px;
+  vertical-align: middle;
+  // Keep the chip's own type size rather than the title's headline size.
+  font: var(--mat-sys-label-large);
+  text-shadow: none;
+}
+
+// Expanded: the side chip collapses to nothing and its copy flows inline after the text.
+:host(.expanded) {
+  .side {
+    width: 0;
+    margin-left: 0;
+  }
+
+  .inline-chip {
+    display: inline-block;
+  }
+}
