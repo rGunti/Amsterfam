@@ -11,8 +11,15 @@ public class EventAttendance
     public decimal AmountPaid { get; set; }
     public decimal? CostOverride { get; set; }
 
+    /// <summary>Joined via an organiser link; only the owner may confirm, granting Organiser.</summary>
+    public bool RequestedOrganiser { get; set; }
+
+    /// <summary>The join link this attendance was requested through, if any.</summary>
+    public int? JoinLinkId { get; set; }
+
     public Event Event { get; set; } = null!;
     public User User { get; set; } = null!;
+    public EventJoinLink? JoinLink { get; set; }
     public ICollection<ComfortAnswer> ComfortAnswers { get; set; } = [];
 }
 

@@ -1,0 +1,66 @@
+.links-card {
+  max-width: 640px;
+  margin: 24px auto;
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+h3 {
+  margin: 16px 0 8px;
+}
+
+.create-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  mat-form-field {
+    flex: 1 1 150px;
+  }
+}
+
+.create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+
+  &.unusable {
+    opacity: 0.6;
+  }
+}
+
+.kind-icon {
+  flex: none;
+  color: var(--mat-sys-on-surface-variant);
+
+  &.organiser {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.link-info {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  .note {
+    margin: 0;
+    flex-wrap: wrap;
+  }
+}
+
+.link-actions {
+  flex: none;
+}

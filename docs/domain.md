@@ -101,10 +101,19 @@ Rules:
 - Automatic transitions run on a cron schedule (`AutoTransitions:Schedule`, default `5 0 * * *`, server local time) and once at startup: Open → InProgress when `StartDate <= today`, InProgress → Closed when `EndDate < today`.
 - Deleting is a separate owner action, only for Archived or Cancelled events.
 
+### EventJoinLink
+Unguessable, revocable link that lets a signed-in user request to join an event. Joining always yields a Pending attendance.
+- `Id`, `EventId`, `Token` (unique, 32 random bytes base64url), `Kind` (Attendee | Organiser)
+- `Label` (string?, max 60) — shown instead of the default "Attendee link" / "Organiser link"
+- `CreatedById`, `CreatedAt`, `ExpiresAt?`, `MaxUses?`, `UseCount`, `RevokedAt?`
+- Organisers create Attendee links; only the owner creates Organiser links.
+
 ### EventAttendance
 Join between User and Event.
 - `Id`, `EventId` (Guid, matches `Event.Id`), `UserId`, `Role` (Organiser | Attendee | Pending)
 - `PlannedArrival`, `PlannedDeparture`
+- `JoinLinkId` (int?) — the link used to request; organisers see its label next to pending requests
+- `RequestedOrganiser` (bool) — joined via an organiser link; only the owner can confirm, which grants Organiser
 - `AmountPaid` (decimal)
 - `CostOverride` (decimal?) — null = use calculated value; set by organiser for edge cases (complimentary stays, special arrangements)
 

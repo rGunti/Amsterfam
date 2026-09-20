@@ -33,6 +33,8 @@ export interface EventResponse {
   allowedTransitions: EventStatus[];
   /** True after an owner reset; automatic start/close is skipped until the next manual move. */
   autoTransitionsPaused: boolean;
+  /** Requests waiting for approval; only sent to organisers. */
+  pendingAttendeeCount: number | null;
 }
 
 export interface UpdatePollRangeRequest {

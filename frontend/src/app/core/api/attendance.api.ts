@@ -18,10 +18,6 @@ export class AttendanceApi {
     return this.http.get<AttendeeResponse[]>(this.getUrl(`/api/v1/events/${eventId}/attendees`));
   }
 
-  join(eventId: string): Observable<void> {
-    return this.http.post<void>(this.getUrl(`/api/v1/events/${eventId}/attendees/join`), null);
-  }
-
   confirm(eventId: string, userId: number): Observable<void> {
     return this.http.post<void>(
       this.getUrl(`/api/v1/events/${eventId}/attendees/${userId}/confirm`),

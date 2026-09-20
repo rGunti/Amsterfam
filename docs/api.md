@@ -49,11 +49,26 @@ the targets the current user may move the event to right now.
 ### Attendance
 ```
 GET    /api/v1/events/{id}/attendees
-POST   /api/v1/events/{id}/attendees/join                     (RPC – current user RSVPs)
 POST   /api/v1/events/{id}/attendees/{userId}/confirm         (RPC – organiser confirms pending)
 DELETE /api/v1/events/{id}/attendees/{userId}
 PUT    /api/v1/events/{id}/attendees/{userId}
 ```
+There is no open "join" endpoint; joining always goes through a join link. `confirm` on a
+pending attendee who joined via an organiser link is owner-only and grants Organiser.
+
+### Join Links
+```
+GET    /api/v1/events/{id}/join-links              (organiser; owner also sees organiser links)
+POST   /api/v1/events/{id}/join-links              (organiser; kind=Organiser is owner-only; body: kind, label?, expiresAt?, maxUses?)
+DELETE /api/v1/events/{id}/join-links/{linkId}     (revoke; owner, or the organiser who created an attendee link)
+GET    /api/v1/join-links/{token}                  (preview: event name/dates, kind; 404 if invalid/expired/revoked/full)
+POST   /api/v1/join-links/{token}/join             (RPC – current user requests to join; lands Pending)
+```
+- `label` is optional (max 60 chars) and defaults to "Attendee link" / "Organiser link". Attendee rows returned to organisers include `joinLinkLabel`, the label of the link they joined through.
+- Tokens are 32 random bytes, base64url. The link is `/join/{token}` in the frontend.
+- Invalid, revoked, expired and used-up tokens are indistinguishable (404).
+- Attendee links need an event that accepts joins; organiser links also work in Draft.
+- `GET /api/v1/events/{id}` returns 404 to non-members.
 
 ### Availability
 ```

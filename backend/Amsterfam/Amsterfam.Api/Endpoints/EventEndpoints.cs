@@ -55,6 +55,10 @@ public static class EventEndpoints
             return TypedResults.NotFound();
 
         var user = await currentUser.GetOrCreateAsync();
+        // Events are only reachable via join link; non-members can't peek by GUID.
+        if (ev.Attendances.All(a => a.UserId != user.Id))
+            return TypedResults.NotFound();
+
         return TypedResults.Ok(BuildResponse(ev, user.Id, time.Today()));
     }
 
@@ -282,7 +286,9 @@ public static class EventEndpoints
             ev.CreatedById,
             organisers,
             allowed,
-            ev.AutoTransitionsPaused
+            ev.AutoTransitionsPaused,
+            // Only organisers can act on pending requests, so only they get the count.
+            isOrganiser ? ev.Attendances.Count(a => a.Role == AttendanceRole.Pending) : null
         );
     }
 

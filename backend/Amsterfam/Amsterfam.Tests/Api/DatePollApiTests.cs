@@ -345,7 +345,7 @@ public class DatePollApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var owner = api.CreateClientWithUser("discord|poll-org-cancel");
         var attendee = api.CreateClientWithUser("discord|poll-att-cancel");
         var ev = await CreatePollingEvent(owner, "cancel");
-        await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        await attendee.JoinAsync(api, ev.Id);
         var attendeeInfo = await attendee.GetFromJsonAsync<UserResponse>("/api/v1/me/");
         await owner.PostAsync($"/api/v1/events/{ev.Id}/attendees/{attendeeInfo!.Id}/confirm", null);
         await owner.TransitionThroughAsync(ev.Id, "Cancelled");

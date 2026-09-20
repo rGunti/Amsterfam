@@ -121,3 +121,20 @@ mat-toolbar span:first-of-type {
   opacity: 1;
   font-weight: 600;
 }
+
+// Needs the extra selectors to beat MDC's trailing-meta text colour and size.
+.mat-mdc-list-item.mdc-list-item--with-trailing-meta .nav-badge.mdc-list-item__end {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  box-sizing: border-box;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}

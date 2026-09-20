@@ -107,6 +107,9 @@
             <mat-icon>edit</mat-icon> Edit
           </button>
         }
+        @if (canShare) {
+          <button mat-button (click)="openShare()"><mat-icon>share</mat-icon> Share</button>
+        }
         @for (action of regularActions(); track action.target) {
           @if (action.primary) {
             <button
@@ -152,21 +155,7 @@
     <mat-card-content>
       @switch (ev.currentUserRole) {
         @case (null) {
-          @if (acceptsJoins(ev.status)) {
-            <p class="detail-row">You haven't joined this event yet.</p>
-            <button mat-flat-button color="primary" (click)="join()" [disabled]="actioning()">
-              <mat-icon>person_add</mat-icon> Join
-            </button>
-          } @else if (ev.status === 'Draft') {
-            <p class="detail-row">
-              <mat-icon inline>info</mat-icon>
-              This event can be joined once the organisers open it up.
-            </p>
-          } @else {
-            <p class="detail-row">
-              <mat-icon inline>info</mat-icon> This event is no longer accepting joins.
-            </p>
-          }
+          <p class="detail-row">You need a join link from an organiser to join this event.</p>
         }
         @case ('Pending') {
           <mat-chip-set>
@@ -197,51 +186,10 @@
     </mat-card-content>
   </mat-card>
 
-  @if (isOrganiser && !readOnly && pending().length > 0) {
-    <mat-card class="event-card">
-      <mat-card-header>
-        <mat-card-title>Pending attendees</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <p class="detail-row">Confirm to let them join, or remove their request.</p>
-        <mat-list>
-          @for (attendee of pending(); track attendee.userId) {
-            <mat-list-item>
-              @if (attendee.avatarUrl) {
-                <img matListItemAvatar [src]="attendee.avatarUrl" alt="" />
-              } @else {
-                <mat-icon matListItemAvatar>account_circle</mat-icon>
-              }
-              <span matListItemTitle>{{ attendee.displayName }}</span>
-              <span matListItemMeta>
-                <button
-                  mat-button
-                  color="primary"
-                  (click)="confirm(attendee.userId)"
-                  [disabled]="actioning()"
-                >
-                  <mat-icon>check</mat-icon> Confirm
-                </button>
-                <button
-                  mat-button
-                  color="warn"
-                  (click)="removeAttendee(attendee.userId, attendee.displayName)"
-                  [disabled]="actioning()"
-                >
-                  <mat-icon>close</mat-icon> Remove
-                </button>
-              </span>
-            </mat-list-item>
-          }
-        </mat-list>
-      </mat-card-content>
-    </mat-card>
-  }
-
   @if (isConfirmed) {
     <mat-card class="event-card">
       <mat-card-header>
-        <mat-card-title>Who's coming</mat-card-title>
+        <mat-card-title>Who's coming?</mat-card-title>
       </mat-card-header>
       <mat-card-content>
         @if (attendeesLoading()) {
@@ -273,6 +221,16 @@
                   }
                 </span>
               </button>
+            }
+            @if (isOrganiser && !readOnly && pending().length > 0) {
+              <a
+                class="avatar-cell pending-bubble"
+                [routerLink]="['/events', ev.id, 'join-links']"
+                [matTooltip]="pending().length + ' waiting for approval'"
+                [attr.aria-label]="pending().length + ' waiting for approval'"
+              >
+                <span class="avatar-circle">+{{ pending().length }}</span>
+              </a>
             }
           </div>
 

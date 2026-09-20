@@ -17,6 +17,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of } from 'rxjs';
@@ -33,11 +34,13 @@ import { UserApi } from '../../core/api/user.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
+import { JoinLinkShareSheet } from './join-link-share-sheet';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 import {
   TransitionAction,
   acceptsJoins,
   areDatesLocked,
+  canShareJoinLink,
   canUseDatePoll,
   isReadOnly,
   statusClass,
@@ -81,6 +84,7 @@ export class EventsDetail implements OnInit {
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly bottomSheet = inject(MatBottomSheet);
 
   readonly event = this.currentEventService.event;
   readonly loading = this.currentEventService.loading;
@@ -149,6 +153,25 @@ export class EventsDetail implements OnInit {
     return ev !== null && userId !== null && ev.createdById === userId;
   }
 
+  get canShare(): boolean {
+    const ev = this.event();
+    return ev !== null && canShareJoinLink(ev, this.isOwner);
+  }
+
+  openShare(): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.bottomSheet.open(JoinLinkShareSheet, {
+      data: {
+        eventId: ev.id,
+        eventName: ev.name,
+        kind: ev.status === 'Draft' ? 'Organiser' : 'Attendee',
+      },
+    });
+  }
+
   get readOnly(): boolean {
     const ev = this.event();
     return ev !== null && isReadOnly(ev.status);
@@ -207,28 +230,9 @@ export class EventsDetail implements OnInit {
       next: (attendees) => {
         this.attendees.set(attendees);
         this.attendeesLoading.set(false);
+        this.currentEventService.setPendingCount(this.pending().length);
       },
       error: () => this.attendeesLoading.set(false),
-    });
-  }
-
-  join(): void {
-    const ev = this.event();
-    if (!ev) {
-      return;
-    }
-    this.actioning.set(true);
-    this.attendanceApi.join(ev.id).subscribe({
-      next: () => {
-        this.actioning.set(false);
-        this.loadEvent(ev.id);
-        this.snackBar.open('Joined — waiting for confirmation', 'Dismiss', { duration: 3000 });
-      },
-      error: (err: HttpErrorResponse) => {
-        this.actioning.set(false);
-        const message = err.error?.error ?? 'Could not join event';
-        this.snackBar.open(message, 'Dismiss', { duration: 3000 });
-      },
     });
   }
 
@@ -258,25 +262,6 @@ export class EventsDetail implements OnInit {
           this.snackBar.open('Could not leave event', 'Dismiss', { duration: 3000 });
         },
       });
-    });
-  }
-
-  confirm(userId: number): void {
-    const ev = this.event();
-    if (!ev) {
-      return;
-    }
-    this.actioning.set(true);
-    this.attendanceApi.confirm(ev.id, userId).subscribe({
-      next: () => {
-        this.actioning.set(false);
-        this.loadAttendees(ev.id);
-        this.snackBar.open('Attendee confirmed', 'Dismiss', { duration: 3000 });
-      },
-      error: () => {
-        this.actioning.set(false);
-        this.snackBar.open('Could not confirm attendee', 'Dismiss', { duration: 3000 });
-      },
     });
   }
 

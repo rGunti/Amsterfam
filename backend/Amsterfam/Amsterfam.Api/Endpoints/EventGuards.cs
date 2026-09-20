@@ -58,4 +58,15 @@ internal static class EventGuards
             ? TypedResults.Forbid()
             : null;
     }
+
+    public static Task<bool> IsOrganiser(AmsterfamDbContext db, Guid eventId, int userId) =>
+        db.EventAttendances.AnyAsync(a =>
+            a.EventId == eventId && a.UserId == userId && a.Role == AttendanceRole.Organiser
+        );
+
+    public static Task<bool> IsMember(AmsterfamDbContext db, Guid eventId, int userId) =>
+        db.EventAttendances.AnyAsync(a => a.EventId == eventId && a.UserId == userId);
+
+    public static Task<bool> IsOwner(AmsterfamDbContext db, Guid eventId, int userId) =>
+        db.Events.AnyAsync(e => e.Id == eventId && e.CreatedById == userId);
 }

@@ -18,7 +18,8 @@ public record EventResponse(
     int CreatedById,
     IReadOnlyList<OrganiserSummary> Organisers,
     IReadOnlyList<string> AllowedTransitions,
-    bool AutoTransitionsPaused
+    bool AutoTransitionsPaused,
+    int? PendingAttendeeCount = null
 );
 
 public record OrganiserSummary(int UserId, string DisplayName, string? AvatarUrl);

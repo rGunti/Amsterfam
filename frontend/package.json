@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "scripts": {
     "ng": "ng",
+    "postinstall": "node scripts/set-version.js",
     "prestart": "node scripts/set-version.js",
     "start": "ng serve",
+    "prestart:e2e": "node scripts/set-version.js",
     "start:e2e": "ng serve --configuration e2e",
     "prebuild": "node scripts/set-version.js",
     "build": "ng build",

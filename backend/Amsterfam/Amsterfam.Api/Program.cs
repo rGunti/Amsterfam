@@ -123,6 +123,7 @@ app.MapVersionEndpoints();
 app.MapUserEndpoints();
 app.MapEventEndpoints();
 app.MapAttendanceEndpoints();
+app.MapJoinLinkEndpoints();
 app.MapDatePollEndpoints();
 app.MapPaymentMethodEndpoints();
 

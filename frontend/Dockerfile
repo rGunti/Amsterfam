@@ -16,7 +16,9 @@ RUN npm install -g pnpm@10.20.0
 
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# Only package.json is copied at this point, so the postinstall version script can't run;
+# `pnpm run build` below regenerates version.ts via prebuild.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY . .
 # Environment-specific values (API base URL, OIDC issuer) are never baked in
