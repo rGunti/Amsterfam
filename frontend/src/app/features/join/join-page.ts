@@ -28,9 +28,9 @@ import { JoinLinkPreviewResponse } from '../../core/models/join-link';
             <p>{{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}</p>
           }
           @if (p.kind === 'Organiser') {
-            <p>
-              <mat-icon inline>admin_panel_settings</mat-icon>
-              This link is for organisers. The event owner will need to approve you.
+            <p class="note">
+              <mat-icon>admin_panel_settings</mat-icon>
+              <span>This link is for organisers. The event owner will need to approve you.</span>
             </p>
           } @else {
             <p>An organiser will need to approve your request before you're in.</p>
@@ -71,6 +71,18 @@ import { JoinLinkPreviewResponse } from '../../core/models/join-link';
     .join-card {
       max-width: 480px;
       margin: 0 auto;
+    }
+    .note {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0 0;
+    }
+    .note mat-icon {
+      flex: none;
+    }
+    mat-card-actions {
+      padding: 16px 16px 16px;
     }
   `,
 })
