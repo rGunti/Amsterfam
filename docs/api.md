@@ -61,7 +61,7 @@ pending attendee who joined via an organiser link is owner-only and grants Organ
 GET    /api/v1/events/{id}/join-links              (organiser; owner also sees organiser links)
 POST   /api/v1/events/{id}/join-links              (organiser; kind=Organiser is owner-only; body: kind, label?, expiresAt?, maxUses?)
 DELETE /api/v1/events/{id}/join-links/{linkId}     (revoke; owner, or the organiser who created an attendee link)
-GET    /api/v1/join-links/{token}                  (preview: event name/dates, kind; 404 if invalid/expired/revoked/full)
+GET    /api/v1/join-links/{token}                  (preview: event name/dates/location, kind, owner id, organisers (name + avatar), banner id; 404 if invalid/expired/revoked/full)
 POST   /api/v1/join-links/{token}/join             (RPC – current user requests to join; lands Pending)
 ```
 - `label` is optional (max 60 chars) and defaults to "Attendee link" / "Organiser link". Attendee rows returned to organisers include `joinLinkLabel`, the label of the link they joined through.

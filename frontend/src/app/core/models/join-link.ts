@@ -1,3 +1,5 @@
+import { OrganiserSummary } from './event';
+
 export type JoinLinkKind = 'Attendee' | 'Organiser';
 
 export interface JoinLinkResponse {
@@ -30,5 +32,7 @@ export interface JoinLinkPreviewResponse {
   endDate: string | null;
   kind: JoinLinkKind;
   alreadyMember: boolean;
+  ownerId: number;
+  organisers: OrganiserSummary[];
   bannerFileId: string | null;
 }

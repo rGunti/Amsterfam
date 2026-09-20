@@ -1,7 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import {
   FormBuilder,
@@ -23,7 +21,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
-import { map, of } from 'rxjs';
+import { of } from 'rxjs';
 
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import {
@@ -38,6 +36,7 @@ import { CurrentEventService } from '../../core/event/current-event.service';
 import { EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
 import { JoinLinkShareSheet } from './join-link-share-sheet';
+import { isCompactScreen } from '../../shared/compact-screen';
 import { EventBanner } from '../../shared/event-banner/event-banner';
 import { prepareBanner } from '../../shared/banner-image';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
@@ -94,12 +93,7 @@ export class EventsDetail implements OnInit {
   private readonly bottomSheet = inject(MatBottomSheet);
 
   /** Phone-sized screen: the banner has no room for the organisers, so they go below it. */
-  readonly compact = toSignal(
-    inject(BreakpointObserver)
-      .observe(Breakpoints.XSmall)
-      .pipe(map((state) => state.matches)),
-    { initialValue: false },
-  );
+  readonly compact = isCompactScreen();
 
   readonly event = this.currentEventService.event;
   readonly loading = this.currentEventService.loading;

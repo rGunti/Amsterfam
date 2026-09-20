@@ -29,5 +29,7 @@ public record JoinLinkPreviewResponse(
     DateOnly? EndDate,
     string Kind,
     bool AlreadyMember,
+    int OwnerId,
+    IReadOnlyList<OrganiserSummary> Organisers,
     Guid? BannerFileId = null
 );

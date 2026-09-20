@@ -10,11 +10,21 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { JoinLinkApi } from '../../core/api/join-link.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { JoinLinkPreviewResponse } from '../../core/models/join-link';
+import { isCompactScreen } from '../../shared/compact-screen';
 import { EventBanner } from '../../shared/event-banner/event-banner';
+import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 
 @Component({
   selector: 'app-join-page',
-  imports: [RouterLink, DatePipe, MatButtonModule, MatCardModule, MatIconModule, EventBanner],
+  imports: [
+    RouterLink,
+    DatePipe,
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule,
+    EventBanner,
+    OrganiserAvatarStack,
+  ],
   template: `
     <mat-card class="join-card" [class.has-banner]="!!preview()?.bannerFileId">
       @if (loading()) {
@@ -30,6 +40,14 @@ import { EventBanner } from '../../shared/event-banner/event-banner';
               </p>
             }
             <p class="banner-meta"><mat-icon inline>place</mat-icon> {{ p.location }}</p>
+            @if (!compact()) {
+              <app-organiser-avatar-stack
+                bannerAside
+                class="banner-organisers"
+                [organisers]="p.organisers"
+                [ownerId]="p.ownerId"
+              />
+            }
           </app-event-banner>
         } @else {
           <mat-card-header>
@@ -38,6 +56,13 @@ import { EventBanner } from '../../shared/event-banner/event-banner';
           </mat-card-header>
         }
         <mat-card-content>
+          @if ((compact() || !p.bannerFileId) && p.organisers.length > 0) {
+            <app-organiser-avatar-stack
+              class="organisers"
+              [organisers]="p.organisers"
+              [ownerId]="p.ownerId"
+            />
+          }
           @if (!p.bannerFileId && p.startDate && p.endDate) {
             <p>{{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}</p>
           }
@@ -99,6 +124,15 @@ import { EventBanner } from '../../shared/event-banner/event-banner';
       font: var(--mat-sys-headline-small);
       text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
     }
+    .banner-organisers {
+      --organiser-label-color: #fff;
+      display: block;
+      text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+    }
+    .organisers {
+      display: block;
+      margin: 12px 0;
+    }
     .banner-meta {
       display: flex;
       align-items: center;
@@ -127,6 +161,7 @@ export class JoinPage implements OnInit {
   private readonly currentEventService = inject(CurrentEventService);
   private readonly token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
 
+  readonly compact = isCompactScreen();
   readonly bannerUrl = this.api.bannerUrl(this.token);
   readonly loading = signal(true);
   readonly joining = signal(false);

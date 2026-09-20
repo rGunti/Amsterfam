@@ -250,6 +250,18 @@ public static class JoinLinkEndpoints
         var user = await currentUser.GetOrCreateAsync();
         var member = await EventGuards.IsMember(db, link.EventId, user.Id);
 
+        // Shown so a recipient can tell who is inviting them before asking to join.
+        var organisers = await db
+            .EventAttendances.Where(a =>
+                a.EventId == link.EventId && a.Role == AttendanceRole.Organiser
+            )
+            .Select(a => new OrganiserSummary(
+                a.UserId,
+                a.User.DisplayName ?? a.User.Handle,
+                a.User.AvatarUrl
+            ))
+            .ToListAsync();
+
         return TypedResults.Ok(
             new JoinLinkPreviewResponse(
                 link.EventId,
@@ -259,6 +271,8 @@ public static class JoinLinkEndpoints
                 link.Event.EndDate,
                 link.Kind.ToString(),
                 member,
+                link.Event.CreatedById,
+                organisers,
                 link.Event.BannerFileId
             )
         );
