@@ -60,20 +60,6 @@
   flex-wrap: wrap;
 }
 
-.banner-title-row {
-  // Collapsed, the title shrinks with an ellipsis and the chip stays beside it. Expanded, the
-  // title takes whole lines and the chip drops below instead of leaving a gap beside it.
-  flex-wrap: nowrap;
-
-  &:has(app-banner-title.open) {
-    flex-wrap: wrap;
-  }
-
-  mat-chip-set {
-    flex: none;
-  }
-}
-
 .banner-footer {
   display: flex;
   flex-wrap: wrap;

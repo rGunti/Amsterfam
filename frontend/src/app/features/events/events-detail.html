@@ -14,15 +14,15 @@
       }
     }
   </ng-template>
+  <ng-template #statusChip>
+    <mat-chip-set>
+      <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
+    </mat-chip-set>
+  </ng-template>
   <mat-card class="event-card" [class.has-banner]="!!ev.bannerFileId">
     @if (ev.bannerFileId; as bannerVersion) {
       <app-event-banner [src]="bannerUrl(ev.id)" [version]="bannerVersion">
-        <div class="title-row banner-title-row">
-          <app-banner-title>{{ ev.name }}</app-banner-title>
-          <mat-chip-set>
-            <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
-          </mat-chip-set>
-        </div>
+        <app-banner-title [chip]="statusChip">{{ ev.name }}</app-banner-title>
         <div class="banner-footer">
           <div>
             <p class="banner-meta">
