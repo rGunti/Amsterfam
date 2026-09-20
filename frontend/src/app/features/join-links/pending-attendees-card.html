@@ -1,0 +1,62 @@
+@if (pending().length > 0) {
+  <mat-card class="pending-card">
+    <mat-card-header>
+      <mat-card-title>Pending attendees</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="detail-row">Confirm to let them join, or remove their request.</p>
+      <mat-list>
+        @for (attendee of pending(); track attendee.userId) {
+          <mat-list-item>
+            @if (attendee.avatarUrl) {
+              <img matListItemAvatar [src]="attendee.avatarUrl" alt="" />
+            } @else {
+              <mat-icon matListItemAvatar class="default-avatar">account_circle</mat-icon>
+            }
+            <span matListItemTitle>{{ attendee.displayName }}</span>
+            @if (attendee.requestedOrganiser || attendee.joinLinkLabel) {
+              <span
+                matListItemLine
+                class="meta-line"
+                [attr.title]="attendee.requestedOrganiser ? 'Wants to be an organiser' : null"
+              >
+                @if (attendee.requestedOrganiser) {
+                  <mat-icon inline>admin_panel_settings</mat-icon>
+                  <span class="meta-text">as Organiser</span>
+                  @if (attendee.joinLinkLabel) {
+                    <span aria-hidden="true">·</span>
+                  }
+                } @else {
+                  <mat-icon inline>link</mat-icon>
+                }
+                @if (attendee.joinLinkLabel) {
+                  <span class="meta-text">via {{ attendee.joinLinkLabel }}</span>
+                }
+              </span>
+            }
+            <span matListItemMeta>
+              @if (!attendee.requestedOrganiser || isOwner()) {
+                <button
+                  mat-button
+                  color="primary"
+                  (click)="confirm(attendee.userId)"
+                  [disabled]="actioning()"
+                >
+                  <mat-icon>check</mat-icon> Confirm
+                </button>
+              }
+              <button
+                mat-button
+                color="warn"
+                (click)="remove(attendee.userId, attendee.displayName)"
+                [disabled]="actioning()"
+              >
+                <mat-icon>close</mat-icon> Remove
+              </button>
+            </span>
+          </mat-list-item>
+        }
+      </mat-list>
+    </mat-card-content>
+  </mat-card>
+}

@@ -10,43 +10,6 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.default-avatar.mat-mdc-list-item-avatar {
-  // MDC paints icon avatars as a small glyph on a filled disc; show a plain 40px icon instead.
-  width: 40px;
-  height: 40px;
-  font-size: 40px;
-  line-height: 40px;
-  background: none;
-  color: var(--mat-sys-on-surface-variant);
-}
-
-.meta-line {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-
-  // MDC adds a zero-width ::before to list lines; as a flex item it would add an extra gap.
-  &::before {
-    display: none;
-  }
-
-  .meta-text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  mat-icon {
-    flex: none;
-    width: 16px;
-    height: 16px;
-    margin: 0;
-    font-size: 16px;
-    line-height: 16px;
-  }
-}
-
 .description {
   margin-top: 16px;
   white-space: pre-wrap;
@@ -119,6 +82,22 @@ app-organiser-avatar-stack {
   border: none;
   background: none;
   cursor: pointer;
+}
+
+.pending-bubble {
+  text-decoration: none;
+
+  .avatar-circle {
+    border: 2px dashed var(--mat-sys-outline);
+    color: var(--mat-sys-on-surface-variant);
+    font-weight: 500;
+    box-sizing: border-box;
+  }
+
+  &:hover .avatar-circle {
+    border-color: var(--mat-sys-primary);
+    color: var(--mat-sys-primary);
+  }
 }
 
 .avatar-circle {

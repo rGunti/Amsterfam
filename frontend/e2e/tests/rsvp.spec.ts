@@ -56,7 +56,10 @@ test('organiser confirms a pending attendee', async ({ page, request }) => {
   const eventId = await createOpenEvent(request, BROWSER_USER);
   await joinViaApi(request, eventId, BROWSER_USER, joiner);
 
+  // The overview points at the pending list with a +N bubble.
   await page.goto(`/events/${eventId}`);
+  await page.getByRole('link', { name: '1 waiting for approval' }).click();
+  await expect(page).toHaveURL(new RegExp(`/events/${eventId}/join-links$`));
 
   const pendingCard = page.locator('mat-card', { hasText: 'Pending attendees' });
   await expect(pendingCard.getByText(`Test User ${joiner}`)).toBeVisible();
@@ -65,6 +68,7 @@ test('organiser confirms a pending attendee', async ({ page, request }) => {
 
   await expect(page.getByText('Attendee confirmed')).toBeVisible();
 
+  await page.goto(`/events/${eventId}`);
   const rosterCard = page.locator('mat-card', { hasText: "Who's coming" });
   await expect(rosterCard.getByRole('button', { name: `Test User ${joiner}` })).toBeVisible();
 });
@@ -74,7 +78,7 @@ test('organiser removes a pending attendee', async ({ page, request }) => {
   const eventId = await createOpenEvent(request, BROWSER_USER);
   await joinViaApi(request, eventId, BROWSER_USER, joiner);
 
-  await page.goto(`/events/${eventId}`);
+  await page.goto(`/events/${eventId}/join-links`);
 
   const pendingCard = page.locator('mat-card', { hasText: 'Pending attendees' });
   await expect(pendingCard.getByText(`Test User ${joiner}`)).toBeVisible();

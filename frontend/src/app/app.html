@@ -129,6 +129,14 @@
           >
             <mat-icon matListItemIcon>link</mat-icon>
             <span matListItemTitle>Join links</span>
+            @if (currentEvent.pendingAttendeeCount) {
+              <span
+                matListItemMeta
+                class="nav-badge"
+                [attr.aria-label]="currentEvent.pendingAttendeeCount + ' waiting for approval'"
+                >{{ currentEvent.pendingAttendeeCount }}</span
+              >
+            }
           </a>
         }
       } @else {

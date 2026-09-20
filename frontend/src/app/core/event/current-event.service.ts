@@ -43,6 +43,14 @@ export class CurrentEventService {
     this._event.set(event);
   }
 
+  /** Keeps the nav badge in step after a page (re)loads or changes the attendee list. */
+  setPendingCount(count: number): void {
+    const event = this._event();
+    if (event && event.pendingAttendeeCount !== null && event.pendingAttendeeCount !== count) {
+      this._event.set({ ...event, pendingAttendeeCount: count });
+    }
+  }
+
   clear(): void {
     this._eventId.set(null);
     this._event.set(null);

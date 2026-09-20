@@ -1,4 +1,6 @@
-@if (event()) {
+@if (event(); as ev) {
+  <app-pending-attendees-card [eventId]="ev.id" [isOwner]="isOwner()" />
+
   <mat-card class="links-card">
     <mat-card-header>
       <mat-card-title>Join links</mat-card-title>

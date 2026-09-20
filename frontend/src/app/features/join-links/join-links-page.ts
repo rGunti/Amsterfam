@@ -14,6 +14,7 @@ import { JoinLinkApi } from '../../core/api/join-link.api';
 import { UserApi } from '../../core/api/user.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { JoinLinkKind, JoinLinkResponse } from '../../core/models/join-link';
+import { PendingAttendeesCard } from './pending-attendees-card';
 import { copyJoinLink } from '../../shared/join-link';
 import { localIsoDate } from '../../shared/local-date';
 
@@ -28,6 +29,7 @@ import { localIsoDate } from '../../shared/local-date';
     MatIconModule,
     MatInputModule,
     MatTooltipModule,
+    PendingAttendeesCard,
   ],
   templateUrl: './join-links-page.html',
   styleUrl: './join-links-page.scss',

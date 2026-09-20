@@ -541,6 +541,27 @@ public class JoinLinkApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         );
     }
 
+    [Fact]
+    public async Task Event_ReportsPendingCount_ToOrganisersOnly()
+    {
+        var owner = api.CreateClientWithUser("discord|jl-owner-21");
+        var joiner = api.CreateClientWithUser("discord|jl-joiner-21");
+        var other = api.CreateClientWithUser("discord|jl-joiner-21b");
+        var ev = await CreateEvent(owner, "21", open: true);
+
+        var before = await owner.GetFromJsonAsync<EventResponse>($"/api/v1/events/{ev.Id}");
+        Assert.Equal(0, before!.PendingAttendeeCount);
+
+        await joiner.JoinAsync(api, ev.Id);
+        await other.JoinAsync(api, ev.Id);
+
+        var asOwner = await owner.GetFromJsonAsync<EventResponse>($"/api/v1/events/{ev.Id}");
+        Assert.Equal(2, asOwner!.PendingAttendeeCount);
+
+        var asPending = await joiner.GetFromJsonAsync<EventResponse>($"/api/v1/events/{ev.Id}");
+        Assert.Null(asPending!.PendingAttendeeCount);
+    }
+
     private static async Task<HttpClient> ClientFor(Guid eventId, params HttpClient[] candidates)
     {
         foreach (var c in candidates)

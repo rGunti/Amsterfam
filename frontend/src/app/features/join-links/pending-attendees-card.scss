@@ -1,0 +1,52 @@
+.pending-card {
+  max-width: 640px;
+  margin: 24px auto;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+[matListItemAvatar] {
+  object-fit: cover;
+}
+
+.default-avatar.mat-mdc-list-item-avatar {
+  // MDC paints icon avatars as a small glyph on a filled disc; show a plain 40px icon instead.
+  width: 40px;
+  height: 40px;
+  font-size: 40px;
+  line-height: 40px;
+  background: none;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  // MDC adds a zero-width ::before to list lines; as a flex item it would add an extra gap.
+  &::before {
+    display: none;
+  }
+
+  .meta-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  mat-icon {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    font-size: 16px;
+    line-height: 16px;
+  }
+}

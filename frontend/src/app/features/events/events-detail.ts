@@ -230,6 +230,7 @@ export class EventsDetail implements OnInit {
       next: (attendees) => {
         this.attendees.set(attendees);
         this.attendeesLoading.set(false);
+        this.currentEventService.setPendingCount(this.pending().length);
       },
       error: () => this.attendeesLoading.set(false),
     });
@@ -261,25 +262,6 @@ export class EventsDetail implements OnInit {
           this.snackBar.open('Could not leave event', 'Dismiss', { duration: 3000 });
         },
       });
-    });
-  }
-
-  confirm(userId: number): void {
-    const ev = this.event();
-    if (!ev) {
-      return;
-    }
-    this.actioning.set(true);
-    this.attendanceApi.confirm(ev.id, userId).subscribe({
-      next: () => {
-        this.actioning.set(false);
-        this.loadAttendees(ev.id);
-        this.snackBar.open('Attendee confirmed', 'Dismiss', { duration: 3000 });
-      },
-      error: () => {
-        this.actioning.set(false);
-        this.snackBar.open('Could not confirm attendee', 'Dismiss', { duration: 3000 });
-      },
     });
   }
 
