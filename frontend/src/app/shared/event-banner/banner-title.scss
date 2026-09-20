@@ -1,0 +1,18 @@
+:host {
+  display: block;
+  // As a flex item next to the status chip, let the title shrink instead of pushing it out.
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  font: var(--mat-sys-headline-small);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+  outline: none;
+}
+
+:host(.open) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

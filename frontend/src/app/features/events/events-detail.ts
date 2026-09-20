@@ -33,10 +33,11 @@ import { EventApi } from '../../core/api/event.api';
 import { AttendanceApi } from '../../core/api/attendance.api';
 import { UserApi } from '../../core/api/user.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
-import { EventResponse } from '../../core/models/event';
+import { EVENT_NAME_MAX_LENGTH, EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
 import { JoinLinkShareSheet } from './join-link-share-sheet';
 import { isCompactScreen } from '../../shared/compact-screen';
+import { BannerTitle } from '../../shared/event-banner/banner-title';
 import { EventBanner } from '../../shared/event-banner/event-banner';
 import { prepareBanner } from '../../shared/banner-image';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
@@ -77,6 +78,7 @@ interface EventForm {
     MatTooltipModule,
     OrganiserAvatarStack,
     EventBanner,
+    BannerTitle,
     NgTemplateOutlet,
   ],
   templateUrl: './events-detail.html',
@@ -133,11 +135,12 @@ export class EventsDetail implements OnInit {
   readonly acceptsJoins = acceptsJoins;
   /** Local "yyyy-MM-dd", the earliest start date the backend accepts. */
   readonly today = localIsoDate();
+  readonly nameMaxLength = EVENT_NAME_MAX_LENGTH;
   readonly form: FormGroup<EventForm>;
 
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
-      name: ['', [Validators.required, Validators.maxLength(200)]],
+      name: ['', [Validators.required, Validators.maxLength(EVENT_NAME_MAX_LENGTH)]],
       description: [''],
       startDate: [''],
       endDate: [''],

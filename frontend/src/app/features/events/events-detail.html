@@ -17,25 +17,28 @@
   <mat-card class="event-card" [class.has-banner]="!!ev.bannerFileId">
     @if (ev.bannerFileId; as bannerVersion) {
       <app-event-banner [src]="bannerUrl(ev.id)" [version]="bannerVersion">
-        <div class="title-row banner-title">
-          {{ ev.name }}
+        <div class="title-row banner-title-row">
+          <app-banner-title>{{ ev.name }}</app-banner-title>
           <mat-chip-set>
             <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
           </mat-chip-set>
         </div>
-        <p class="banner-meta">
-          <mat-icon inline>event</mat-icon>
-          <span><ng-container *ngTemplateOutlet="dates; context: { $implicit: ev }" /></span>
-        </p>
-        <p class="banner-meta"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
-        @if (!compact()) {
-          <app-organiser-avatar-stack
-            bannerAside
-            class="banner-organisers"
-            [organisers]="organisers()"
-            [ownerId]="ev.createdById"
-          />
-        }
+        <div class="banner-footer">
+          <div>
+            <p class="banner-meta">
+              <mat-icon inline>event</mat-icon>
+              <span><ng-container *ngTemplateOutlet="dates; context: { $implicit: ev }" /></span>
+            </p>
+            <p class="banner-meta"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
+          </div>
+          @if (!compact()) {
+            <app-organiser-avatar-stack
+              class="banner-organisers"
+              [organisers]="organisers()"
+              [ownerId]="ev.createdById"
+            />
+          }
+        </div>
       </app-event-banner>
       @if (compact()) {
         <mat-card-header>
@@ -92,7 +95,13 @@
           </div>
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Name</mat-label>
-            <input matInput formControlName="name" />
+            <input matInput formControlName="name" [attr.maxlength]="nameMaxLength" />
+            <mat-hint align="end"
+              >{{ form.controls.name.value.length }} / {{ nameMaxLength }}</mat-hint
+            >
+            @if (form.controls.name.hasError('maxlength')) {
+              <mat-error>Name can be at most {{ nameMaxLength }} characters</mat-error>
+            }
           </mat-form-field>
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Description</mat-label>

@@ -3,8 +3,7 @@ import { Component, DestroyRef, effect, inject, input, signal } from '@angular/c
 
 /**
  * Event header image. The title (projected content) sits on the image's bottom edge over a
- * blurred, darkened strip, like a chat-app group banner. Content marked
- * `bannerAside` goes to the right of it. Fetches through HttpClient because
+ * blurred, darkened strip, like a chat-app group banner. Fetches through HttpClient because
  * the API needs the bearer token, which a plain <img src> can't send.
  */
 @Component({
@@ -14,10 +13,7 @@ import { Component, DestroyRef, effect, inject, input, signal } from '@angular/c
       @if (objectUrl(); as url) {
         <img [src]="url" alt="" />
       }
-      <div class="caption">
-        <div class="main"><ng-content /></div>
-        <div class="aside"><ng-content select="[bannerAside]" /></div>
-      </div>
+      <div class="caption"><ng-content /></div>
     </div>
   `,
   styleUrl: './event-banner.scss',

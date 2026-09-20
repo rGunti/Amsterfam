@@ -6,6 +6,9 @@ export type EventStatus =
   | 'Closed'
   | 'Archived'
   | 'Cancelled';
+/** Keeps titles short enough to sit on the banner and in nav/list UI. */
+export const EVENT_NAME_MAX_LENGTH = 64;
+
 export type AttendanceRole = 'Pending' | 'Attendee' | 'Organiser';
 
 export interface OrganiserSummary {

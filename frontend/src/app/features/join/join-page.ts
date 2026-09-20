@@ -11,6 +11,7 @@ import { JoinLinkApi } from '../../core/api/join-link.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { JoinLinkPreviewResponse } from '../../core/models/join-link';
 import { isCompactScreen } from '../../shared/compact-screen';
+import { BannerTitle } from '../../shared/event-banner/banner-title';
 import { EventBanner } from '../../shared/event-banner/event-banner';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 
@@ -23,6 +24,7 @@ import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organi
     MatCardModule,
     MatIconModule,
     EventBanner,
+    BannerTitle,
     OrganiserAvatarStack,
   ],
   template: `
@@ -32,22 +34,25 @@ import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organi
       } @else if (preview(); as p) {
         @if (p.bannerFileId; as bannerVersion) {
           <app-event-banner [src]="bannerUrl" [version]="bannerVersion">
-            <div class="banner-title">You're invited to {{ p.eventName }}</div>
-            @if (p.startDate && p.endDate) {
-              <p class="banner-meta">
-                <mat-icon inline>event</mat-icon>
-                {{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}
-              </p>
-            }
-            <p class="banner-meta"><mat-icon inline>place</mat-icon> {{ p.location }}</p>
-            @if (!compact()) {
-              <app-organiser-avatar-stack
-                bannerAside
-                class="banner-organisers"
-                [organisers]="p.organisers"
-                [ownerId]="p.ownerId"
-              />
-            }
+            <app-banner-title>You're invited to {{ p.eventName }}</app-banner-title>
+            <div class="banner-footer">
+              <div>
+                @if (p.startDate && p.endDate) {
+                  <p class="banner-meta">
+                    <mat-icon inline>event</mat-icon>
+                    {{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}
+                  </p>
+                }
+                <p class="banner-meta"><mat-icon inline>place</mat-icon> {{ p.location }}</p>
+              </div>
+              @if (!compact()) {
+                <app-organiser-avatar-stack
+                  class="banner-organisers"
+                  [organisers]="p.organisers"
+                  [ownerId]="p.ownerId"
+                />
+              }
+            </div>
           </app-event-banner>
         } @else {
           <mat-card-header>
@@ -120,10 +125,6 @@ import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organi
         border-radius: 0;
       }
     }
-    .banner-title {
-      font: var(--mat-sys-headline-small);
-      text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
-    }
     .banner-organisers {
       --organiser-label-color: #fff;
       display: block;
@@ -132,6 +133,13 @@ import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organi
     .organisers {
       display: block;
       margin: 12px 0;
+    }
+    .banner-footer {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 8px 16px;
     }
     .banner-meta {
       display: flex;

@@ -60,9 +60,26 @@
   flex-wrap: wrap;
 }
 
-.banner-title {
-  font: var(--mat-sys-headline-small);
-  text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+.banner-title-row {
+  // Collapsed, the title shrinks with an ellipsis and the chip stays beside it. Expanded, the
+  // title takes whole lines and the chip drops below instead of leaving a gap beside it.
+  flex-wrap: nowrap;
+
+  &:has(app-banner-title.open) {
+    flex-wrap: wrap;
+  }
+
+  mat-chip-set {
+    flex: none;
+  }
+}
+
+.banner-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 16px;
 }
 
 .banner-meta {
