@@ -13,8 +13,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             "Annual trip",
             new DateOnly(2030, 7, 1),
             new DateOnly(2030, 7, 8),
-            "Amsterdam",
-            35.00m
+            "Amsterdam"
         );
 
     [Fact]
@@ -77,7 +76,6 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Null(ev!.CurrentUserRole);
         Assert.False(ev.IsMember);
         Assert.Null(ev.Description);
-        Assert.Null(ev.CostPerNight);
         Assert.Null(ev.PollRangeStart);
         Assert.Null(ev.PollRangeEnd);
     }
@@ -97,7 +95,6 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var ev = await pending.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created.Id}");
         Assert.Equal("Pending", ev!.CurrentUserRole);
         Assert.True(ev.IsMember);
-        Assert.NotNull(ev.CostPerNight);
     }
 
     [Fact]
@@ -125,7 +122,6 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var ev = await response.Content.ReadFromJsonAsync<EventResponse>();
         Assert.Equal(created.Id, ev!.Id);
         Assert.True(ev.IsMember);
-        Assert.NotNull(ev.CostPerNight);
     }
 
     [Fact]
@@ -149,8 +145,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             null,
             new DateOnly(2030, 7, 1),
             new DateOnly(2030, 7, 8),
-            "Amsterdam",
-            35.00m
+            "Amsterdam"
         );
 
         var response = await client.PutAsJsonAsync($"/api/v1/events/{created!.Id}", updateRequest);
@@ -174,8 +169,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             null,
             new DateOnly(2030, 7, 1),
             new DateOnly(2030, 7, 8),
-            "Amsterdam",
-            35.00m
+            "Amsterdam"
         );
 
         var response = await other.PutAsJsonAsync($"/api/v1/events/{created!.Id}", updateRequest);
@@ -255,7 +249,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     {
         var (client, created) = await CreateAs(
             "discord|sm-nodates",
-            new CreateEventRequest("No dates", null, null, null, "Amsterdam", null)
+            new CreateEventRequest("No dates", null, null, null, "Amsterdam")
         );
 
         var response = await client.TransitionAsync(created.Id, "Open");
@@ -361,22 +355,14 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
                 null,
                 new DateOnly(2030, 7, 2),
                 new DateOnly(2030, 7, 9),
-                "Amsterdam",
-                35.00m
+                "Amsterdam"
             )
         );
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
         var nameOnly = await client.PutAsJsonAsync(
             $"/api/v1/events/{created.Id}",
-            new UpdateEventRequest(
-                "Renamed",
-                null,
-                created.StartDate,
-                created.EndDate,
-                "Amsterdam",
-                35.00m
-            )
+            new UpdateEventRequest("Renamed", null, created.StartDate, created.EndDate, "Amsterdam")
         );
         nameOnly.EnsureSuccessStatusCode();
     }
@@ -393,8 +379,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
                 null,
                 new DateOnly(2000, 1, 1),
                 new DateOnly(2000, 1, 5),
-                "Amsterdam",
-                null
+                "Amsterdam"
             )
         );
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -408,14 +393,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         var response = await client.PutAsJsonAsync(
             $"/api/v1/events/{created.Id}",
-            new UpdateEventRequest(
-                "Renamed",
-                null,
-                created.StartDate,
-                created.EndDate,
-                "Amsterdam",
-                null
-            )
+            new UpdateEventRequest("Renamed", null, created.StartDate, created.EndDate, "Amsterdam")
         );
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -473,14 +451,10 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         );
         Assert.Equal("Cancelled", asAttendee!.Status);
         Assert.Equal("Attendee", asAttendee.CurrentUserRole);
-        Assert.Null(asAttendee.CostPerNight);
         Assert.Empty(asAttendee.AllowedTransitions);
 
         var attendees = await attendee.GetAsync($"/api/v1/events/{created.Id}/attendees/");
         Assert.Equal(HttpStatusCode.Forbidden, attendees.StatusCode);
-
-        var asOwner = await owner.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created.Id}");
-        Assert.NotNull(asOwner!.CostPerNight);
     }
 
     [Fact]

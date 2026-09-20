@@ -10,7 +10,6 @@ public class Event
     public required string Location { get; set; }
     public DateOnly? PollRangeStart { get; set; }
     public DateOnly? PollRangeEnd { get; set; }
-    public decimal? CostPerNight { get; set; }
     public EventStatus Status { get; set; } = EventStatus.Draft;
     public bool AutoTransitionsPaused { get; set; }
     public int CreatedById { get; set; }

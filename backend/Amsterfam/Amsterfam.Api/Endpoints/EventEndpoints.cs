@@ -83,7 +83,6 @@ public static class EventEndpoints
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             Location = request.Location,
-            CostPerNight = request.CostPerNight,
             CreatedById = user.Id,
         };
 
@@ -147,7 +146,6 @@ public static class EventEndpoints
         ev.StartDate = request.StartDate;
         ev.EndDate = request.EndDate;
         ev.Location = request.Location;
-        ev.CostPerNight = request.CostPerNight;
 
         await db.SaveChangesAsync();
         return TypedResults.Ok(BuildResponse(ev, user.Id, today));
@@ -277,7 +275,6 @@ public static class EventEndpoints
             ev.Location,
             ev.PollRangeStart,
             ev.PollRangeEnd,
-            ev.CostPerNight,
             ev.Status.ToString(),
             ev.CreatedAt,
             role.ToString(),
@@ -301,7 +298,6 @@ public static class EventEndpoints
             ev.StartDate,
             ev.EndDate,
             ev.Location,
-            null,
             null,
             null,
             ev.Status.ToString(),

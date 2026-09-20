@@ -11,7 +11,6 @@ public record EventResponse(
     string Location,
     DateOnly? PollRangeStart,
     DateOnly? PollRangeEnd,
-    decimal? CostPerNight,
     string Status,
     DateTime CreatedAt,
     string? CurrentUserRole,
@@ -29,8 +28,7 @@ public record CreateEventRequest(
     string? Description,
     DateOnly? StartDate,
     DateOnly? EndDate,
-    string Location,
-    decimal? CostPerNight
+    string Location
 );
 
 public record UpdateEventRequest(
@@ -38,8 +36,7 @@ public record UpdateEventRequest(
     string? Description,
     DateOnly? StartDate,
     DateOnly? EndDate,
-    string Location,
-    decimal? CostPerNight
+    string Location
 );
 
 public record TransitionEventRequest(string Target);

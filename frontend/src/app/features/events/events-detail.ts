@@ -19,7 +19,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
-import { CurrencyPipe } from '@angular/common';
 import { of } from 'rxjs';
 
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
@@ -53,7 +52,6 @@ interface EventForm {
   startDate: FormControl<string>;
   endDate: FormControl<string>;
   location: FormControl<string>;
-  costPerNight: FormControl<number>;
 }
 
 @Component({
@@ -70,7 +68,6 @@ interface EventForm {
     MatListModule,
     MatMenuModule,
     MatTooltipModule,
-    CurrencyPipe,
     OrganiserAvatarStack,
   ],
   templateUrl: './events-detail.html',
@@ -131,7 +128,6 @@ export class EventsDetail implements OnInit {
       startDate: [''],
       endDate: [''],
       location: ['', Validators.required],
-      costPerNight: [0, [Validators.required, Validators.min(0)]],
     });
   }
 
@@ -447,7 +443,6 @@ export class EventsDetail implements OnInit {
       startDate: ev.startDate ?? '',
       endDate: ev.endDate ?? '',
       location: ev.location,
-      costPerNight: ev.costPerNight ?? 0,
     });
     // Disabled controls still come back through getRawValue(), so locked dates round-trip
     // unchanged and the backend's date lock never trips.
@@ -479,7 +474,6 @@ export class EventsDetail implements OnInit {
         startDate: raw.startDate || null,
         endDate: raw.endDate || null,
         location: raw.location.trim(),
-        costPerNight: raw.costPerNight,
       })
       .subscribe({
         next: (updated) => {

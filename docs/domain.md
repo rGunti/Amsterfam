@@ -47,7 +47,6 @@ Per user, list of preferred ways for others to pay them back (splitting costs). 
 ### Event
 - `Id` (Guid — external/URL identifier, not a sequential integer, to keep event URLs from being guessable), `Name`, `Description`, `StartDate`, `EndDate`, `Location`
 - `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable while `Status` is `Draft` or `LookingForDate`, voting only while `LookingForDate`
-- `CostPerNight` (decimal)
 - `Status`: Draft | LookingForDate | Open | InProgress | Closed | Archived | Cancelled — see *Event lifecycle* below
 - `AutoTransitionsPaused` (bool) — set when the owner resets an event back to Open; the scheduled job skips it until the next manual transition
 - `CreatedBy`, `CreatedAt`
@@ -110,7 +109,7 @@ Join between User and Event.
 - `CostOverride` (decimal?) — null = use calculated value; set by organiser for edge cases (complimentary stays, special arrangements)
 
 Derived (not stored):
-- `TotalAmountDue` = `CostOverride ?? (BedAssignment-nights for this user × Event.CostPerNight)`
+- `TotalAmountDue` = `CostOverride ?? (BedAssignment-nights for this user × nightly rate — rate not modelled yet)`
 - `OpenAmount` = `TotalAmountDue - AmountPaid`
 - `PhysicalNightsStayed` = count of distinct `AvailabilityEntry` dates with status `Booked`
 

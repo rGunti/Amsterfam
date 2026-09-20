@@ -23,7 +23,6 @@ export interface EventResponse {
   location: string;
   pollRangeStart: string | null;
   pollRangeEnd: string | null;
-  costPerNight: number | null;
   status: EventStatus;
   createdAt: string;
   currentUserRole: AttendanceRole | null;
@@ -47,7 +46,6 @@ export interface UpdateEventRequest {
   startDate: string | null;
   endDate: string | null;
   location: string;
-  costPerNight: number | null;
 }
 
 export interface CreateEventRequest {
@@ -56,5 +54,4 @@ export interface CreateEventRequest {
   startDate: string | null;
   endDate: string | null;
   location: string;
-  costPerNight: number | null;
 }

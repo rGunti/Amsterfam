@@ -71,7 +71,6 @@ export class EventsCreate {
         startDate: raw.startDate || null,
         endDate: raw.endDate || null,
         location: raw.location.trim(),
-        costPerNight: null,
       })
       .subscribe({
         next: (created) => {

@@ -17,7 +17,6 @@ async function createOpenEvent(request: APIRequestContext, organiser: string): P
       startDate: '2030-08-01',
       endDate: '2030-08-05',
       location: 'Amsterdam',
-      costPerNight: 25,
     },
   });
   expect(create.ok()).toBeTruthy();

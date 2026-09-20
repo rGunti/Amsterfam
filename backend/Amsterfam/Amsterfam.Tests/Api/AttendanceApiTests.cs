@@ -18,8 +18,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
                     null,
                     new DateOnly(2030, 8, 1),
                     new DateOnly(2030, 8, 7),
-                    "Amsterdam",
-                    35.00m
+                    "Amsterdam"
                 )
             )
         ).Content.ReadFromJsonAsync<EventResponse>();

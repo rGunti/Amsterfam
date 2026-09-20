@@ -13,8 +13,7 @@ public class DatePollApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             null,
             new DateOnly(2030, 7, 1),
             new DateOnly(2030, 7, 8),
-            "Amsterdam",
-            35.00m
+            "Amsterdam"
         );
 
     private static async Task<EventResponse> CreateDraftEvent(HttpClient client, string suffix) =>
