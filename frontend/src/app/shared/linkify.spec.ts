@@ -21,6 +21,13 @@ describe('linkify', () => {
     ]);
   });
 
+  it('shows the port of a link that has one', () => {
+    expect(linkify('Try http://localhost:4200/dev now')[1]).toEqual({
+      text: 'localhost:4200/dev',
+      href: 'http://localhost:4200/dev',
+    });
+  });
+
   it('leaves sentence punctuation outside the link', () => {
     const [, link, tail] = linkify('See https://example.com/a, or https://example.com/b.');
     expect(link).toEqual({ text: 'example.com/a', href: 'https://example.com/a' });
@@ -127,6 +134,13 @@ describe('bare domains', () => {
 describe('shortenUrl', () => {
   it('drops the scheme, www and a bare trailing slash', () => {
     expect(shortenUrl(new URL('https://www.example.com/'))).toBe('example.com');
+  });
+
+  it('keeps a non-default port but not a default one', () => {
+    expect(shortenUrl(new URL('http://localhost:4200/dev'))).toBe('localhost:4200/dev');
+    expect(shortenUrl(new URL('https://example.com:8443/admin'))).toBe('example.com:8443/admin');
+    expect(shortenUrl(new URL('https://example.com:443/admin'))).toBe('example.com/admin');
+    expect(shortenUrl(new URL('http://[2001:db8::1]:8080/x'))).toBe('[2001:db8::1]:8080/x');
   });
 
   it('keeps the query string', () => {

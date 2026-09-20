@@ -64,5 +64,5 @@ export interface ExternalLinkDialogData {
 export class ExternalLinkDialog {
   readonly dialogRef = inject(MatDialogRef<ExternalLinkDialog>);
   readonly data = inject<ExternalLinkDialogData>(MAT_DIALOG_DATA);
-  readonly host = new URL(this.data.href).hostname;
+  readonly host = new URL(this.data.href).host;
 }

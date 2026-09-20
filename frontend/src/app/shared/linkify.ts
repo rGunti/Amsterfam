@@ -67,10 +67,13 @@ function toUrl(raw: string): URL | null {
   }
 }
 
-/** Compact label for a link: no scheme, no `www.`, no bare trailing slash, cut when long. */
+/**
+ * Compact label for a link: no scheme, no `www.`, no bare trailing slash, cut when long. The
+ * port stays (it changes where the link goes); a default port is dropped by `URL` itself.
+ */
 export function shortenUrl(url: URL, max = MAX_LINK_LABEL_LENGTH): string {
   const path = url.pathname === '/' ? '' : url.pathname;
-  const label = url.hostname.replace(/^www\./i, '') + path + url.search + url.hash;
+  const label = url.host.replace(/^www\./i, '') + path + url.search + url.hash;
   return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 
