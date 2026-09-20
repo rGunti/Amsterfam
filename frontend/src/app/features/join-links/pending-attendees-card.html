@@ -4,15 +4,35 @@
       <mat-card-title>Pending attendees</mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <p class="detail-row">Confirm to let them join, or remove their request.</p>
+      <div class="intro-row">
+        <p class="detail-row">
+          Confirm to let them join, or remove their request. Tap an avatar to select several.
+        </p>
+        <button mat-button (click)="toggleAll()" [disabled]="actioning()">
+          {{ allSelected() ? 'Clear' : 'Select all' }}
+        </button>
+      </div>
       <mat-list>
         @for (attendee of pending(); track attendee.userId) {
-          <mat-list-item>
-            @if (attendee.avatarUrl) {
-              <img matListItemAvatar [src]="attendee.avatarUrl" alt="" />
-            } @else {
-              <mat-icon matListItemAvatar class="default-avatar">account_circle</mat-icon>
-            }
+          <mat-list-item [class.selected]="isSelected(attendee.userId)">
+            <button
+              type="button"
+              matListItemAvatar
+              class="select-avatar"
+              [attr.aria-pressed]="isSelected(attendee.userId)"
+              [attr.aria-label]="'Select ' + attendee.displayName"
+              [disabled]="actioning()"
+              (click)="toggle(attendee.userId)"
+            >
+              @if (attendee.avatarUrl) {
+                <img [src]="attendee.avatarUrl" alt="" />
+              } @else {
+                <mat-icon class="default-avatar">account_circle</mat-icon>
+              }
+              @if (isSelected(attendee.userId)) {
+                <span class="check"><mat-icon>check</mat-icon></span>
+              }
+            </button>
             <span matListItemTitle>{{ attendee.displayName }}</span>
             @if (attendee.requestedOrganiser || attendee.joinLinkLabel) {
               <span
@@ -59,4 +79,26 @@
       </mat-list>
     </mat-card-content>
   </mat-card>
+}
+
+@if (selectedCount() > 0) {
+  <div class="selection-bar" role="toolbar" aria-label="Selected attendees">
+    <span class="selection-count">{{ selectedCount() }} selected</span>
+    <button mat-button (click)="clearSelection()" [disabled]="actioning()">Clear</button>
+    <button mat-button color="warn" (click)="removeSelected()" [disabled]="actioning()">
+      <mat-icon>close</mat-icon> Remove
+    </button>
+    <button
+      mat-flat-button
+      color="primary"
+      (click)="confirmSelected()"
+      [disabled]="actioning() || confirmableSelected().length === 0"
+    >
+      <mat-icon>check</mat-icon> Confirm{{
+        confirmableSelected().length !== selectedCount()
+          ? ' (' + confirmableSelected().length + ')'
+          : ''
+      }}
+    </button>
+  </div>
 }

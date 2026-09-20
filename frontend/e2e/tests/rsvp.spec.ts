@@ -91,6 +91,30 @@ test('organiser removes a pending attendee', async ({ page, request }) => {
   await expect(pendingCard).toBeHidden();
 });
 
+test('organiser confirms several pending attendees at once', async ({ page, request }) => {
+  const stamp = Date.now();
+  const joiners = [`rsvp-bulk-a-${stamp}`, `rsvp-bulk-b-${stamp}`];
+  const eventId = await createOpenEvent(request, BROWSER_USER);
+  for (const joiner of joiners) {
+    await joinViaApi(request, eventId, BROWSER_USER, joiner);
+  }
+
+  await page.goto(`/events/${eventId}/join-links`);
+
+  const pendingCard = page.locator('mat-card', { hasText: 'Pending attendees' });
+  for (const joiner of joiners) {
+    await pendingCard.getByRole('button', { name: `Select Test User ${joiner}` }).click();
+  }
+
+  const bar = page.getByRole('toolbar', { name: 'Selected attendees' });
+  await expect(bar.getByText('2 selected')).toBeVisible();
+  await bar.getByRole('button', { name: 'Confirm' }).click();
+
+  await expect(page.getByText('2 attendees confirmed')).toBeVisible();
+  await expect(bar).toBeHidden();
+  await expect(pendingCard).toBeHidden();
+});
+
 test('user joins via a join link then cancels the request', async ({ page, request }) => {
   const organiser = `rsvp-org-${Date.now()}`;
   const eventId = await createOpenEvent(request, organiser);
