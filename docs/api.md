@@ -59,11 +59,12 @@ pending attendee who joined via an organiser link is owner-only and grants Organ
 ### Join Links
 ```
 GET    /api/v1/events/{id}/join-links              (organiser; owner also sees organiser links)
-POST   /api/v1/events/{id}/join-links              (organiser; kind=Organiser is owner-only; body: kind, expiresAt?, maxUses?)
+POST   /api/v1/events/{id}/join-links              (organiser; kind=Organiser is owner-only; body: kind, label?, expiresAt?, maxUses?)
 DELETE /api/v1/events/{id}/join-links/{linkId}     (revoke; owner, or the organiser who created an attendee link)
 GET    /api/v1/join-links/{token}                  (preview: event name/dates, kind; 404 if invalid/expired/revoked/full)
 POST   /api/v1/join-links/{token}/join             (RPC – current user requests to join; lands Pending)
 ```
+- `label` is optional (max 60 chars) and defaults to "Attendee link" / "Organiser link". Attendee rows returned to organisers include `joinLinkLabel`, the label of the link they joined through.
 - Tokens are 32 random bytes, base64url. The link is `/join/{token}` in the frontend.
 - Invalid, revoked, expired and used-up tokens are indistinguishable (404).
 - Attendee links need an event that accepts joins; organiser links also work in Draft.

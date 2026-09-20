@@ -118,6 +118,19 @@
             <span matListItemTitle>Find a date</span>
           </a>
         }
+        @if (canManageJoinLinks(currentEvent)) {
+          <a
+            mat-list-item
+            [routerLink]="['/events', currentEvent.id, 'join-links']"
+            routerLinkActive
+            #linksActive="routerLinkActive"
+            [activated]="linksActive.isActive"
+            (click)="onNavLinkClick()"
+          >
+            <mat-icon matListItemIcon>link</mat-icon>
+            <span matListItemTitle>Join links</span>
+          </a>
+        }
       } @else {
         <a mat-list-item routerLink="/" (click)="onNavLinkClick()">
           <mat-icon matListItemIcon>event</mat-icon>

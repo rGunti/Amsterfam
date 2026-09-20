@@ -44,18 +44,22 @@ public static class AttendanceEndpoints
         if (!isMember)
             query = query.Where(a => a.Role == AttendanceRole.Organiser);
 
-        var attendees = await query
-            .Include(a => a.User)
-            .Select(a => new AttendeeResponse(
+        var isOrganiser = await IsOrganiser(db, eventId, user.Id);
+
+        var rows = await query.Include(a => a.User).Include(a => a.JoinLink).ToListAsync();
+
+        // Which link someone came in through is only useful to organisers.
+        var attendees = rows.Select(a => new AttendeeResponse(
                 a.UserId,
                 a.User.DisplayName ?? a.User.Handle,
                 a.User.AvatarUrl,
                 a.Role.ToString(),
                 a.PlannedArrival,
                 a.PlannedDeparture,
-                a.RequestedOrganiser
+                a.RequestedOrganiser,
+                isOrganiser ? a.JoinLink?.DisplayLabel : null
             ))
-            .ToListAsync();
+            .ToList();
 
         return TypedResults.Ok(attendees);
     }

@@ -1,0 +1,95 @@
+@if (event(); as ev) {
+  <mat-card class="links-card">
+    <mat-card-header>
+      <mat-card-title>Join links</mat-card-title>
+      <mat-card-subtitle>{{ ev.name }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="note">
+        Share a link to let people request to join. Everyone still needs to be approved.
+      </p>
+      @if (isDraft) {
+        <p class="note">
+          <mat-icon inline>info</mat-icon>
+          Attendee links start working once the event is open for joins. Organiser links work right
+          away.
+        </p>
+      }
+
+      <h3>New link</h3>
+      <div class="create-row">
+        <mat-form-field>
+          <mat-label>Label</mat-label>
+          <input matInput maxlength="60" [(ngModel)]="label" placeholder="e.g. Friends from work" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Expires</mat-label>
+          <input matInput type="date" [min]="today" [(ngModel)]="expires" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Max uses</mat-label>
+          <input matInput type="number" min="1" [(ngModel)]="maxUses" />
+        </mat-form-field>
+      </div>
+      <p class="note">Label, expiry and max uses are optional.</p>
+      <div class="create-actions">
+        <button mat-flat-button color="primary" (click)="create('Attendee')" [disabled]="busy()">
+          <mat-icon>person_add</mat-icon> Create attendee link
+        </button>
+        @if (isOwner()) {
+          <button mat-stroked-button (click)="create('Organiser')" [disabled]="busy()">
+            <mat-icon>admin_panel_settings</mat-icon> Create organiser link
+          </button>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="links-card">
+    <mat-card-header>
+      <mat-card-title>Active links</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (loading()) {
+        <p>Loading…</p>
+      } @else if (links().length === 0) {
+        <p class="note">No active links.</p>
+      }
+      @for (link of links(); track link.id) {
+        <div class="link-row" [class.unusable]="!link.isUsable">
+          <mat-icon
+            class="kind-icon"
+            [class.organiser]="link.kind === 'Organiser'"
+            [matTooltip]="kindName(link.kind)"
+            [attr.aria-label]="kindName(link.kind)"
+            >{{ kindIcon(link.kind) }}</mat-icon
+          >
+          <div class="link-info">
+            <strong>{{ link.label }}</strong>
+            <div class="note">
+              @if (link.label !== kindName(link.kind)) {
+                {{ kindName(link.kind) }} ·
+              }
+              Used {{ link.useCount }}{{ link.maxUses ? ' / ' + link.maxUses : '' }} ·
+              @if (link.expiresAt) {
+                {{ link.isUsable ? 'expires' : 'expired' }} {{ link.expiresAt | date: 'medium' }}
+              } @else {
+                never expires
+              }
+            </div>
+          </div>
+          <span class="link-actions">
+            <button mat-button (click)="copy(link)" [disabled]="!link.isUsable">
+              <mat-icon>content_copy</mat-icon> Copy
+            </button>
+            <button mat-button color="warn" (click)="revoke(link)" [disabled]="busy()">
+              <mat-icon>link_off</mat-icon> Revoke
+            </button>
+          </span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+} @else {
+  <p>Loading…</p>
+}

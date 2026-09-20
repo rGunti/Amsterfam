@@ -17,6 +17,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of } from 'rxjs';
@@ -33,12 +34,13 @@ import { UserApi } from '../../core/api/user.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
-import { JoinLinksCard } from './join-links-card';
+import { JoinLinkShareSheet } from './join-link-share-sheet';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 import {
   TransitionAction,
   acceptsJoins,
   areDatesLocked,
+  canShareJoinLink,
   canUseDatePoll,
   isReadOnly,
   statusClass,
@@ -70,7 +72,6 @@ interface EventForm {
     MatMenuModule,
     MatTooltipModule,
     OrganiserAvatarStack,
-    JoinLinksCard,
   ],
   templateUrl: './events-detail.html',
   styleUrl: './events-detail.scss',
@@ -83,6 +84,7 @@ export class EventsDetail implements OnInit {
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly bottomSheet = inject(MatBottomSheet);
 
   readonly event = this.currentEventService.event;
   readonly loading = this.currentEventService.loading;
@@ -149,6 +151,25 @@ export class EventsDetail implements OnInit {
     const ev = this.event();
     const userId = this.currentUserId();
     return ev !== null && userId !== null && ev.createdById === userId;
+  }
+
+  get canShare(): boolean {
+    const ev = this.event();
+    return ev !== null && canShareJoinLink(ev, this.isOwner);
+  }
+
+  openShare(): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+    this.bottomSheet.open(JoinLinkShareSheet, {
+      data: {
+        eventId: ev.id,
+        eventName: ev.name,
+        kind: ev.status === 'Draft' ? 'Organiser' : 'Attendee',
+      },
+    });
   }
 
   get readOnly(): boolean {

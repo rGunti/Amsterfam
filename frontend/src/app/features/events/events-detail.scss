@@ -20,7 +20,7 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.organiser-request {
+.meta-line {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -28,6 +28,13 @@
   // MDC adds a zero-width ::before to list lines; as a flex item it would add an extra gap.
   &::before {
     display: none;
+  }
+
+  .meta-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   mat-icon {

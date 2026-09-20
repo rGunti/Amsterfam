@@ -4,6 +4,8 @@ export interface JoinLinkResponse {
   id: number;
   token: string;
   kind: JoinLinkKind;
+  /** Organiser-chosen name, or "Attendee link" / "Organiser link" when unset. */
+  label: string;
   createdById: number;
   createdAt: string;
   expiresAt: string | null;
@@ -17,6 +19,7 @@ export interface CreateJoinLinkRequest {
   kind: JoinLinkKind;
   expiresAt: string | null;
   maxUses: number | null;
+  label: string | null;
 }
 
 export interface JoinLinkPreviewResponse {

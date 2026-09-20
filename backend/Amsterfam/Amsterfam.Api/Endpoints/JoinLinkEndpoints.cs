@@ -17,6 +17,7 @@ public static class JoinLinkEndpoints
         managed.MapGet("/", GetLinks);
         managed.MapPost("/", CreateLink);
         managed.MapDelete("/{id:int}", RevokeLink);
+        managed.MapPost("/{id:int}/regenerate", RegenerateLink);
 
         var redeem = app.MapGroup("/api/v1/join-links/{token}").RequireAuthorization();
         redeem.MapGet("/", Preview);
@@ -35,6 +36,7 @@ public static class JoinLinkEndpoints
             l.Id,
             l.Token,
             l.Kind.ToString(),
+            l.DisplayLabel,
             l.CreatedById,
             l.CreatedAt,
             l.ExpiresAt,
@@ -99,11 +101,18 @@ public static class JoinLinkEndpoints
         if (request.MaxUses is < 1)
             return TypedResults.BadRequest(new { error = "Max uses must be at least 1." });
 
+        var label = request.Label?.Trim();
+        if (label is { Length: > EventJoinLink.MaxLabelLength })
+            return TypedResults.BadRequest(
+                new { error = $"Label can be at most {EventJoinLink.MaxLabelLength} characters." }
+            );
+
         var link = new EventJoinLink
         {
             EventId = eventId,
             Token = NewToken(),
             Kind = kind,
+            Label = string.IsNullOrEmpty(label) ? null : label,
             CreatedById = user.Id,
             CreatedAt = now,
             ExpiresAt = request.ExpiresAt,
@@ -139,13 +148,75 @@ public static class JoinLinkEndpoints
         if (link is null)
             return TypedResults.NotFound();
 
-        var isOwner = await EventGuards.IsOwner(db, eventId, user.Id);
-        if (!isOwner && (link.CreatedById != user.Id || link.Kind == JoinLinkKind.Organiser))
+        if (!await CanManage(db, eventId, user.Id, link.Kind))
             return TypedResults.Forbid();
 
         link.RevokedAt ??= time.GetUtcNow();
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
+    }
+
+    /// <summary>Organisers manage attendee links; organiser links are the owner's.</summary>
+    private static async Task<bool> CanManage(
+        AmsterfamDbContext db,
+        Guid eventId,
+        int userId,
+        JoinLinkKind kind
+    ) =>
+        kind == JoinLinkKind.Organiser
+            ? await EventGuards.IsOwner(db, eventId, userId)
+            : await EventGuards.IsOrganiser(db, eventId, userId);
+
+    /// <summary>
+    /// Revokes a link and issues a fresh token with the same kind, label, expiry and use limit.
+    /// </summary>
+    private static async Task<IResult> RegenerateLink(
+        Guid eventId,
+        int id,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db,
+        TimeProvider time
+    )
+    {
+        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
+            return notWritable;
+
+        var user = await currentUser.GetOrCreateAsync();
+        if (!await EventGuards.IsOrganiser(db, eventId, user.Id))
+            return TypedResults.Forbid();
+
+        var old = await db.EventJoinLinks.FirstOrDefaultAsync(l =>
+            l.Id == id && l.EventId == eventId
+        );
+        if (old is null)
+            return TypedResults.NotFound();
+
+        if (!await CanManage(db, eventId, user.Id, old.Kind))
+            return TypedResults.Forbid();
+
+        if (old.RevokedAt is not null)
+            return TypedResults.Conflict(new { error = "This link was already revoked." });
+
+        var now = time.GetUtcNow();
+        old.RevokedAt = now;
+        var replacement = new EventJoinLink
+        {
+            EventId = eventId,
+            Token = NewToken(),
+            Kind = old.Kind,
+            Label = old.Label,
+            CreatedById = user.Id,
+            CreatedAt = now,
+            ExpiresAt = old.ExpiresAt,
+            MaxUses = old.MaxUses,
+        };
+        db.EventJoinLinks.Add(replacement);
+        await db.SaveChangesAsync();
+
+        return TypedResults.Created(
+            $"/api/v1/events/{eventId}/join-links/{replacement.Id}",
+            ToResponse(replacement, now)
+        );
     }
 
     /// <summary>
@@ -231,6 +302,7 @@ public static class JoinLinkEndpoints
                 UserId = user.Id,
                 Role = AttendanceRole.Pending,
                 RequestedOrganiser = link.Kind == JoinLinkKind.Organiser,
+                JoinLinkId = link.Id,
             }
         );
 

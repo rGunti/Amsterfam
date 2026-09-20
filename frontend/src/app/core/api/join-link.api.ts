@@ -33,6 +33,14 @@ export class JoinLinkApi {
     return this.http.delete<void>(this.getUrl(`/api/v1/events/${eventId}/join-links/${linkId}`));
   }
 
+  /** Revokes the link and returns a new one with the same kind, label, expiry and use limit. */
+  regenerate(eventId: string, linkId: number): Observable<JoinLinkResponse> {
+    return this.http.post<JoinLinkResponse>(
+      this.getUrl(`/api/v1/events/${eventId}/join-links/${linkId}/regenerate`),
+      null,
+    );
+  }
+
   preview(token: string): Observable<JoinLinkPreviewResponse> {
     return this.http.get<JoinLinkPreviewResponse>(
       this.getUrl(`/api/v1/join-links/${encodeURIComponent(token)}`),

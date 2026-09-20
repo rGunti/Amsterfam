@@ -7,7 +7,8 @@ public record AttendeeResponse(
     string Role,
     DateOnly? PlannedArrival,
     DateOnly? PlannedDeparture,
-    bool RequestedOrganiser
+    bool RequestedOrganiser,
+    string? JoinLinkLabel
 );
 
 public record UpdateAttendanceRequest(

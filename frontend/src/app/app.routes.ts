@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { eventGuard } from './core/event/event.guard';
 import { cancelledEventGuard } from './core/event/cancelled-event.guard';
+import { joinLinksGuard } from './features/join-links/join-links.guard';
 import { datePollGuard } from './features/date-poll/date-poll.guard';
 import type { StatusPageData } from './shared/status-page/status-page';
 
@@ -48,6 +49,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/date-poll/date-poll-page').then((m) => m.DatePollPage),
         canActivate: [datePollGuard],
+      },
+      {
+        path: 'join-links',
+        loadComponent: () =>
+          import('./features/join-links/join-links-page').then((m) => m.JoinLinksPage),
+        canActivate: [joinLinksGuard],
       },
     ],
   },

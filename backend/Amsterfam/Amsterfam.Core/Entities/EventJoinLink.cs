@@ -9,6 +9,9 @@ public class EventJoinLink
     public int Id { get; set; }
     public Guid EventId { get; set; }
     public string Token { get; set; } = null!;
+
+    /// <summary>Optional organiser-chosen name; see <see cref="DisplayLabel"/>.</summary>
+    public string? Label { get; set; }
     public JoinLinkKind Kind { get; set; } = JoinLinkKind.Attendee;
     public int CreatedById { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -19,6 +22,13 @@ public class EventJoinLink
 
     public Event Event { get; set; } = null!;
     public User CreatedBy { get; set; } = null!;
+
+    public const int MaxLabelLength = 60;
+
+    public string DisplayLabel => Label ?? DefaultLabel(Kind);
+
+    public static string DefaultLabel(JoinLinkKind kind) =>
+        kind == JoinLinkKind.Organiser ? "Organiser link" : "Attendee link";
 
     public bool IsUsable(DateTimeOffset now) =>
         RevokedAt is null

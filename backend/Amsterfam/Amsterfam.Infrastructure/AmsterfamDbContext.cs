@@ -48,6 +48,10 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         {
             e.HasIndex(a => new { a.EventId, a.UserId }).IsUnique();
             e.Property(a => a.Role).HasConversion<string>();
+            e.HasOne(a => a.JoinLink)
+                .WithMany()
+                .HasForeignKey(a => a.JoinLinkId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<EventJoinLink>(e =>
@@ -55,6 +59,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.HasIndex(l => l.Token).IsUnique();
             e.HasIndex(l => l.EventId);
             e.Property(l => l.Token).HasMaxLength(64);
+            e.Property(l => l.Label).HasMaxLength(EventJoinLink.MaxLabelLength);
             e.Property(l => l.Kind).HasConversion<string>();
             e.HasOne(l => l.Event)
                 .WithMany()

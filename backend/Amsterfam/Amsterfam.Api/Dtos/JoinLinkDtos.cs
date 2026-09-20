@@ -1,11 +1,17 @@
 namespace Amsterfam.Api.Dtos;
 
-public record CreateJoinLinkRequest(string? Kind, DateTimeOffset? ExpiresAt, int? MaxUses);
+public record CreateJoinLinkRequest(
+    string? Kind,
+    DateTimeOffset? ExpiresAt,
+    int? MaxUses,
+    string? Label = null
+);
 
 public record JoinLinkResponse(
     int Id,
     string Token,
     string Kind,
+    string Label,
     int CreatedById,
     DateTimeOffset CreatedAt,
     DateTimeOffset? ExpiresAt,

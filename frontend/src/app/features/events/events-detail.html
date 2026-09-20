@@ -107,6 +107,9 @@
             <mat-icon>edit</mat-icon> Edit
           </button>
         }
+        @if (canShare) {
+          <button mat-button (click)="openShare()"><mat-icon>share</mat-icon> Share</button>
+        }
         @for (action of regularActions(); track action.target) {
           @if (action.primary) {
             <button
@@ -199,10 +202,24 @@
                 <mat-icon matListItemAvatar class="default-avatar">account_circle</mat-icon>
               }
               <span matListItemTitle>{{ attendee.displayName }}</span>
-              @if (attendee.requestedOrganiser) {
-                <span matListItemLine class="organiser-request">
-                  <mat-icon inline>admin_panel_settings</mat-icon>
-                  <span>Wants to be an organiser</span>
+              @if (attendee.requestedOrganiser || attendee.joinLinkLabel) {
+                <span
+                  matListItemLine
+                  class="meta-line"
+                  [attr.title]="attendee.requestedOrganiser ? 'Wants to be an organiser' : null"
+                >
+                  @if (attendee.requestedOrganiser) {
+                    <mat-icon inline>admin_panel_settings</mat-icon>
+                    <span class="meta-text">as Organiser</span>
+                    @if (attendee.joinLinkLabel) {
+                      <span aria-hidden="true">·</span>
+                    }
+                  } @else {
+                    <mat-icon inline>link</mat-icon>
+                  }
+                  @if (attendee.joinLinkLabel) {
+                    <span class="meta-text">via {{ attendee.joinLinkLabel }}</span>
+                  }
                 </span>
               }
               <span matListItemMeta>
@@ -230,10 +247,6 @@
         </mat-list>
       </mat-card-content>
     </mat-card>
-  }
-
-  @if (isOrganiser && !readOnly) {
-    <app-join-links-card [eventId]="ev.id" [isOwner]="isOwner" />
   }
 
   @if (isConfirmed) {

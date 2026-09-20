@@ -37,6 +37,22 @@ export const areDatesLocked = (status: EventStatus) =>
 export const acceptsJoins = (status: EventStatus) =>
   status === 'LookingForDate' || status === 'Open';
 
+/** Organisers manage join links until the event is archived or cancelled. */
+export function canManageJoinLinks(ev: EventResponse): boolean {
+  return ev.currentUserRole === 'Organiser' && !isReadOnly(ev.status);
+}
+
+/**
+ * Whether the overview's share button applies. Drafts only take organiser links, which
+ * only the owner can create; attendee links work while joins are accepted.
+ */
+export function canShareJoinLink(ev: EventResponse, isOwner: boolean): boolean {
+  if (ev.currentUserRole !== 'Organiser') {
+    return false;
+  }
+  return ev.status === 'Draft' ? isOwner : acceptsJoins(ev.status);
+}
+
 /**
  * Whether "Find a date" is available: confirmed members vote while the event is looking
  * for a date; organisers can already set up the poll range while it's a draft.
