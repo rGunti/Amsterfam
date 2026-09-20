@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { linkify, shortenUrl } from './linkify';
+import { SAMPLE_DESCRIPTION, SAMPLE_SECTIONS } from './linkify.samples';
 
 describe('linkify', () => {
   it('returns plain text untouched', () => {
@@ -151,5 +152,49 @@ describe('shortenUrl', () => {
     const label = shortenUrl(new URL(`https://example.com/${'a'.repeat(100)}`), 20);
     expect(label).toHaveLength(20);
     expect(label.endsWith('…')).toBe(true);
+  });
+});
+
+describe('sample description', () => {
+  const links = (line: string) =>
+    linkify(line).flatMap((s) => (s.href ? [{ label: s.text, href: s.href }] : []));
+
+  for (const section of SAMPLE_SECTIONS) {
+    describe(section.title, () => {
+      for (const { line, links: expected } of section.cases) {
+        it(line, () => {
+          expect(links(line)).toEqual(expected);
+        });
+      }
+    });
+  }
+
+  it('finds exactly the expected links when the whole description is processed at once', () => {
+    const expected = SAMPLE_SECTIONS.flatMap((section) => section.cases.flatMap((c) => c.links));
+    expect(links(SAMPLE_DESCRIPTION)).toEqual(expected);
+  });
+
+  it('leaves the text that is not a link untouched, including the dangerous samples', () => {
+    const plain = linkify(SAMPLE_DESCRIPTION)
+      .filter((s) => !s.href)
+      .map((s) => s.text)
+      .join('');
+    for (const text of [
+      'Protocol-relative: //example.com/asset.js',
+      'Mail: mailto:test@example.com',
+      'Not a link: file.txt, v1.2.3, e.g., 3.14, foo.bar()',
+      "<script>alert('XSS')</script>",
+      'javascript:alert(document.cookie)',
+    ]) {
+      expect(plain).toContain(text);
+    }
+  });
+
+  it('only ever produces absolute http or https hrefs', () => {
+    const hrefs = linkify(SAMPLE_DESCRIPTION).flatMap((s) => (s.href ? [s.href] : []));
+    expect(hrefs.length).toBeGreaterThan(30);
+    for (const href of hrefs) {
+      expect(href).toMatch(/^https?:\/\//);
+    }
   });
 });
