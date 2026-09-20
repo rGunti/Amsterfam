@@ -64,7 +64,7 @@ test('organiser confirms a pending attendee', async ({ page, request }) => {
   const pendingCard = page.locator('mat-card', { hasText: 'Pending attendees' });
   await expect(pendingCard.getByText(`Test User ${joiner}`)).toBeVisible();
 
-  await pendingCard.getByRole('button', { name: 'Confirm' }).click();
+  await pendingCard.getByRole('button', { name: 'Confirm', exact: true }).click();
 
   await expect(page.getByText('Attendee confirmed')).toBeVisible();
 
@@ -83,7 +83,7 @@ test('organiser removes a pending attendee', async ({ page, request }) => {
   const pendingCard = page.locator('mat-card', { hasText: 'Pending attendees' });
   await expect(pendingCard.getByText(`Test User ${joiner}`)).toBeVisible();
 
-  await pendingCard.getByRole('button', { name: 'Remove' }).click();
+  await pendingCard.getByRole('button', { name: 'Remove', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click();
 
   await expect(page.getByText('Attendee removed')).toBeVisible();
@@ -108,7 +108,7 @@ test('organiser confirms several pending attendees at once', async ({ page, requ
 
   const bar = page.getByRole('toolbar', { name: 'Selected attendees' });
   await expect(bar.getByText('2 selected')).toBeVisible();
-  await bar.getByRole('button', { name: 'Confirm' }).click();
+  await bar.getByRole('button', { name: 'Confirm', exact: true }).click();
 
   await expect(page.getByText('2 attendees confirmed')).toBeVisible();
   await expect(bar).toBeHidden();
