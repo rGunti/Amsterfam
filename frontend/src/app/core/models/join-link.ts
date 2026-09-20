@@ -30,4 +30,5 @@ export interface JoinLinkPreviewResponse {
   endDate: string | null;
   kind: JoinLinkKind;
   alreadyMember: boolean;
+  bannerFileId: string | null;
 }

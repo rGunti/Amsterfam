@@ -21,6 +21,7 @@ public static class JoinLinkEndpoints
 
         var redeem = app.MapGroup("/api/v1/join-links/{token}").RequireAuthorization();
         redeem.MapGet("/", Preview);
+        redeem.MapGet("/banner", PreviewBanner);
         redeem.MapPost("/join", Join);
 
         return app;
@@ -257,9 +258,31 @@ public static class JoinLinkEndpoints
                 link.Event.StartDate,
                 link.Event.EndDate,
                 link.Kind.ToString(),
-                member
+                member,
+                link.Event.BannerFileId
             )
         );
+    }
+
+    private static async Task<IResult> PreviewBanner(
+        string token,
+        HttpRequest request,
+        AmsterfamDbContext db,
+        TimeProvider time
+    )
+    {
+        var link = await db
+            .EventJoinLinks.Include(l => l.Event)
+            .FirstOrDefaultAsync(l => l.Token == token);
+
+        if (
+            link is null
+            || !link.IsUsable(time.GetUtcNow())
+            || !CanJoin(link.Event.Status, link.Kind)
+        )
+            return TypedResults.NotFound();
+
+        return await EventBannerEndpoints.ServeAsync(db, link.EventId, request);
     }
 
     private static async Task<IResult> Join(

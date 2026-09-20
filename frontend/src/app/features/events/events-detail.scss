@@ -60,6 +60,17 @@
   flex-wrap: wrap;
 }
 
+.banner-title {
+  font: var(--mat-sys-headline-small);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+}
+
+.banner-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 app-organiser-avatar-stack {
   display: block;
   margin-top: 4px;

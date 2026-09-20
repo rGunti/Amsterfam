@@ -12,6 +12,7 @@ public class Event
     public DateOnly? PollRangeEnd { get; set; }
     public EventStatus Status { get; set; } = EventStatus.Draft;
     public bool AutoTransitionsPaused { get; set; }
+    public Guid? BannerFileId { get; set; }
     public int CreatedById { get; set; }
     public DateTime CreatedAt { get; set; }
 
@@ -24,6 +25,7 @@ public class Event
     public ICollection<ItineraryEntry> ItineraryEntries { get; set; } = [];
     public ICollection<ShoppingItem> ShoppingItems { get; set; } = [];
     public ICollection<EventComfortQuestion> ComfortQuestions { get; set; } = [];
+    public ICollection<EventFile> Files { get; set; } = [];
 }
 
 public enum EventStatus

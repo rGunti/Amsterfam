@@ -122,6 +122,7 @@ app.UseAuthorization();
 app.MapVersionEndpoints();
 app.MapUserEndpoints();
 app.MapEventEndpoints();
+app.MapEventBannerEndpoints();
 app.MapAttendanceEndpoints();
 app.MapJoinLinkEndpoints();
 app.MapDatePollEndpoints();

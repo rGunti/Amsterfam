@@ -10,19 +10,29 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { JoinLinkApi } from '../../core/api/join-link.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { JoinLinkPreviewResponse } from '../../core/models/join-link';
+import { EventBanner } from '../../shared/event-banner/event-banner';
 
 @Component({
   selector: 'app-join-page',
-  imports: [RouterLink, DatePipe, MatButtonModule, MatCardModule, MatIconModule],
+  imports: [RouterLink, DatePipe, MatButtonModule, MatCardModule, MatIconModule, EventBanner],
   template: `
     <mat-card class="join-card">
       @if (loading()) {
         <mat-card-content><p>Checking invite…</p></mat-card-content>
       } @else if (preview(); as p) {
-        <mat-card-header>
-          <mat-card-title>You're invited to {{ p.eventName }}</mat-card-title>
-          <mat-card-subtitle>{{ p.location }}</mat-card-subtitle>
-        </mat-card-header>
+        @if (p.bannerFileId; as bannerVersion) {
+          <app-event-banner [src]="bannerUrl" [version]="bannerVersion">
+            <div class="banner-title">You're invited to {{ p.eventName }}</div>
+          </app-event-banner>
+          <mat-card-header>
+            <mat-card-subtitle>{{ p.location }}</mat-card-subtitle>
+          </mat-card-header>
+        } @else {
+          <mat-card-header>
+            <mat-card-title>You're invited to {{ p.eventName }}</mat-card-title>
+            <mat-card-subtitle>{{ p.location }}</mat-card-subtitle>
+          </mat-card-header>
+        }
         <mat-card-content>
           @if (p.startDate && p.endDate) {
             <p>{{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}</p>
@@ -72,6 +82,10 @@ import { JoinLinkPreviewResponse } from '../../core/models/join-link';
       max-width: 480px;
       margin: 0 auto;
     }
+    .banner-title {
+      font: var(--mat-sys-headline-small);
+      text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+    }
     .note {
       display: flex;
       align-items: center;
@@ -93,6 +107,7 @@ export class JoinPage implements OnInit {
   private readonly currentEventService = inject(CurrentEventService);
   private readonly token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
 
+  readonly bannerUrl = this.api.bannerUrl(this.token);
   readonly loading = signal(true);
   readonly joining = signal(false);
   readonly preview = signal<JoinLinkPreviewResponse | null>(null);

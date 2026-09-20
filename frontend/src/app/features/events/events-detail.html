@@ -2,21 +2,66 @@
   <p>Loading…</p>
 } @else if (event(); as ev) {
   <mat-card class="event-card">
-    <mat-card-header>
-      <mat-card-title class="title-row">
-        {{ ev.name }}
-        <mat-chip-set>
-          <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
-        </mat-chip-set>
-      </mat-card-title>
-      <mat-card-subtitle>
-        <app-organiser-avatar-stack [organisers]="organisers()" [ownerId]="ev.createdById" />
-      </mat-card-subtitle>
-    </mat-card-header>
+    @if (ev.bannerFileId; as bannerVersion) {
+      <app-event-banner [src]="bannerUrl(ev.id)" [version]="bannerVersion">
+        <div class="title-row banner-title">
+          {{ ev.name }}
+          <mat-chip-set>
+            <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
+          </mat-chip-set>
+        </div>
+      </app-event-banner>
+      <mat-card-header>
+        <mat-card-subtitle>
+          <app-organiser-avatar-stack [organisers]="organisers()" [ownerId]="ev.createdById" />
+        </mat-card-subtitle>
+      </mat-card-header>
+    } @else {
+      <mat-card-header>
+        <mat-card-title class="title-row">
+          {{ ev.name }}
+          <mat-chip-set>
+            <mat-chip [class]="statusClass(ev.status)">{{ statusLabel(ev.status) }}</mat-chip>
+          </mat-chip-set>
+        </mat-card-title>
+        <mat-card-subtitle>
+          <app-organiser-avatar-stack [organisers]="organisers()" [ownerId]="ev.createdById" />
+        </mat-card-subtitle>
+      </mat-card-header>
+    }
 
     <mat-card-content>
       @if (editing()) {
         <form [formGroup]="form" (ngSubmit)="save()" class="edit-form">
+          <div class="banner-edit">
+            <input
+              #bannerInput
+              type="file"
+              accept="image/*"
+              hidden
+              (change)="onBannerSelected($event)"
+            />
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="bannerInput.click()"
+              [disabled]="bannerBusy()"
+            >
+              <mat-icon>image</mat-icon>
+              {{ ev.bannerFileId ? 'Change banner' : 'Add banner' }}
+            </button>
+            @if (ev.bannerFileId) {
+              <button
+                mat-button
+                type="button"
+                color="warn"
+                (click)="removeBanner()"
+                [disabled]="bannerBusy()"
+              >
+                <mat-icon>delete</mat-icon> Remove banner
+              </button>
+            }
+          </div>
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Name</mat-label>
             <input matInput formControlName="name" />

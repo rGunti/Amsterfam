@@ -1,0 +1,36 @@
+:host {
+  display: block;
+}
+
+.banner {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-high);
+  color: #fff;
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// A blurred, darkened strip along the bottom. It's a separate layer so the mask that fades
+// it in from the top doesn't also fade the caption text.
+.blur {
+  position: absolute;
+  inset: auto 0 0;
+  height: 55%;
+  background: linear-gradient(to top, rgb(0 0 0 / 65%), rgb(0 0 0 / 0%));
+  backdrop-filter: blur(12px);
+  mask-image: linear-gradient(to top, #000 55%, transparent);
+}
+
+.caption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 0 16px 12px;
+}

@@ -24,6 +24,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<ComfortAnswer> ComfortAnswers => Set<ComfortAnswer>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<EventJoinLink> EventJoinLinks => Set<EventJoinLink>();
+    public DbSet<EventFile> EventFiles => Set<EventFile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +42,26 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.HasOne(ev => ev.CreatedBy)
                 .WithMany()
                 .HasForeignKey(ev => ev.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+            // Points at a file the event itself owns; files cascade away with the event.
+            e.HasOne<EventFile>()
+                .WithMany()
+                .HasForeignKey(ev => ev.BannerFileId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<EventFile>(e =>
+        {
+            e.HasIndex(f => f.EventId);
+            e.Property(f => f.FileName).HasMaxLength(EventFile.MaxFileNameLength);
+            e.Property(f => f.ContentType).HasMaxLength(100);
+            e.HasOne(f => f.Event)
+                .WithMany(ev => ev.Files)
+                .HasForeignKey(f => f.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.UploadedBy)
+                .WithMany()
+                .HasForeignKey(f => f.UploadedById)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

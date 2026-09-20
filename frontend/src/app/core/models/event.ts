@@ -33,6 +33,8 @@ export interface EventResponse {
   allowedTransitions: EventStatus[];
   /** True after an owner reset; automatic start/close is skipped until the next manual move. */
   autoTransitionsPaused: boolean;
+  /** Id of the banner image, or null. Changes when the image is replaced. */
+  bannerFileId: string | null;
   /** Requests waiting for approval; only sent to organisers. */
   pendingAttendeeCount: number | null;
 }
