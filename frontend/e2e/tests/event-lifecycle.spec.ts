@@ -18,7 +18,6 @@ async function createEvent(request: APIRequestContext, owner: string, name: stri
       startDate: '2031-07-01',
       endDate: '2031-07-08',
       location: 'Amsterdam',
-      costPerNight: 25,
     },
   });
   expect(create.ok()).toBeTruthy();

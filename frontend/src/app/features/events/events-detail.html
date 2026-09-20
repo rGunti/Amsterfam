@@ -45,11 +45,6 @@
               [min]="form.controls.startDate.value || today"
             />
           </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Cost per night</mat-label>
-            <span matTextPrefix>€&nbsp;</span>
-            <input matInput type="number" step="0.01" min="0" formControlName="costPerNight" />
-          </mat-form-field>
 
           <div class="actions">
             <button
@@ -82,11 +77,6 @@
         </p>
         <p class="detail-row"><mat-icon inline>place</mat-icon> {{ ev.location }}</p>
         @if (ev.isMember) {
-          @if (ev.costPerNight !== null) {
-            <p class="detail-row">
-              <mat-icon inline>payments</mat-icon> {{ ev.costPerNight | currency: 'EUR' }} / night
-            </p>
-          }
           @if (ev.description) {
             <p class="description">{{ ev.description }}</p>
           }

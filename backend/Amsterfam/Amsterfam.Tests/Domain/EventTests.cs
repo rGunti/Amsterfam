@@ -29,7 +29,6 @@ public class EventTests(DatabaseFixture db) : IClassFixture<DatabaseFixture>
             StartDate = new DateOnly(2027, 7, 1),
             EndDate = new DateOnly(2027, 7, 8),
             Location = "Amsterdam",
-            CostPerNight = 35.00m,
             CreatedById = organiser.Id,
         };
 
@@ -42,7 +41,6 @@ public class EventTests(DatabaseFixture db) : IClassFixture<DatabaseFixture>
             .SingleAsync(e => e.Name == "Amsterfam 2027");
 
         Assert.Equal(EventStatus.Draft, saved.Status);
-        Assert.Equal(35.00m, saved.CostPerNight);
         Assert.Equal(organiser.Id, saved.CreatedBy.Id);
     }
 
@@ -61,7 +59,6 @@ public class EventTests(DatabaseFixture db) : IClassFixture<DatabaseFixture>
             StartDate = new DateOnly(2028, 7, 1),
             EndDate = new DateOnly(2028, 7, 8),
             Location = "Amsterdam",
-            CostPerNight = 35.00m,
             CreatedById = user.Id,
         };
         context.Events.Add(ev);

@@ -18,7 +18,6 @@ async function createEvent(request: APIRequestContext, name: string): Promise<st
       startDate: null,
       endDate: null,
       location: 'Amsterdam',
-      costPerNight: 25,
     },
   });
   expect(create.ok()).toBeTruthy();

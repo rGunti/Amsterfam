@@ -17,7 +17,6 @@ async function createDraftEvent(request: APIRequestContext, suffix: string) {
       startDate: '2031-07-01',
       endDate: '2031-07-08',
       location: 'Amsterdam',
-      costPerNight: 35,
     },
   });
   expect(response.ok()).toBeTruthy();
