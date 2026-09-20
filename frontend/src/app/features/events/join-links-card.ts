@@ -32,7 +32,8 @@ import { JoinLinkKind, JoinLinkResponse } from '../../core/models/join-link';
       </mat-card-header>
       <mat-card-content>
         <p class="detail-row">
-          Share a link to let people request to join. Everyone still needs to be approved.
+          Share a link to let people request to join. Everyone still needs to be approved. Expiry
+          and max uses are optional.
         </p>
 
         <div class="create-row">
@@ -46,11 +47,11 @@ import { JoinLinkKind, JoinLinkResponse } from '../../core/models/join-link';
             </mat-form-field>
           }
           <mat-form-field>
-            <mat-label>Expires (optional)</mat-label>
+            <mat-label>Expires</mat-label>
             <input matInput type="date" [min]="today" [(ngModel)]="expires" />
           </mat-form-field>
           <mat-form-field>
-            <mat-label>Max uses (optional)</mat-label>
+            <mat-label>Max uses</mat-label>
             <input matInput type="number" min="1" [(ngModel)]="maxUses" />
           </mat-form-field>
           <button mat-flat-button color="primary" (click)="create()" [disabled]="busy()">
@@ -88,12 +89,27 @@ import { JoinLinkKind, JoinLinkResponse } from '../../core/models/join-link';
       </mat-card-content>
     </mat-card>
   `,
+  // Component styles are encapsulated, so the card styles shared by events-detail are repeated.
   styles: `
+    .event-card {
+      max-width: 640px;
+      margin: 24px auto;
+    }
+    .detail-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mat-sys-on-surface-variant);
+    }
     .create-row {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
       align-items: center;
+      margin-bottom: 16px;
+    }
+    .create-row mat-form-field {
+      flex: 1 1 150px;
     }
     .link-row {
       display: flex;
