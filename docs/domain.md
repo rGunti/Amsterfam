@@ -46,6 +46,7 @@ Per user, list of preferred ways for others to pay them back (splitting costs). 
 
 ### Event
 - `Id` (Guid — external/URL identifier, not a sequential integer, to keep event URLs from being guessable), `Name`, `Description`, `StartDate`, `EndDate`, `Location`
+- `Description` is plain text. The frontend turns `http(s)://` links, `www.` links and bare domains on a common TLD (see `frontend/src/app/shared/tlds.ts`) into clickable links; nothing is stored or rendered as HTML. A plain click on such a link asks for confirmation first because the text was written by another user.
 - `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable while `Status` is `Draft` or `LookingForDate`, voting only while `LookingForDate`
 - `Status`: Draft | LookingForDate | Open | InProgress | Closed | Archived | Cancelled — see *Event lifecycle* below
 - `AutoTransitionsPaused` (bool) — set when the owner resets an event back to Open; the scheduled job skips it until the next manual transition
