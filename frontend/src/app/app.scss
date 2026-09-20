@@ -107,8 +107,10 @@ mat-toolbar span:first-of-type {
   color: var(--mat-sys-on-surface-variant);
 }
 
+// Pages that want a full-bleed hero (the event banner) cancel this with a negative margin.
 .main-content {
-  padding: 24px;
+  --page-padding: 24px;
+  padding: var(--page-padding);
 }
 
 .status-icon {

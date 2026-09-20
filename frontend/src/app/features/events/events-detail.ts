@@ -1,4 +1,7 @@
+import { NgTemplateOutlet } from '@angular/common';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import {
   FormBuilder,
@@ -20,7 +23,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of } from 'rxjs';
+import { map, of } from 'rxjs';
 
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import {
@@ -75,6 +78,7 @@ interface EventForm {
     MatTooltipModule,
     OrganiserAvatarStack,
     EventBanner,
+    NgTemplateOutlet,
   ],
   templateUrl: './events-detail.html',
   styleUrl: './events-detail.scss',
@@ -88,6 +92,14 @@ export class EventsDetail implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly bottomSheet = inject(MatBottomSheet);
+
+  /** Phone-sized screen: the banner has no room for the organisers, so they go below it. */
+  readonly compact = toSignal(
+    inject(BreakpointObserver)
+      .observe(Breakpoints.XSmall)
+      .pipe(map((state) => state.matches)),
+    { initialValue: false },
+  );
 
   readonly event = this.currentEventService.event;
   readonly loading = this.currentEventService.loading;

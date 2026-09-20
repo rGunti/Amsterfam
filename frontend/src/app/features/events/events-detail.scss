@@ -65,6 +65,41 @@
   text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
 }
 
+.banner-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+
+  a {
+    color: inherit;
+  }
+}
+
+.has-banner mat-card-content {
+  padding-top: 16px;
+}
+
+.has-banner mat-card-header + mat-card-content {
+  padding-top: 0;
+}
+
+// On phones the banner runs edge to edge, so the whole card cancels the page padding.
+@media (max-width: 599.98px) {
+  .event-card.has-banner {
+    margin: calc(-1 * var(--page-padding, 24px)) calc(-1 * var(--page-padding, 24px)) 24px;
+    max-width: none;
+    border-radius: 0;
+  }
+}
+
+.banner-organisers {
+  --organiser-label-color: #fff;
+  margin: 0;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+}
+
 .banner-edit {
   display: flex;
   flex-wrap: wrap;

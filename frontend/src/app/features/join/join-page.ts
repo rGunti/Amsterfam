@@ -16,17 +16,21 @@ import { EventBanner } from '../../shared/event-banner/event-banner';
   selector: 'app-join-page',
   imports: [RouterLink, DatePipe, MatButtonModule, MatCardModule, MatIconModule, EventBanner],
   template: `
-    <mat-card class="join-card">
+    <mat-card class="join-card" [class.has-banner]="!!preview()?.bannerFileId">
       @if (loading()) {
         <mat-card-content><p>Checking invite…</p></mat-card-content>
       } @else if (preview(); as p) {
         @if (p.bannerFileId; as bannerVersion) {
           <app-event-banner [src]="bannerUrl" [version]="bannerVersion">
             <div class="banner-title">You're invited to {{ p.eventName }}</div>
+            @if (p.startDate && p.endDate) {
+              <p class="banner-meta">
+                <mat-icon inline>event</mat-icon>
+                {{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}
+              </p>
+            }
+            <p class="banner-meta"><mat-icon inline>place</mat-icon> {{ p.location }}</p>
           </app-event-banner>
-          <mat-card-header>
-            <mat-card-subtitle>{{ p.location }}</mat-card-subtitle>
-          </mat-card-header>
         } @else {
           <mat-card-header>
             <mat-card-title>You're invited to {{ p.eventName }}</mat-card-title>
@@ -34,7 +38,7 @@ import { EventBanner } from '../../shared/event-banner/event-banner';
           </mat-card-header>
         }
         <mat-card-content>
-          @if (p.startDate && p.endDate) {
+          @if (!p.bannerFileId && p.startDate && p.endDate) {
             <p>{{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}</p>
           }
           @if (p.kind === 'Organiser') {
@@ -82,8 +86,24 @@ import { EventBanner } from '../../shared/event-banner/event-banner';
       max-width: 480px;
       margin: 0 auto;
     }
+    // On phones the banner runs edge to edge: cancel this host's padding and the page's.
+    @media (max-width: 599.98px) {
+      .join-card.has-banner {
+        margin: calc(-1 * (var(--page-padding, 24px) + 16px));
+        margin-bottom: 0;
+        max-width: none;
+        border-radius: 0;
+      }
+    }
     .banner-title {
       font: var(--mat-sys-headline-small);
+      text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+    }
+    .banner-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0 0;
       text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
     }
     .note {
