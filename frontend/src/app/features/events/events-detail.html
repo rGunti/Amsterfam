@@ -152,7 +152,7 @@
         }
         @if (ev.isMember) {
           @if (ev.description) {
-            <p class="description">{{ ev.description }}</p>
+            <app-linkified-text class="description" [text]="ev.description" />
           }
         } @else {
           <p class="detail-row">

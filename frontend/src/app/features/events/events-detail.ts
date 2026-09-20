@@ -38,6 +38,7 @@ import { AttendeeResponse } from '../../core/models/attendance';
 import { JoinLinkShareSheet } from './join-link-share-sheet';
 import { isCompactScreen } from '../../shared/compact-screen';
 import { BannerTitle } from '../../shared/event-banner/banner-title';
+import { LinkifiedText } from '../../shared/linkified-text/linkified-text';
 import { EventBanner } from '../../shared/event-banner/event-banner';
 import { prepareBanner } from '../../shared/banner-image';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
@@ -78,6 +79,7 @@ interface EventForm {
     MatTooltipModule,
     OrganiserAvatarStack,
     EventBanner,
+    LinkifiedText,
     BannerTitle,
     NgTemplateOutlet,
   ],
