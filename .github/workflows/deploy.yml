@@ -103,7 +103,7 @@ jobs:
           echo "extra_vars=$extra_vars" >> "$GITHUB_OUTPUT"
 
       - name: Run deploy playbook
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 15
           max_attempts: 2
