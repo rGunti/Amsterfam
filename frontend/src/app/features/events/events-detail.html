@@ -152,21 +152,7 @@
     <mat-card-content>
       @switch (ev.currentUserRole) {
         @case (null) {
-          @if (acceptsJoins(ev.status)) {
-            <p class="detail-row">You haven't joined this event yet.</p>
-            <button mat-flat-button color="primary" (click)="join()" [disabled]="actioning()">
-              <mat-icon>person_add</mat-icon> Join
-            </button>
-          } @else if (ev.status === 'Draft') {
-            <p class="detail-row">
-              <mat-icon inline>info</mat-icon>
-              This event can be joined once the organisers open it up.
-            </p>
-          } @else {
-            <p class="detail-row">
-              <mat-icon inline>info</mat-icon> This event is no longer accepting joins.
-            </p>
-          }
+          <p class="detail-row">You need a join link from an organiser to join this event.</p>
         }
         @case ('Pending') {
           <mat-chip-set>
@@ -213,15 +199,22 @@
                 <mat-icon matListItemAvatar>account_circle</mat-icon>
               }
               <span matListItemTitle>{{ attendee.displayName }}</span>
+              @if (attendee.requestedOrganiser) {
+                <span matListItemLine>
+                  <mat-icon inline>admin_panel_settings</mat-icon> Wants to be an organiser
+                </span>
+              }
               <span matListItemMeta>
-                <button
-                  mat-button
-                  color="primary"
-                  (click)="confirm(attendee.userId)"
-                  [disabled]="actioning()"
-                >
-                  <mat-icon>check</mat-icon> Confirm
-                </button>
+                @if (!attendee.requestedOrganiser || isOwner) {
+                  <button
+                    mat-button
+                    color="primary"
+                    (click)="confirm(attendee.userId)"
+                    [disabled]="actioning()"
+                  >
+                    <mat-icon>check</mat-icon> Confirm
+                  </button>
+                }
                 <button
                   mat-button
                   color="warn"
@@ -236,6 +229,10 @@
         </mat-list>
       </mat-card-content>
     </mat-card>
+  }
+
+  @if (isOrganiser && !readOnly) {
+    <app-join-links-card [eventId]="ev.id" [isOwner]="isOwner" />
   }
 
   @if (isConfirmed) {

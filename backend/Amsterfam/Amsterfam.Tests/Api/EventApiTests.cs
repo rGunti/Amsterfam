@@ -64,23 +64,6 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task GetEvent_ReturnsPreview_ForNonMember()
-    {
-        var organiser = api.CreateClientWithUser("discord|organiser-nullrole");
-        var created = await (
-            await organiser.PostAsJsonAsync("/api/v1/events/", SampleEvent("-nullrole"))
-        ).Content.ReadFromJsonAsync<EventResponse>();
-
-        var other = api.CreateClientWithUser("discord|other-nullrole");
-        var ev = await other.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created!.Id}");
-        Assert.Null(ev!.CurrentUserRole);
-        Assert.False(ev.IsMember);
-        Assert.Null(ev.Description);
-        Assert.Null(ev.PollRangeStart);
-        Assert.Null(ev.PollRangeEnd);
-    }
-
-    [Fact]
     public async Task GetEvent_ReturnsFullDetail_ForPendingAttendee()
     {
         var organiser = api.CreateClientWithUser("discord|organiser-pending-full");
@@ -90,7 +73,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         await organiser.TransitionThroughAsync(created!.Id, "Open");
 
         var pending = api.CreateClientWithUser("discord|pending-full-user");
-        await pending.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null);
+        await pending.JoinAsync(api, created.Id);
 
         var ev = await pending.GetFromJsonAsync<EventResponse>($"/api/v1/events/{created.Id}");
         Assert.Equal("Pending", ev!.CurrentUserRole);
@@ -196,7 +179,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     )
     {
         var client = api.CreateClientWithUser(user);
-        await client.PostAsync($"/api/v1/events/{eventId}/attendees/join", null);
+        await client.JoinAsync(api, eventId);
         var info = await client.GetFromJsonAsync<UserResponse>("/api/v1/me/");
         await owner.PostAsync($"/api/v1/events/{eventId}/attendees/{info!.Id}/confirm", null);
         if (promote)
@@ -419,23 +402,14 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var (owner, created) = await CreateAs("discord|sm-join-owner");
         var joiner = api.CreateClientWithUser("discord|sm-join-user");
 
-        Assert.Equal(
-            HttpStatusCode.Conflict,
-            (await joiner.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null)).StatusCode
-        );
+        Assert.Equal(HttpStatusCode.NotFound, (await joiner.JoinAsync(api, created.Id)).StatusCode);
 
         await owner.TransitionThroughAsync(created.Id, "LookingForDate");
-        Assert.Equal(
-            HttpStatusCode.Created,
-            (await joiner.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null)).StatusCode
-        );
+        Assert.Equal(HttpStatusCode.Created, (await joiner.JoinAsync(api, created.Id)).StatusCode);
 
         await owner.TransitionThroughAsync(created.Id, "Open", "InProgress");
         var late = api.CreateClientWithUser("discord|sm-join-late");
-        Assert.Equal(
-            HttpStatusCode.Conflict,
-            (await late.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null)).StatusCode
-        );
+        Assert.Equal(HttpStatusCode.NotFound, (await late.JoinAsync(api, created.Id)).StatusCode);
     }
 
     [Fact]
@@ -492,7 +466,7 @@ public class EventApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         ).Content.ReadFromJsonAsync<EventResponse>();
 
         await owner.TransitionThroughAsync(created!.Id, "Open");
-        await secondOrganiser.PostAsync($"/api/v1/events/{created.Id}/attendees/join", null);
+        await secondOrganiser.JoinAsync(api, created.Id);
         var secondOrgInfo = await (
             await secondOrganiser.GetAsync("/api/v1/me/")
         ).Content.ReadFromJsonAsync<UserResponse>();

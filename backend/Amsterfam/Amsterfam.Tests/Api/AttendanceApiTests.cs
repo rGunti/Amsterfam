@@ -72,7 +72,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var pending = api.CreateClientWithUser("discord|att-pending200");
         var ev = await CreateOpenEvent(organiser, "pending200");
 
-        await pending.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        await pending.JoinAsync(api, ev.Id);
 
         var response = await pending.GetAsync($"/api/v1/events/{ev.Id}/attendees/");
         response.EnsureSuccessStatusCode();
@@ -85,7 +85,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var attendee = api.CreateClientWithUser("discord|att-user-c");
         var ev = await CreateOpenEvent(organiser, "c");
 
-        var joinResponse = await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        var joinResponse = await attendee.JoinAsync(api, ev.Id);
         Assert.Equal(HttpStatusCode.Created, joinResponse.StatusCode);
 
         var attendees = await (
@@ -102,8 +102,8 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var attendee = api.CreateClientWithUser("discord|att-user-d");
         var ev = await CreateOpenEvent(organiser, "d");
 
-        await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
-        var second = await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        await attendee.JoinAsync(api, ev.Id);
+        var second = await attendee.JoinAsync(api, ev.Id);
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
     }
 
@@ -114,7 +114,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var attendee = api.CreateClientWithUser("discord|att-user-e");
         var ev = await CreateOpenEvent(organiser, "e");
 
-        await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        await attendee.JoinAsync(api, ev.Id);
 
         var attendeeUser = await (
             await attendee.GetAsync("/api/v1/me/")
@@ -142,7 +142,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var user2 = api.CreateClientWithUser("discord|att-user-f2");
         var ev = await CreateOpenEvent(organiser, "f");
 
-        await user1.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        await user1.JoinAsync(api, ev.Id);
         var user1Info = await (
             await user1.GetAsync("/api/v1/me/")
         ).Content.ReadFromJsonAsync<UserResponse>();
@@ -161,7 +161,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var attendee = api.CreateClientWithUser("discord|att-user-g");
         var ev = await CreateOpenEvent(organiser, "g");
 
-        await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        await attendee.JoinAsync(api, ev.Id);
         var attendeeInfo = await (
             await attendee.GetAsync("/api/v1/me/")
         ).Content.ReadFromJsonAsync<UserResponse>();
@@ -179,7 +179,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var attendee = api.CreateClientWithUser("discord|att-user-i");
         var ev = await CreateOpenEvent(organiser, "i");
 
-        await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        await attendee.JoinAsync(api, ev.Id);
         var attendeeInfo = await (
             await attendee.GetAsync("/api/v1/me/")
         ).Content.ReadFromJsonAsync<UserResponse>();
@@ -205,7 +205,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         Guid eventId
     )
     {
-        await attendee.PostAsync($"/api/v1/events/{eventId}/attendees/join", null);
+        await attendee.JoinAsync(api, eventId);
         var attendeeInfo = await (
             await attendee.GetAsync("/api/v1/me/")
         ).Content.ReadFromJsonAsync<UserResponse>();
@@ -382,7 +382,7 @@ public class AttendanceApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var attendee = api.CreateClientWithUser("discord|att-user-h");
         var ev = await CreateOpenEvent(organiser, "h");
 
-        await attendee.PostAsync($"/api/v1/events/{ev.Id}/attendees/join", null);
+        await attendee.JoinAsync(api, ev.Id);
         var attendeeInfo = await (
             await attendee.GetAsync("/api/v1/me/")
         ).Content.ReadFromJsonAsync<UserResponse>();

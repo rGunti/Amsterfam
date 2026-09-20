@@ -1,5 +1,7 @@
 import { APIRequestContext, expect, test } from '@playwright/test';
 
+import { joinViaLink } from './join-helper';
+
 const API = 'http://localhost:5293';
 const BROWSER_USER = 'e2e-user-1';
 const USER_HEADER = 'X-Test-User-ExternalId';
@@ -36,10 +38,7 @@ async function joinAndConfirm(
   organiser: string,
   user: string,
 ) {
-  const join = await request.post(`${API}/api/v1/events/${eventId}/attendees/join`, {
-    headers: asUser(user),
-  });
-  expect(join.ok()).toBeTruthy();
+  await joinViaLink(request, eventId, organiser, user);
 
   const me = await request.get(`${API}/api/v1/me`, { headers: asUser(user) });
   const userId = (await me.json()).id as number;

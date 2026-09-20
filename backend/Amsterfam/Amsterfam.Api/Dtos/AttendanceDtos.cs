@@ -6,7 +6,8 @@ public record AttendeeResponse(
     string? AvatarUrl,
     string Role,
     DateOnly? PlannedArrival,
-    DateOnly? PlannedDeparture
+    DateOnly? PlannedDeparture,
+    bool RequestedOrganiser
 );
 
 public record UpdateAttendanceRequest(

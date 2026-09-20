@@ -7,4 +7,5 @@ export interface AttendeeResponse {
   role: AttendanceRole;
   plannedArrival: string | null;
   plannedDeparture: string | null;
+  requestedOrganiser: boolean;
 }

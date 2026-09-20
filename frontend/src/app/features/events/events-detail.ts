@@ -33,6 +33,7 @@ import { UserApi } from '../../core/api/user.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { EventResponse } from '../../core/models/event';
 import { AttendeeResponse } from '../../core/models/attendance';
+import { JoinLinksCard } from './join-links-card';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 import {
   TransitionAction,
@@ -69,6 +70,7 @@ interface EventForm {
     MatMenuModule,
     MatTooltipModule,
     OrganiserAvatarStack,
+    JoinLinksCard,
   ],
   templateUrl: './events-detail.html',
   styleUrl: './events-detail.scss',
@@ -209,26 +211,6 @@ export class EventsDetail implements OnInit {
         this.attendeesLoading.set(false);
       },
       error: () => this.attendeesLoading.set(false),
-    });
-  }
-
-  join(): void {
-    const ev = this.event();
-    if (!ev) {
-      return;
-    }
-    this.actioning.set(true);
-    this.attendanceApi.join(ev.id).subscribe({
-      next: () => {
-        this.actioning.set(false);
-        this.loadEvent(ev.id);
-        this.snackBar.open('Joined — waiting for confirmation', 'Dismiss', { duration: 3000 });
-      },
-      error: (err: HttpErrorResponse) => {
-        this.actioning.set(false);
-        const message = err.error?.error ?? 'Could not join event';
-        this.snackBar.open(message, 'Dismiss', { duration: 3000 });
-      },
     });
   }
 

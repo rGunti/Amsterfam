@@ -1,5 +1,7 @@
 import { APIRequestContext, Page, expect, test } from '@playwright/test';
 
+import { joinViaLink } from './join-helper';
+
 // The browser session is fixed to `e2e-user-1` (see environment.e2e.ts).
 const API = 'http://localhost:5293';
 const BROWSER_USER = 'e2e-user-1';
@@ -125,10 +127,7 @@ test('attendees of a cancelled event get a dead-end page', async ({ page, reques
   const eventId = await createEvent(request, organiser, `Cancelled ${Date.now()}`);
   await setStatus(request, organiser, eventId, 'LookingForDate');
 
-  const join = await request.post(`${API}/api/v1/events/${eventId}/attendees/join`, {
-    headers: asUser(BROWSER_USER),
-  });
-  expect(join.ok()).toBeTruthy();
+  await joinViaLink(request, eventId, organiser, BROWSER_USER);
   const browserUserId = await userId(request, BROWSER_USER);
   const confirm = await request.post(
     `${API}/api/v1/events/${eventId}/attendees/${browserUserId}/confirm`,

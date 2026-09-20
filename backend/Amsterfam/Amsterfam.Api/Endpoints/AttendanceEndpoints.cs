@@ -14,7 +14,6 @@ public static class AttendanceEndpoints
         var group = app.MapGroup("/api/v1/events/{eventId:guid}/attendees").RequireAuthorization();
 
         group.MapGet("/", GetAttendees);
-        group.MapPost("/join", Join);
         group.MapPost("/{userId:int}/confirm", Confirm);
         group.MapDelete("/{userId:int}", RemoveAttendee);
         group.MapPut("/{userId:int}", UpdateAttendee);
@@ -53,46 +52,12 @@ public static class AttendanceEndpoints
                 a.User.AvatarUrl,
                 a.Role.ToString(),
                 a.PlannedArrival,
-                a.PlannedDeparture
+                a.PlannedDeparture,
+                a.RequestedOrganiser
             ))
             .ToListAsync();
 
         return TypedResults.Ok(attendees);
-    }
-
-    private static async Task<IResult> Join(
-        Guid eventId,
-        ICurrentUserService currentUser,
-        AmsterfamDbContext db
-    )
-    {
-        var ev = await db.Events.FindAsync(eventId);
-        if (ev is null)
-            return TypedResults.NotFound();
-
-        if (!EventStateMachine.AcceptsJoins(ev.Status))
-            return TypedResults.Conflict(new { error = "Event is not open for RSVPs." });
-
-        var user = await currentUser.GetOrCreateAsync();
-
-        var existing = await db.EventAttendances.AnyAsync(a =>
-            a.EventId == eventId && a.UserId == user.Id
-        );
-
-        if (existing)
-            return TypedResults.Conflict(new { error = "Already attending this event." });
-
-        db.EventAttendances.Add(
-            new EventAttendance
-            {
-                EventId = eventId,
-                UserId = user.Id,
-                Role = AttendanceRole.Pending,
-            }
-        );
-
-        await db.SaveChangesAsync();
-        return TypedResults.Created($"/api/v1/events/{eventId}/attendees/{user.Id}");
     }
 
     private static async Task<IResult> Confirm(
@@ -116,7 +81,20 @@ public static class AttendanceEndpoints
         if (attendance is null)
             return TypedResults.NotFound();
 
-        attendance.Role = AttendanceRole.Attendee;
+        if (attendance.Role != AttendanceRole.Pending)
+            return TypedResults.Conflict(new { error = "This attendee is already confirmed." });
+
+        if (attendance.RequestedOrganiser)
+        {
+            if (!await IsOwner(db, eventId, requestingUser.Id))
+                return TypedResults.Forbid();
+            attendance.Role = AttendanceRole.Organiser;
+        }
+        else
+        {
+            attendance.Role = AttendanceRole.Attendee;
+        }
+
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }
@@ -296,13 +274,11 @@ public static class AttendanceEndpoints
     }
 
     private static Task<bool> IsOrganiser(AmsterfamDbContext db, Guid eventId, int userId) =>
-        db.EventAttendances.AnyAsync(a =>
-            a.EventId == eventId && a.UserId == userId && a.Role == AttendanceRole.Organiser
-        );
+        EventGuards.IsOrganiser(db, eventId, userId);
 
     private static Task<bool> IsMember(AmsterfamDbContext db, Guid eventId, int userId) =>
-        db.EventAttendances.AnyAsync(a => a.EventId == eventId && a.UserId == userId);
+        EventGuards.IsMember(db, eventId, userId);
 
     private static Task<bool> IsOwner(AmsterfamDbContext db, Guid eventId, int userId) =>
-        db.Events.AnyAsync(e => e.Id == eventId && e.CreatedById == userId);
+        EventGuards.IsOwner(db, eventId, userId);
 }

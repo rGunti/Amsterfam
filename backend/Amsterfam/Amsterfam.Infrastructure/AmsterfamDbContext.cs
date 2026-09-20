@@ -23,6 +23,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<EventComfortQuestion> EventComfortQuestions => Set<EventComfortQuestion>();
     public DbSet<ComfortAnswer> ComfortAnswers => Set<ComfortAnswer>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
+    public DbSet<EventJoinLink> EventJoinLinks => Set<EventJoinLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,6 +48,22 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         {
             e.HasIndex(a => new { a.EventId, a.UserId }).IsUnique();
             e.Property(a => a.Role).HasConversion<string>();
+        });
+
+        modelBuilder.Entity<EventJoinLink>(e =>
+        {
+            e.HasIndex(l => l.Token).IsUnique();
+            e.HasIndex(l => l.EventId);
+            e.Property(l => l.Token).HasMaxLength(64);
+            e.Property(l => l.Kind).HasConversion<string>();
+            e.HasOne(l => l.Event)
+                .WithMany()
+                .HasForeignKey(l => l.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.CreatedBy)
+                .WithMany()
+                .HasForeignKey(l => l.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<AvailabilityEntry>(e =>

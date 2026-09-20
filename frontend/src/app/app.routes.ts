@@ -20,6 +20,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'join/:token',
+    loadComponent: () => import('./features/join/join-page').then((m) => m.JoinPage),
+    canActivate: [authGuard],
+  },
+  {
     // Declared before 'events/:id' so it's matched without going through eventGuard.
     path: 'events/:id/cancelled',
     loadComponent: loadStatusPage,

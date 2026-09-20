@@ -3,6 +3,7 @@ using System;
 using Amsterfam.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Amsterfam.Infrastructure.Migrations
 {
     [DbContext(typeof(AmsterfamDbContext))]
-    partial class AmsterfamDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260920102147_JoinLinks")]
+    partial class JoinLinks
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -307,6 +310,9 @@ namespace Amsterfam.Infrastructure.Migrations
 
                     b.Property<bool>("AutoTransitionsPaused")
                         .HasColumnType("boolean");
+
+                    b.Property<decimal?>("CostPerNight")
+                        .HasColumnType("numeric");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
