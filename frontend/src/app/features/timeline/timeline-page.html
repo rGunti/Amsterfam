@@ -6,46 +6,48 @@
     <p class="note">Everything that changed in this event, newest first.</p>
 
     <ol class="timeline">
-      @for (line of lines(); track line.entry.id) {
-        <li class="entry">
-          <span class="entry-avatar">
-            @if (line.entry.actor?.avatarUrl; as avatarUrl) {
-              <img [src]="avatarUrl" alt="" />
-              <mat-icon class="entry-badge">{{ line.icon }}</mat-icon>
-            } @else {
-              <mat-icon>{{ line.icon }}</mat-icon>
-            }
-          </span>
-          <div class="entry-body">
-            <div class="entry-text">
-              @for (part of line.parts; track $index) {
-                @if (part.user) {
-                  <span class="entry-person">
-                    @if (part.avatar; as avatar) {
-                      @if (avatar.url) {
-                        <img class="entry-person-avatar" [src]="avatar.url" alt="" />
-                      } @else {
-                        <mat-icon class="entry-person-avatar">account_circle</mat-icon>
-                      }
-                    }
-                    <strong>{{ part.text }}</strong>
-                  </span>
-                } @else {
-                  <span>{{ part.text }}</span>
-                }
-              }
-            </div>
-            <div class="entry-meta">
-              <time [attr.datetime]="line.entry.occurredAt">{{
-                line.entry.occurredAt | date: 'medium'
-              }}</time>
-              @if (line.note; as note) {
-                <mat-icon class="entry-private" [matTooltip]="note" [attr.aria-label]="note"
-                  >lock</mat-icon
+      @for (day of days(); track day.key) {
+        <li class="day">
+          <h3 class="day-label">{{ day.label }}</h3>
+          <ol class="entries">
+            @for (line of day.lines; track line.entry.id) {
+              <li class="entry" [class.entry-automatic]="!line.entry.actor">
+                <span class="entry-icon"
+                  ><mat-icon>{{ line.icon }}</mat-icon></span
                 >
-              }
-            </div>
-          </div>
+                <p class="entry-body">
+                  @for (part of line.parts; track $index) {
+                    @if (part.user) {
+                      <span class="entry-person">
+                        @if (part.avatar; as avatar) {
+                          @if (avatar.url) {
+                            <img class="entry-person-avatar" [src]="avatar.url" alt="" />
+                          } @else {
+                            <mat-icon class="entry-person-avatar">account_circle</mat-icon>
+                          }
+                        }
+                        <strong>{{ part.text }}</strong>
+                      </span>
+                    } @else {
+                      <span>{{ part.text }}</span>
+                    }
+                  }
+                  <!-- A real space (not a margin), so it vanishes when the date wraps to a new line. -->
+                  &ngsp;<span class="entry-meta">
+                    <mat-icon class="entry-meta-icon">chevron_right</mat-icon>
+                    <time [attr.datetime]="line.entry.occurredAt" [matTooltip]="line.fullTime">{{
+                      line.time
+                    }}</time>
+                    @if (line.note; as note) {
+                      <mat-icon class="entry-meta-icon" [matTooltip]="note" [attr.aria-label]="note"
+                        >lock</mat-icon
+                      >
+                    }
+                  </span>
+                </p>
+              </li>
+            }
+          </ol>
         </li>
       }
     </ol>

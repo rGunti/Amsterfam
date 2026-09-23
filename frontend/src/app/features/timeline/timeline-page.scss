@@ -3,68 +3,85 @@
   margin: 24px auto;
 }
 
+// On phones the card runs edge to edge (like the overview's banner card) to save space.
+@media (max-width: 599.98px) {
+  .timeline-card {
+    margin: calc(-1 * var(--page-padding, 24px));
+    max-width: none;
+    border-radius: 0;
+  }
+}
+
 .note {
   margin: 0 0 8px;
   color: var(--mat-sys-on-surface-variant);
 }
 
-.timeline {
+.timeline,
+.entries {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
+.day + .day {
+  margin-top: 8px;
+}
+
+.day-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Icon column on the left, joined by a thin line from one entry to the next.
 .entry {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 10px 0;
+  padding: 6px 0 14px;
 
-  & + .entry {
-    border-top: 1px solid var(--mat-sys-outline-variant);
+  &:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 11.5px;
+    top: 32px;
+    bottom: 0;
+    width: 1px;
+    background: var(--mat-sys-outline-variant);
   }
 }
 
-.entry-avatar {
+.entry-icon {
   flex: none;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--mat-sys-surface-container-high);
+  width: 24px;
+  height: 24px;
   color: var(--mat-sys-on-surface-variant);
 
-  img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    margin: 2px;
+    font-size: 20px;
+    line-height: 20px;
   }
-}
-
-// What happened, pinned to the actor's avatar.
-.entry-badge {
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
-  width: 18px;
-  height: 18px;
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-  border-radius: 50%;
-  border: 2px solid var(--mat-sys-surface-container-low);
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
 }
 
 .entry-body {
   flex: 1 1 auto;
   min-width: 0;
+  margin: 2px 0 0;
+  line-height: 20px;
   overflow-wrap: anywhere;
+}
+
+// Automatic changes (no person behind them) read quieter.
+.entry-automatic .entry-body {
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .entry-person {
@@ -88,19 +105,21 @@
   vertical-align: -3px;
 }
 
-.entry-private {
+.entry-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+  vertical-align: bottom;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.entry-meta-icon {
   width: 14px;
   height: 14px;
   font-size: 14px;
   line-height: 14px;
-}
-
-.entry-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--mat-sys-on-surface-variant);
 }
 
 .more {

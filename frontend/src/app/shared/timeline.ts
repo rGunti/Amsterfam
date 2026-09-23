@@ -20,7 +20,6 @@ export interface TimelineLine {
   text: string;
 }
 
-const person = (text: string): TimelinePart => ({ text, user: true });
 const personWithAvatar = (text: string, u: TimelineUser): TimelinePart => ({
   text,
   user: true,
@@ -93,11 +92,10 @@ function describeParts(
   entry: TimelineEntry,
   viewerId: number | null,
 ): { icon: string; parts: TimelinePart[] } {
-  // Everyone mentioned is highlighted. The actor's avatar already leads the entry, so only
-  // the subject gets an inline one.
+  // Everyone mentioned is highlighted, with their avatar in front of the name.
   const isMe = (u: TimelineUser | null) => u !== null && u.id === viewerId;
   const actor = entry.actor
-    ? person(isMe(entry.actor) ? 'You' : entry.actor.displayName)
+    ? personWithAvatar(isMe(entry.actor) ? 'You' : entry.actor.displayName, entry.actor)
     : 'Someone';
   const subjectOf = (u: TimelineUser | null) =>
     u ? personWithAvatar(isMe(u) ? 'you' : u.displayName, u) : 'someone';

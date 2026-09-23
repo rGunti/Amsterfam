@@ -1,5 +1,4 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,13 +8,21 @@ import { TimelineApi } from '../../core/api/timeline.api';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { TimelineEntry } from '../../core/models/timeline';
-import { describeEntry, visibilityNote } from '../../shared/timeline';
+import { TimelineLine, describeEntry, visibilityNote } from '../../shared/timeline';
+import { dayKey, dayLabel, fullTimestamp, timeOfDay } from '../../shared/timestamp';
 
 const PAGE_SIZE = 50;
 
+interface TimelineLineView extends TimelineLine {
+  entry: TimelineEntry;
+  note: string | null;
+  time: string;
+  fullTime: string;
+}
+
 @Component({
   selector: 'app-timeline-page',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule],
+  imports: [MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule],
   templateUrl: './timeline-page.html',
   styleUrl: './timeline-page.scss',
 })
@@ -30,13 +37,27 @@ export class TimelinePage implements OnInit {
   readonly error = signal(false);
   readonly hasMore = signal(false);
 
-  readonly lines = computed(() => {
+  /** Entries grouped under a heading per local day, newest first. */
+  readonly days = computed(() => {
     const viewerId = this.currentUser.user()?.id ?? null;
-    return this.entries().map((entry) => ({
-      entry,
-      ...describeEntry(entry, viewerId),
-      note: visibilityNote(entry.visibility),
-    }));
+    const now = new Date();
+    const days: { key: string; label: string; lines: TimelineLineView[] }[] = [];
+    for (const entry of this.entries()) {
+      const key = dayKey(entry.occurredAt);
+      let day = days.at(-1);
+      if (day?.key !== key) {
+        day = { key, label: dayLabel(entry.occurredAt, now), lines: [] };
+        days.push(day);
+      }
+      day.lines.push({
+        entry,
+        ...describeEntry(entry, viewerId),
+        note: visibilityNote(entry.visibility),
+        time: timeOfDay(entry.occurredAt),
+        fullTime: fullTimestamp(entry.occurredAt),
+      });
+    }
+    return days;
   });
 
   ngOnInit(): void {
