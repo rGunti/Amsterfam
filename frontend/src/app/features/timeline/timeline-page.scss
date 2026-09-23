@@ -30,18 +30,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  overflow: hidden;
   background: var(--mat-sys-surface-container-high);
   color: var(--mat-sys-on-surface-variant);
 
   img {
     width: 100%;
     height: 100%;
+    border-radius: 50%;
     object-fit: cover;
   }
+}
+
+// What happened, pinned to the actor's avatar.
+.entry-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  border: 2px solid var(--mat-sys-surface-container-low);
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
 }
 
 .entry-body {
@@ -50,9 +67,11 @@
   overflow-wrap: anywhere;
 }
 
-.entry-icon {
-  color: var(--mat-sys-on-surface-variant);
-  vertical-align: -2px;
+.entry-private {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  line-height: 14px;
 }
 
 .entry-meta {

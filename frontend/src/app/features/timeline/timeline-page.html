@@ -11,23 +11,19 @@
           <span class="entry-avatar">
             @if (line.entry.actor?.avatarUrl; as avatarUrl) {
               <img [src]="avatarUrl" alt="" />
+              <mat-icon class="entry-badge">{{ line.icon }}</mat-icon>
             } @else {
               <mat-icon>{{ line.icon }}</mat-icon>
             }
           </span>
           <div class="entry-body">
-            <div class="entry-text">
-              @if (line.entry.actor?.avatarUrl) {
-                <mat-icon class="entry-icon" inline>{{ line.icon }}</mat-icon>
-              }
-              {{ line.text }}
-            </div>
+            <div class="entry-text">{{ line.text }}</div>
             <div class="entry-meta">
               <time [attr.datetime]="line.entry.occurredAt">{{
                 line.entry.occurredAt | date: 'medium'
               }}</time>
               @if (line.note; as note) {
-                <mat-icon class="entry-private" inline [matTooltip]="note" [attr.aria-label]="note"
+                <mat-icon class="entry-private" [matTooltip]="note" [attr.aria-label]="note"
                   >lock</mat-icon
                 >
               }
