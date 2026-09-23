@@ -159,6 +159,9 @@
             <mat-icon inline>info</mat-icon> Join this event to see full details.
           </p>
         }
+        @if (isOrganiser) {
+          <app-event-status-graph class="lifecycle-graph" [status]="ev.status" />
+        }
         @if (isOrganiser && needsDatesToOpen) {
           <p class="detail-row hint">
             <mat-icon inline>lightbulb</mat-icon> Set a start and end date (not in the past) to open
