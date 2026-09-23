@@ -1,5 +1,6 @@
 import { TimelineEntry, TimelineUser, TimelineVisibility } from '../core/models/timeline';
 import { EventStatus } from '../core/models/event';
+import { APP_LOCALE } from './app-locale';
 import { statusIcon, statusLabel } from './event-status';
 
 export interface TimelineLine {
@@ -24,7 +25,7 @@ function listOf(items: string[]): string {
 
 function shortDate(iso: unknown): string {
   return typeof iso === 'string'
-    ? new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, {
+    ? new Date(`${iso}T00:00:00`).toLocaleDateString(APP_LOCALE, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
