@@ -66,6 +66,8 @@ docker compose down -v   # tear down including volumes
 
 > Fill in: coding conventions (e.g. C# naming, Angular component structure, API endpoint patterns, EF Core approach — code-first vs db-first, etc.)
 
+- **Event timeline (ADR-012):** endpoints that change an event call `EventLog.Record(...)` right before their `SaveChanges`, and are marked `.LogsToTimeline()`. Endpoints that deliberately don't log are marked `.NotLoggedToTimeline("reason")`. `TimelineCoverageTests` fails for any POST/PUT/PATCH/DELETE endpoint without one of the two. Never log the content of personal answers; comfort & consent answers must not be logged at all.
+
 ## Common Tasks
 
 ### Add a DB migration

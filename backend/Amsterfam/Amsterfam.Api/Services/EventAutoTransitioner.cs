@@ -8,7 +8,11 @@ namespace Amsterfam.Api.Services;
 /// Moves events along when their dates are reached: Open → In Progress on the start
 /// date, In Progress → Closed once the end date has passed. Idempotent.
 /// </summary>
-public class EventAutoTransitioner(AmsterfamDbContext db, ILogger<EventAutoTransitioner> logger)
+public class EventAutoTransitioner(
+    AmsterfamDbContext db,
+    EventLog log,
+    ILogger<EventAutoTransitioner> logger
+)
 {
     public async Task<int> RunAsync(DateOnly today, CancellationToken ct = default)
     {
@@ -24,7 +28,16 @@ public class EventAutoTransitioner(AmsterfamDbContext db, ILogger<EventAutoTrans
         {
             var from = ev.Status;
             while (EventStateMachine.GetDueAutoTransition(ev, today) is { } next)
+            {
+                var step = ev.Status;
                 EventStateMachine.ApplyAutoTransition(ev, next);
+                log.Record(
+                    ev.Id,
+                    EventLogType.StatusChanged,
+                    actorId: null,
+                    data: new { from = step.ToString(), to = next.ToString() }
+                );
+            }
 
             if (ev.Status == from)
                 continue;

@@ -1,4 +1,5 @@
 import { DatePollStatus } from '../../core/models/date-poll';
+import { APP_LOCALE } from '../../shared/app-locale';
 
 export function parseDateOnly(value: string): Date {
   const [year, month, day] = value.split('-').map(Number);
@@ -42,7 +43,7 @@ export interface CalendarMonth {
 }
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MONTH_FORMATTER = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
+const MONTH_FORMATTER = new Intl.DateTimeFormat(APP_LOCALE, { month: 'long', year: 'numeric' });
 
 export function weekdayLabels(): string[] {
   return WEEKDAY_LABELS;

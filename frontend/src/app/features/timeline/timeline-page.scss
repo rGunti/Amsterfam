@@ -1,0 +1,144 @@
+.timeline-card {
+  max-width: 640px;
+  margin: 24px auto;
+}
+
+// On phones the card runs edge to edge (like the overview's banner card) to save space.
+@media (max-width: 599.98px) {
+  .timeline-card {
+    margin: calc(-1 * var(--page-padding, 24px));
+    max-width: none;
+    border-radius: 0;
+  }
+}
+
+.note {
+  margin: 0 0 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.timeline,
+.entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.group + .group {
+  margin-top: 8px;
+}
+
+.group-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Icon column on the left, joined by a thin line from one entry to the next.
+.entry {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 6px 0 14px;
+
+  &:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 11.5px;
+    top: 32px;
+    bottom: 0;
+    width: 1px;
+    background: var(--mat-sys-outline-variant);
+  }
+}
+
+.entry-icon {
+  flex: none;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    margin: 2px;
+    font-size: 20px;
+    line-height: 20px;
+  }
+}
+
+.entry-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 2px 0 0;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+// Automatic changes (no person behind them) read quieter.
+.entry-automatic .entry-body {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.entry-person {
+  white-space: nowrap;
+
+  strong {
+    font-weight: 600;
+    color: var(--mat-sys-primary);
+  }
+}
+
+// Sits on the text line like a letter, so wrapping and line height stay unchanged.
+.entry-person-avatar {
+  width: 16px;
+  height: 16px;
+  margin-right: 3px;
+  border-radius: 50%;
+  object-fit: cover;
+  font-size: 16px;
+  line-height: 16px;
+  vertical-align: -3px;
+}
+
+.entry-person-initial {
+  display: inline-block;
+  // Makes the baseline the bottom edge, as for the <img> avatars, so both line up.
+  overflow: hidden;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+
+  &::before {
+    content: attr(data-initial);
+  }
+}
+
+.entry-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+  vertical-align: bottom;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.entry-meta-icon {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  line-height: 14px;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}

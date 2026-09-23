@@ -24,6 +24,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<ComfortAnswer> ComfortAnswers => Set<ComfortAnswer>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<EventJoinLink> EventJoinLinks => Set<EventJoinLink>();
+    public DbSet<EventLogEntry> EventLogEntries => Set<EventLogEntry>();
     public DbSet<EventFile> EventFiles => Set<EventFile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -89,6 +90,26 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.HasOne(l => l.CreatedBy)
                 .WithMany()
                 .HasForeignKey(l => l.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EventLogEntry>(e =>
+        {
+            e.HasIndex(l => new { l.EventId, l.Id });
+            e.Property(l => l.Type).HasConversion<string>().HasMaxLength(40);
+            e.Property(l => l.Visibility).HasConversion<string>().HasMaxLength(20);
+            e.Property(l => l.Data).HasColumnType("jsonb");
+            e.HasOne(l => l.Event)
+                .WithMany()
+                .HasForeignKey(l => l.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.Actor)
+                .WithMany()
+                .HasForeignKey(l => l.ActorId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(l => l.SubjectUser)
+                .WithMany()
+                .HasForeignKey(l => l.SubjectUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

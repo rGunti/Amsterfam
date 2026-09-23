@@ -1,11 +1,14 @@
 import {
   ApplicationConfig,
+  LOCALE_ID,
   inject,
   isDevMode,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import localeEnGb from '@angular/common/locales/en-GB';
 import { Router, provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { OAuthStorage, provideOAuthClient } from 'angular-oauth2-oidc';
@@ -15,10 +18,14 @@ import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { provideEnvironment } from '../environments/environment.model';
 import { environment } from '../environments/environment';
+import { APP_LOCALE } from './shared/app-locale';
+
+registerLocaleData(localeEnGb);
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    { provide: LOCALE_ID, useValue: APP_LOCALE },
     provideRouter(
       routes,
       withNavigationErrorHandler((event) => {

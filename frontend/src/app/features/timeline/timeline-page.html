@@ -1,0 +1,74 @@
+<mat-card class="timeline-card">
+  <mat-card-header>
+    <mat-card-title>Timeline</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <p class="note">Everything that changed in this event, newest first.</p>
+
+    <ol class="timeline">
+      @for (group of groups(); track group.key) {
+        <li class="group">
+          <h3 class="group-label">{{ group.label }}</h3>
+          <ol class="entries">
+            @for (line of group.lines; track line.entry.id) {
+              <li class="entry" [class.entry-automatic]="!line.entry.actor">
+                <span class="entry-icon"
+                  ><mat-icon aria-hidden="true">{{ line.icon }}</mat-icon></span
+                >
+                <p class="entry-body">
+                  @for (part of line.parts; track $index) {
+                    @if (part.user) {
+                      <span class="entry-person">
+                        @if (part.avatar; as avatar) {
+                          @if (avatar.url) {
+                            <img class="entry-person-avatar" [src]="avatar.url" alt="" />
+                          } @else {
+                            <!-- Initial drawn via CSS, so it doesn't end up in the sentence's text. -->
+                            <span
+                              class="entry-person-avatar entry-person-initial"
+                              [attr.data-initial]="avatar.initial"
+                              aria-hidden="true"
+                            ></span>
+                          }
+                        }
+                        <strong>{{ part.text }}</strong>
+                      </span>
+                    } @else {
+                      <span>{{ part.text }}</span>
+                    }
+                  }
+                  <!-- A real space (not a margin), so it vanishes when the date wraps to a new line. -->
+                  &ngsp;<span class="entry-meta">
+                    <mat-icon class="entry-meta-icon" aria-hidden="true">chevron_right</mat-icon>
+                    <time [attr.datetime]="line.entry.occurredAt" [matTooltip]="line.fullTime">{{
+                      line.time
+                    }}</time>
+                    @if (line.note; as note) {
+                      <mat-icon class="entry-meta-icon" [matTooltip]="note" [attr.aria-label]="note"
+                        >lock</mat-icon
+                      >
+                    }
+                  </span>
+                </p>
+              </li>
+            }
+          </ol>
+        </li>
+      }
+    </ol>
+
+    @if (loading()) {
+      <p class="note">Loading…</p>
+    } @else if (error()) {
+      <p class="note">Could not load the timeline.</p>
+    } @else if (entries().length === 0) {
+      <p class="note">Nothing has happened yet.</p>
+    }
+
+    @if (hasMore() && !loading()) {
+      <div class="more">
+        <button mat-stroked-button (click)="loadMore()">Show older</button>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
