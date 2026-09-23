@@ -1,0 +1,22 @@
+<ol class="status-graph" [class.cancelled]="cancelled()" aria-label="Event progress">
+  @for (stage of stages(); track stage.status) {
+    <li
+      class="stage"
+      [class]="'stage-' + stage.state"
+      [attr.aria-current]="stage.state === 'current' ? 'step' : null"
+      [attr.aria-label]="describe(stage)"
+    >
+      <!-- The current stage takes its status colour (global .status-icon rules). -->
+      <span
+        class="node"
+        [class]="stage.state === 'current' ? 'status-icon ' + statusClass(stage.status) : ''"
+      >
+        <mat-icon>{{ stage.icon }}</mat-icon>
+        @if (stage.state === 'done') {
+          <mat-icon class="check">check_circle</mat-icon>
+        }
+      </span>
+      <span class="label">{{ stage.label }}</span>
+    </li>
+  }
+</ol>

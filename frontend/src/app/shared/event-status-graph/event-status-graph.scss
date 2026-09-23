@@ -1,0 +1,114 @@
+$node-size: 36px;
+
+.status-graph {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+
+  // Connector to the previous stage, drawn behind the nodes.
+  &:not(:first-child)::before {
+    content: '';
+    position: absolute;
+    top: calc($node-size / 2 - 1px);
+    right: 50%;
+    width: 100%;
+    height: 2px;
+    background: var(--mat-sys-outline-variant);
+  }
+
+  &.stage-done::before,
+  &.stage-current::before {
+    background: var(--mat-sys-primary);
+  }
+}
+
+.node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: $node-size;
+  height: $node-size;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container);
+
+  // The current stage's colour comes from the global .status-icon rules instead.
+  &:not(.status-icon) {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .check {
+    position: absolute;
+    right: -6px;
+    bottom: -4px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--mat-sys-surface-container);
+    color: #4caf50;
+  }
+}
+
+.label {
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--mat-sys-on-surface-variant);
+  overflow-wrap: anywhere;
+}
+
+.stage-done .node {
+  border-color: var(--mat-sys-primary);
+}
+
+.stage-current {
+  .node {
+    border-color: currentColor;
+    background: var(--mat-sys-surface-container-highest);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--mat-sys-primary) 20%, transparent);
+  }
+
+  .label {
+    font-weight: 600;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.stage-upcoming .node {
+  border-style: dashed;
+}
+
+.stage-inactive {
+  opacity: 0.4;
+}
+
+// Cancelled: everything is greyed out except the Cancelled stage itself.
+.cancelled .stage-current::before {
+  background: var(--mat-sys-outline-variant);
+}
+
+.cancelled .stage-current .node {
+  border-color: var(--mat-sys-error);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
+}

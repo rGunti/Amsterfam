@@ -29,6 +29,53 @@ export function statusClass(status: EventStatus): string {
   return `status-${status.toLowerCase()}`;
 }
 
+/** The regular lifecycle, in order. Cancelled replaces the last stage when it applies. */
+const LIFECYCLE: readonly EventStatus[] = [
+  'Draft',
+  'LookingForDate',
+  'Open',
+  'InProgress',
+  'Closed',
+  'Archived',
+];
+
+/**
+ * - `done`: passed, or skipped on the way (e.g. Draft → Open skips Looking for date)
+ * - `current`: where the event is now
+ * - `upcoming`: still ahead
+ * - `inactive`: out of reach because the event was cancelled
+ */
+export type StageState = 'done' | 'current' | 'upcoming' | 'inactive';
+
+export interface StatusStage {
+  status: EventStatus;
+  label: string;
+  icon: string;
+  state: StageState;
+}
+
+/** Stages for the organisers' status graph (#128). */
+export function statusStages(status: EventStatus): StatusStage[] {
+  const stage = (s: EventStatus, state: StageState): StatusStage => ({
+    status: s,
+    label: statusLabel(s),
+    icon: statusIcon(s),
+    state,
+  });
+
+  if (status === 'Cancelled') {
+    return [
+      ...LIFECYCLE.slice(0, -1).map((s) => stage(s, 'inactive')),
+      stage('Cancelled', 'current'),
+    ];
+  }
+
+  const current = LIFECYCLE.indexOf(status);
+  return LIFECYCLE.map((s, i) =>
+    stage(s, i < current ? 'done' : i === current ? 'current' : 'upcoming'),
+  );
+}
+
 // Mirrors EventStateMachine on the backend. The server is the source of truth for which
 // transitions are allowed (EventResponse.allowedTransitions); these only drive presentation.
 export const isReadOnly = (status: EventStatus) => status === 'Archived' || status === 'Cancelled';

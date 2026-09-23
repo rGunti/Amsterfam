@@ -41,6 +41,7 @@ import { BannerTitle } from '../../shared/event-banner/banner-title';
 import { LinkifiedText } from '../../shared/linkified-text/linkified-text';
 import { EventBanner } from '../../shared/event-banner/event-banner';
 import { prepareBanner } from '../../shared/banner-image';
+import { EventStatusGraph } from '../../shared/event-status-graph/event-status-graph';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 import {
   TransitionAction,
@@ -82,6 +83,7 @@ interface EventForm {
     LinkifiedText,
     BannerTitle,
     NgTemplateOutlet,
+    EventStatusGraph,
   ],
   templateUrl: './events-detail.html',
   styleUrl: './events-detail.scss',
