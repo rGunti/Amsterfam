@@ -25,6 +25,10 @@ checked against the current owner when reading, so it follows ownership transfer
 
 ## Rules for new features
 
+- Every POST/PUT/PATCH/DELETE endpoint is marked `.LogsToTimeline()` or
+  `.NotLoggedToTimeline("reason")`. `TimelineCoverageTests` fails otherwise, so a new
+  endpoint can't skip the decision; it can't check that the entry itself is right.
+
 - Log only *that* a personal answer changed, never its content. Date poll saves are
   logged without the weeks; comfort & consent answers must not be logged at all.
 - Chatty personal saves go through `RecordCoalescedAsync`, which folds repeats by the same

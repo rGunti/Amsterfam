@@ -11,7 +11,9 @@ public static class PaymentMethodEndpoints
 {
     public static IEndpointRouteBuilder MapPaymentMethodEndpoints(this IEndpointRouteBuilder app)
     {
-        var mine = app.MapGroup("/api/v1/me/payment-methods").RequireAuthorization();
+        var mine = app.MapGroup("/api/v1/me/payment-methods")
+            .RequireAuthorization()
+            .NotLoggedToTimeline("Payment methods belong to the user, not an event.");
 
         mine.MapGet("/", GetMine);
         mine.MapPost("/", Create);

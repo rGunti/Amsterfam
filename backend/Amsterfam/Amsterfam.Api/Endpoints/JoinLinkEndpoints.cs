@@ -15,14 +15,14 @@ public static class JoinLinkEndpoints
         var managed = app.MapGroup("/api/v1/events/{eventId:guid}/join-links")
             .RequireAuthorization();
         managed.MapGet("/", GetLinks);
-        managed.MapPost("/", CreateLink);
-        managed.MapDelete("/{id:int}", RevokeLink);
-        managed.MapPost("/{id:int}/regenerate", RegenerateLink);
+        managed.MapPost("/", CreateLink).LogsToTimeline();
+        managed.MapDelete("/{id:int}", RevokeLink).LogsToTimeline();
+        managed.MapPost("/{id:int}/regenerate", RegenerateLink).LogsToTimeline();
 
         var redeem = app.MapGroup("/api/v1/join-links/{token}").RequireAuthorization();
         redeem.MapGet("/", Preview);
         redeem.MapGet("/banner", PreviewBanner);
-        redeem.MapPost("/join", Join);
+        redeem.MapPost("/join", Join).LogsToTimeline();
 
         return app;
     }

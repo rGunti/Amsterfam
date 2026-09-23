@@ -16,8 +16,8 @@ public static class EventBannerEndpoints
         var group = app.MapGroup("/api/v1/events/{eventId:guid}/banner").RequireAuthorization();
 
         group.MapGet("/", GetBanner);
-        group.MapPut("/", PutBanner);
-        group.MapDelete("/", DeleteBanner);
+        group.MapPut("/", PutBanner).LogsToTimeline();
+        group.MapDelete("/", DeleteBanner).LogsToTimeline();
 
         return app;
     }

@@ -11,7 +11,7 @@ public static class UserEndpoints
         var group = app.MapGroup("/api/v1/me").RequireAuthorization();
 
         group.MapGet("/", GetMe);
-        group.MapPut("/", UpdateMe);
+        group.MapPut("/", UpdateMe).NotLoggedToTimeline("Profile changes aren't tied to an event.");
 
         return app;
     }

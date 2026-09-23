@@ -13,11 +13,11 @@ public static class DatePollEndpoints
     {
         var group = app.MapGroup("/api/v1/events/{eventId:guid}/date-poll").RequireAuthorization();
 
-        group.MapPut("/range", SetPollRange);
+        group.MapPut("/range", SetPollRange).LogsToTimeline();
         group.MapGet("/", GetSummary);
         group.MapGet("/me", GetMyEntries);
-        group.MapPut("/me", UpdateMyEntries);
-        group.MapDelete("/me/{weekStart}", DeleteMyEntry);
+        group.MapPut("/me", UpdateMyEntries).LogsToTimeline();
+        group.MapDelete("/me/{weekStart}", DeleteMyEntry).LogsToTimeline();
 
         return app;
     }

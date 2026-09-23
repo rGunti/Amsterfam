@@ -14,11 +14,13 @@ public static class EventEndpoints
         var group = app.MapGroup("/api/v1/events").RequireAuthorization();
 
         group.MapGet("/", GetEvents);
-        group.MapPost("/", CreateEvent);
+        group.MapPost("/", CreateEvent).LogsToTimeline();
         group.MapGet("/{id:guid}", GetEvent);
-        group.MapPut("/{id:guid}", UpdateEvent);
-        group.MapDelete("/{id:guid}", DeleteEvent);
-        group.MapPost("/{id:guid}/status", TransitionEvent);
+        group.MapPut("/{id:guid}", UpdateEvent).LogsToTimeline();
+        group
+            .MapDelete("/{id:guid}", DeleteEvent)
+            .NotLoggedToTimeline("The event and its timeline are deleted together.");
+        group.MapPost("/{id:guid}/status", TransitionEvent).LogsToTimeline();
 
         return app;
     }

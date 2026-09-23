@@ -14,12 +14,12 @@ public static class AttendanceEndpoints
         var group = app.MapGroup("/api/v1/events/{eventId:guid}/attendees").RequireAuthorization();
 
         group.MapGet("/", GetAttendees);
-        group.MapPost("/{userId:int}/confirm", Confirm);
-        group.MapDelete("/{userId:int}", RemoveAttendee);
-        group.MapPut("/{userId:int}", UpdateAttendee);
-        group.MapPost("/{userId:int}/promote", PromoteToOrganiser);
-        group.MapPost("/{userId:int}/demote", DemoteOrganiser);
-        group.MapPost("/{userId:int}/transfer-ownership", TransferOwnership);
+        group.MapPost("/{userId:int}/confirm", Confirm).LogsToTimeline();
+        group.MapDelete("/{userId:int}", RemoveAttendee).LogsToTimeline();
+        group.MapPut("/{userId:int}", UpdateAttendee).LogsToTimeline();
+        group.MapPost("/{userId:int}/promote", PromoteToOrganiser).LogsToTimeline();
+        group.MapPost("/{userId:int}/demote", DemoteOrganiser).LogsToTimeline();
+        group.MapPost("/{userId:int}/transfer-ownership", TransferOwnership).LogsToTimeline();
 
         return app;
     }
