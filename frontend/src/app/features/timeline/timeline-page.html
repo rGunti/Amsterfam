@@ -1,0 +1,54 @@
+<mat-card class="timeline-card">
+  <mat-card-header>
+    <mat-card-title>Timeline</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <p class="note">Everything that changed in this event, newest first.</p>
+
+    <ol class="timeline">
+      @for (line of lines(); track line.entry.id) {
+        <li class="entry">
+          <span class="entry-avatar">
+            @if (line.entry.actor?.avatarUrl; as avatarUrl) {
+              <img [src]="avatarUrl" alt="" />
+            } @else {
+              <mat-icon>{{ line.icon }}</mat-icon>
+            }
+          </span>
+          <div class="entry-body">
+            <div class="entry-text">
+              @if (line.entry.actor?.avatarUrl) {
+                <mat-icon class="entry-icon" inline>{{ line.icon }}</mat-icon>
+              }
+              {{ line.text }}
+            </div>
+            <div class="entry-meta">
+              <time [attr.datetime]="line.entry.occurredAt">{{
+                line.entry.occurredAt | date: 'medium'
+              }}</time>
+              @if (line.note; as note) {
+                <mat-icon class="entry-private" inline [matTooltip]="note" [attr.aria-label]="note"
+                  >lock</mat-icon
+                >
+              }
+            </div>
+          </div>
+        </li>
+      }
+    </ol>
+
+    @if (loading()) {
+      <p class="note">Loading…</p>
+    } @else if (error()) {
+      <p class="note">Could not load the timeline.</p>
+    } @else if (entries().length === 0) {
+      <p class="note">Nothing has happened yet.</p>
+    }
+
+    @if (hasMore() && !loading()) {
+      <div class="more">
+        <button mat-stroked-button (click)="loadMore()">Show older</button>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>

@@ -118,6 +118,19 @@
             <span matListItemTitle>Find a date</span>
           </a>
         }
+        @if (canViewTimeline(currentEvent)) {
+          <a
+            mat-list-item
+            [routerLink]="['/events', currentEvent.id, 'timeline']"
+            routerLinkActive
+            #timelineActive="routerLinkActive"
+            [activated]="timelineActive.isActive"
+            (click)="onNavLinkClick()"
+          >
+            <mat-icon matListItemIcon>history</mat-icon>
+            <span matListItemTitle>Timeline</span>
+          </a>
+        }
         @if (canManageJoinLinks(currentEvent)) {
           <a
             mat-list-item

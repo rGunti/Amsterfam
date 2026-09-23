@@ -82,6 +82,15 @@ GET    /api/v1/join-links/{token}/banner           (anyone signed in with a usab
 - Blocked in read-only events (409). Cancelled events hide the banner from non-organisers.
 - The endpoints need the bearer token, so the frontend fetches them as blobs rather than via `<img src>`. See ADR-011.
 
+### Timeline
+```
+GET /api/v1/events/{id}/timeline?before={entryId}&limit={n}   (confirmed members; newest first)
+```
+- Returns `{ id, type, visibility, occurredAt, actor, subject, data }`; `actor`/`subject` are `{ id, displayName, avatarUrl }` or null (null actor = automatic).
+- Entries are filtered by the caller's standing: attendees get `Everyone`, organisers also `Organisers`, the owner also `Owner`.
+- `limit` defaults to 50 (max 100). Page by passing the last entry's `id` as `before`.
+- 404 for non-members, 403 for pending members; cancelled events follow the usual organiser-only rule.
+
 ### Availability
 ```
 GET /api/v1/events/{id}/availability

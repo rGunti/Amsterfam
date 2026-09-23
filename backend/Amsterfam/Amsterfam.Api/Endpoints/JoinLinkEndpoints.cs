@@ -27,6 +27,21 @@ public static class JoinLinkEndpoints
         return app;
     }
 
+    /// <summary>Organiser links are the owner's business, so their log entries are too.</summary>
+    private static void RecordLinkChange(
+        EventLog log,
+        EventLogType type,
+        EventJoinLink link,
+        int actorId
+    ) =>
+        log.Record(
+            link.EventId,
+            type,
+            actorId,
+            data: new { label = link.DisplayLabel, kind = link.Kind.ToString() },
+            visibility: link.Kind == JoinLinkKind.Organiser ? EventLogVisibility.Owner : null
+        );
+
     private static string NewToken() => Base64Url(RandomNumberGenerator.GetBytes(32));
 
     private static string Base64Url(byte[] bytes) =>
@@ -76,7 +91,8 @@ public static class JoinLinkEndpoints
         [FromBody] CreateJoinLinkRequest request,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
-        TimeProvider time
+        TimeProvider time,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -120,6 +136,7 @@ public static class JoinLinkEndpoints
             MaxUses = request.MaxUses,
         };
         db.EventJoinLinks.Add(link);
+        RecordLinkChange(log, EventLogType.JoinLinkCreated, link, user.Id);
         await db.SaveChangesAsync();
 
         return TypedResults.Created(
@@ -133,7 +150,8 @@ public static class JoinLinkEndpoints
         int id,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
-        TimeProvider time
+        TimeProvider time,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -152,7 +170,11 @@ public static class JoinLinkEndpoints
         if (!await CanManage(db, eventId, user.Id, link.Kind))
             return TypedResults.Forbid();
 
-        link.RevokedAt ??= time.GetUtcNow();
+        if (link.RevokedAt is null)
+        {
+            link.RevokedAt = time.GetUtcNow();
+            RecordLinkChange(log, EventLogType.JoinLinkRevoked, link, user.Id);
+        }
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }
@@ -176,7 +198,8 @@ public static class JoinLinkEndpoints
         int id,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
-        TimeProvider time
+        TimeProvider time,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -212,6 +235,7 @@ public static class JoinLinkEndpoints
             MaxUses = old.MaxUses,
         };
         db.EventJoinLinks.Add(replacement);
+        RecordLinkChange(log, EventLogType.JoinLinkRegenerated, replacement, user.Id);
         await db.SaveChangesAsync();
 
         return TypedResults.Created(
@@ -303,7 +327,8 @@ public static class JoinLinkEndpoints
         string token,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
-        TimeProvider time
+        TimeProvider time,
+        EventLog log
     )
     {
         var now = time.GetUtcNow();
@@ -340,6 +365,17 @@ public static class JoinLinkEndpoints
                 Role = AttendanceRole.Pending,
                 RequestedOrganiser = link.Kind == JoinLinkKind.Organiser,
                 JoinLinkId = link.Id,
+            }
+        );
+        log.Record(
+            link.EventId,
+            EventLogType.JoinRequested,
+            user.Id,
+            user.Id,
+            new
+            {
+                link = link.DisplayLabel,
+                requestedOrganiser = link.Kind == JoinLinkKind.Organiser,
             }
         );
 

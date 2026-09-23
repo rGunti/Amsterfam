@@ -113,6 +113,15 @@ Unguessable, revocable link that lets a signed-in user request to join an event.
 A binary file stored in Postgres (`bytea`) and owned by an event; deleted with it. Generic on purpose so other file kinds can reuse it; what a file is *for* is decided by whoever points at it. Today only `Event.BannerFileId` does.
 - `Id` (Guid), `EventId`, `FileName`, `ContentType`, `Size`, `Data`, `UploadedById`, `CreatedAt`
 
+### EventLogEntry
+One recorded change to an event, shown newest-first on the event's timeline (issue #127). Written in the same `SaveChanges` as the change itself; deleted with the event.
+- `Id` (long, also the paging cursor), `EventId`, `Type`, `Visibility` (Everyone | Organisers | Owner), `OccurredAt`
+- `ActorId?` — null for automatic changes (auto-transitions, pre-timeline backfill)
+- `SubjectUserId?` — the attendee the change is about (confirmed, removed, promoted, …)
+- `Data` (jsonb?) — type-specific details, e.g. `{ from, to }` for status changes
+- Visibility per type: join requests/declines/withdrawals, cost overrides and join-link changes are Organisers; organiser-link changes are Owner (the *current* owner, checked at read time); everything else is Everyone.
+- Date poll saves only record *that* someone responded, never their answers, and repeated saves by the same person within 15 minutes share one entry.
+
 ### EventAttendance
 Join between User and Event.
 - `Id`, `EventId` (Guid, matches `Event.Id`), `UserId`, `Role` (Organiser | Attendee | Pending)

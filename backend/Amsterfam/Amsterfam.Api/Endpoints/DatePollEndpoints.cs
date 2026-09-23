@@ -26,7 +26,8 @@ public static class DatePollEndpoints
         Guid eventId,
         [FromBody] UpdatePollRangeRequest request,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         var ev = await db.Events.FindAsync(eventId);
@@ -57,6 +58,14 @@ public static class DatePollEndpoints
         )
             return TypedResults.BadRequest(
                 new { error = "PollRangeStart must be before PollRangeEnd." }
+            );
+
+        if (ev.PollRangeStart != request.PollRangeStart || ev.PollRangeEnd != request.PollRangeEnd)
+            log.Record(
+                eventId,
+                EventLogType.PollRangeChanged,
+                user.Id,
+                data: new { start = request.PollRangeStart, end = request.PollRangeEnd }
             );
 
         ev.PollRangeStart = request.PollRangeStart;
@@ -125,7 +134,8 @@ public static class DatePollEndpoints
         Guid eventId,
         [FromBody] UpdateDatePollEntriesRequest request,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         var ev = await db.Events.FindAsync(eventId);
@@ -194,6 +204,10 @@ public static class DatePollEndpoints
             }
         }
 
+        // Only that someone responded; the poll itself is only shown as totals.
+        if (request.Entries.Count > 0)
+            await log.RecordCoalescedAsync(eventId, EventLogType.DatePollResponded, user.Id);
+
         await db.SaveChangesAsync();
 
         var entries = existingEntries
@@ -207,7 +221,8 @@ public static class DatePollEndpoints
         Guid eventId,
         string weekStart,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         var ev = await db.Events.FindAsync(eventId);
@@ -236,6 +251,7 @@ public static class DatePollEndpoints
         if (existing is not null)
         {
             db.DatePollEntries.Remove(existing);
+            await log.RecordCoalescedAsync(eventId, EventLogType.DatePollResponded, user.Id);
             await db.SaveChangesAsync();
         }
 

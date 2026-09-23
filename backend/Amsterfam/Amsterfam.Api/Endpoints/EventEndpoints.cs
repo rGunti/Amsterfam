@@ -66,7 +66,8 @@ public static class EventEndpoints
         [FromBody] CreateEventRequest request,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
-        TimeProvider time
+        TimeProvider time,
+        EventLog log
     )
     {
         var today = time.Today();
@@ -100,6 +101,7 @@ public static class EventEndpoints
                 Role = AttendanceRole.Organiser,
             }
         );
+        log.Record(ev.Id, EventLogType.EventCreated, user.Id);
 
         await db.SaveChangesAsync();
         return TypedResults.Created($"/api/v1/events/{ev.Id}", BuildResponse(ev, user.Id, today));
@@ -110,7 +112,8 @@ public static class EventEndpoints
         [FromBody] UpdateEventRequest request,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
-        TimeProvider time
+        TimeProvider time,
+        EventLog log
     )
     {
         var ev = await LoadEventWithOrganisers(db, id);
@@ -145,11 +148,24 @@ public static class EventEndpoints
                 return TypedResults.BadRequest(new { error = dateError });
         }
 
+        var changed = new List<string>();
+        if (request.Name != ev.Name)
+            changed.Add("name");
+        if (request.Description != ev.Description)
+            changed.Add("description");
+        if (datesChanged)
+            changed.Add("dates");
+        if (request.Location != ev.Location)
+            changed.Add("location");
+
         ev.Name = request.Name;
         ev.Description = request.Description;
         ev.StartDate = request.StartDate;
         ev.EndDate = request.EndDate;
         ev.Location = request.Location;
+
+        if (changed.Count > 0)
+            log.Record(ev.Id, EventLogType.EventDetailsUpdated, user.Id, data: new { changed });
 
         await db.SaveChangesAsync();
         return TypedResults.Ok(BuildResponse(ev, user.Id, today));
@@ -185,7 +201,8 @@ public static class EventEndpoints
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
         TimeProvider time,
-        IEventBalanceCheck balances
+        IEventBalanceCheck balances,
+        EventLog log
     )
     {
         // Enum.TryParse would also accept numeric strings, so match on names only.
@@ -212,6 +229,7 @@ public static class EventEndpoints
             );
 
         var today = time.Today();
+        var from = ev.Status;
         var result = EventStateMachine.TryTransition(ev, target, actor, today);
         switch (result.Outcome)
         {
@@ -221,6 +239,14 @@ public static class EventEndpoints
             case TransitionOutcome.GuardFailed:
                 return TypedResults.Conflict(new { error = result.Error });
         }
+
+        if (ev.Status != from)
+            log.Record(
+                ev.Id,
+                EventLogType.StatusChanged,
+                user.Id,
+                data: new { from = from.ToString(), to = ev.Status.ToString() }
+            );
 
         await db.SaveChangesAsync();
         return TypedResults.Ok(BuildResponse(ev, user.Id, today));

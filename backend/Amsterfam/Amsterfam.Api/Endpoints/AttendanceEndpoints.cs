@@ -68,7 +68,8 @@ public static class AttendanceEndpoints
         Guid eventId,
         int userId,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -99,6 +100,14 @@ public static class AttendanceEndpoints
             attendance.Role = AttendanceRole.Attendee;
         }
 
+        log.Record(
+            eventId,
+            EventLogType.AttendeeConfirmed,
+            requestingUser.Id,
+            userId,
+            new { role = attendance.Role.ToString() }
+        );
+
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }
@@ -107,7 +116,8 @@ public static class AttendanceEndpoints
         Guid eventId,
         int userId,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -137,6 +147,16 @@ public static class AttendanceEndpoints
         if (!isSelf && attendance.Role == AttendanceRole.Organiser && !isOwner)
             return TypedResults.Forbid();
 
+        // Pending requests were never visible to attendees, so neither is their end.
+        var type = (attendance.Role == AttendanceRole.Pending, isSelf) switch
+        {
+            (true, true) => EventLogType.JoinRequestWithdrawn,
+            (true, false) => EventLogType.JoinRequestDeclined,
+            (false, true) => EventLogType.AttendeeLeft,
+            (false, false) => EventLogType.AttendeeRemoved,
+        };
+        log.Record(eventId, type, requestingUser.Id, userId);
+
         db.EventAttendances.Remove(attendance);
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
@@ -146,7 +166,8 @@ public static class AttendanceEndpoints
         Guid eventId,
         int userId,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -169,6 +190,7 @@ public static class AttendanceEndpoints
             );
 
         attendance.Role = AttendanceRole.Organiser;
+        log.Record(eventId, EventLogType.OrganiserPromoted, requestingUser.Id, userId);
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }
@@ -177,7 +199,8 @@ public static class AttendanceEndpoints
         Guid eventId,
         int userId,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -201,6 +224,7 @@ public static class AttendanceEndpoints
             return TypedResults.Conflict(new { error = "This attendee is not an organiser." });
 
         attendance.Role = AttendanceRole.Attendee;
+        log.Record(eventId, EventLogType.OrganiserDemoted, requestingUser.Id, userId);
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }
@@ -209,7 +233,8 @@ public static class AttendanceEndpoints
         Guid eventId,
         int userId,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -238,6 +263,7 @@ public static class AttendanceEndpoints
             return TypedResults.NotFound();
 
         ev.CreatedById = userId;
+        log.Record(eventId, EventLogType.OwnershipTransferred, requestingUser.Id, userId);
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }
@@ -247,7 +273,8 @@ public static class AttendanceEndpoints
         int userId,
         [FromBody] UpdateAttendanceRequest request,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -267,11 +294,32 @@ public static class AttendanceEndpoints
         if (attendance is null)
             return TypedResults.NotFound();
 
+        if (
+            attendance.PlannedArrival != request.PlannedArrival
+            || attendance.PlannedDeparture != request.PlannedDeparture
+        )
+            log.Record(
+                eventId,
+                EventLogType.TravelDatesChanged,
+                requestingUser.Id,
+                userId,
+                new { arrival = request.PlannedArrival, departure = request.PlannedDeparture }
+            );
+
         attendance.PlannedArrival = request.PlannedArrival;
         attendance.PlannedDeparture = request.PlannedDeparture;
 
-        if (isOrganiser)
+        if (isOrganiser && attendance.CostOverride != request.CostOverride)
+        {
+            log.Record(
+                eventId,
+                EventLogType.CostOverrideChanged,
+                requestingUser.Id,
+                userId,
+                new { costOverride = request.CostOverride }
+            );
             attendance.CostOverride = request.CostOverride;
+        }
 
         await db.SaveChangesAsync();
         return TypedResults.NoContent();

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Amsterfam.Api.Services;
 using Amsterfam.Core.Entities;
 using Amsterfam.Tests.Infrastructure;
@@ -51,6 +52,7 @@ public class EventAutoTransitionTests(DatabaseFixture db) : IClassFixture<Databa
         await using var context = db.CreateDbContext();
         await new EventAutoTransitioner(
             context,
+            new EventLog(context, TimeProvider.System),
             NullLogger<EventAutoTransitioner>.Instance
         ).RunAsync(today);
     }
@@ -103,6 +105,35 @@ public class EventAutoTransitionTests(DatabaseFixture db) : IClassFixture<Databa
         // Idempotent.
         await RunAsync(Today);
         Assert.Equal(EventStatus.InProgress, await StatusOf(starting));
+    }
+
+    [Fact]
+    public async Task Run_LogsEachStepWithoutAnActor()
+    {
+        var missed = await SeedEventAsync(
+            "logged",
+            EventStatus.Open,
+            Today.AddDays(-5),
+            Today.AddDays(-1)
+        );
+
+        await RunAsync(Today);
+        await RunAsync(Today);
+
+        await using var context = db.CreateDbContext();
+        var entries = await context
+            .EventLogEntries.Where(l => l.EventId == missed)
+            .OrderBy(l => l.Id)
+            .ToListAsync();
+        Assert.Equal(2, entries.Count);
+        Assert.All(entries, l => Assert.Equal(EventLogType.StatusChanged, l.Type));
+        Assert.All(entries, l => Assert.Null(l.ActorId));
+        Assert.Equal(
+            ["InProgress", "Closed"],
+            entries.Select(l =>
+                JsonDocument.Parse(l.Data!).RootElement.GetProperty("to").GetString()
+            )
+        );
     }
 
     [Fact]

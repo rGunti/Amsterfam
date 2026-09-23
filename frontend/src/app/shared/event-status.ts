@@ -42,6 +42,11 @@ export function canManageJoinLinks(ev: EventResponse): boolean {
   return ev.currentUserRole === 'Organiser' && !isReadOnly(ev.status);
 }
 
+/** Confirmed members see the timeline; pending requests don't. */
+export function canViewTimeline(ev: EventResponse): boolean {
+  return ev.currentUserRole === 'Attendee' || ev.currentUserRole === 'Organiser';
+}
+
 /**
  * Whether the overview's share button applies. Drafts only take organiser links, which
  * only the owner can create; attendee links work while joins are accepted.

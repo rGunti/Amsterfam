@@ -35,6 +35,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IEventBalanceCheck, NoOpEventBalanceCheck>();
 builder.Services.AddScoped<EventAutoTransitioner>();
+builder.Services.AddScoped<EventLog>();
 
 builder
     .Services.AddOptions<AutoTransitionOptions>()
@@ -127,6 +128,7 @@ app.MapAttendanceEndpoints();
 app.MapJoinLinkEndpoints();
 app.MapDatePollEndpoints();
 app.MapPaymentMethodEndpoints();
+app.MapTimelineEndpoints();
 
 app.Run();
 

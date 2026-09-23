@@ -80,7 +80,8 @@ public static class EventBannerEndpoints
         HttpRequest request,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
-        TimeProvider time
+        TimeProvider time,
+        EventLog log
     )
     {
         var user = await currentUser.GetOrCreateAsync();
@@ -121,6 +122,12 @@ public static class EventBannerEndpoints
         };
         db.EventFiles.Add(file);
         ev.BannerFileId = file.Id;
+        log.Record(
+            eventId,
+            EventLogType.EventDetailsUpdated,
+            user.Id,
+            data: new { changed = new[] { "banner" } }
+        );
         await db.SaveChangesAsync();
 
         if (previousId is { } old)
@@ -132,7 +139,8 @@ public static class EventBannerEndpoints
     private static async Task<IResult> DeleteBanner(
         Guid eventId,
         ICurrentUserService currentUser,
-        AmsterfamDbContext db
+        AmsterfamDbContext db,
+        EventLog log
     )
     {
         var user = await currentUser.GetOrCreateAsync();
@@ -146,6 +154,12 @@ public static class EventBannerEndpoints
             return TypedResults.NoContent();
 
         ev.BannerFileId = null;
+        log.Record(
+            eventId,
+            EventLogType.EventDetailsUpdated,
+            user.Id,
+            data: new { changed = new[] { "banner" } }
+        );
         await db.SaveChangesAsync();
         await db.EventFiles.Where(f => f.Id == bannerId).ExecuteDeleteAsync();
         return TypedResults.NoContent();
