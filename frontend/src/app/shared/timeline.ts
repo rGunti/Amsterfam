@@ -5,12 +5,12 @@ import { statusIcon, statusLabel } from './event-status';
 
 /**
  * A run of sentence text. `user` marks a reference to a person so it can be highlighted;
- * `avatar` is set when their picture should be shown in front of it.
+ * `avatar` is set when their picture (or, without one, their initial) goes in front of it.
  */
 export interface TimelinePart {
   text: string;
   user: boolean;
-  avatar?: { url: string | null };
+  avatar?: { url: string | null; initial: string };
 }
 
 export interface TimelineLine {
@@ -23,7 +23,7 @@ export interface TimelineLine {
 const personWithAvatar = (text: string, u: TimelineUser): TimelinePart => ({
   text,
   user: true,
-  avatar: { url: u.avatarUrl },
+  avatar: { url: u.avatarUrl, initial: [...u.displayName.trim()][0]?.toUpperCase() ?? '?' },
 });
 
 /**

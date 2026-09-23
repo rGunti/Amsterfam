@@ -13,7 +13,7 @@
             @for (line of group.lines; track line.entry.id) {
               <li class="entry" [class.entry-automatic]="!line.entry.actor">
                 <span class="entry-icon"
-                  ><mat-icon>{{ line.icon }}</mat-icon></span
+                  ><mat-icon aria-hidden="true">{{ line.icon }}</mat-icon></span
                 >
                 <p class="entry-body">
                   @for (part of line.parts; track $index) {
@@ -23,7 +23,12 @@
                           @if (avatar.url) {
                             <img class="entry-person-avatar" [src]="avatar.url" alt="" />
                           } @else {
-                            <mat-icon class="entry-person-avatar">account_circle</mat-icon>
+                            <!-- Initial drawn via CSS, so it doesn't end up in the sentence's text. -->
+                            <span
+                              class="entry-person-avatar entry-person-initial"
+                              [attr.data-initial]="avatar.initial"
+                              aria-hidden="true"
+                            ></span>
                           }
                         }
                         <strong>{{ part.text }}</strong>
@@ -34,7 +39,7 @@
                   }
                   <!-- A real space (not a margin), so it vanishes when the date wraps to a new line. -->
                   &ngsp;<span class="entry-meta">
-                    <mat-icon class="entry-meta-icon">chevron_right</mat-icon>
+                    <mat-icon class="entry-meta-icon" aria-hidden="true">chevron_right</mat-icon>
                     <time [attr.datetime]="line.entry.occurredAt" [matTooltip]="line.fullTime">{{
                       line.time
                     }}</time>

@@ -105,6 +105,21 @@
   vertical-align: -3px;
 }
 
+.entry-person-initial {
+  display: inline-block;
+  // Makes the baseline the bottom edge, as for the <img> avatars, so both line up.
+  overflow: hidden;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+
+  &::before {
+    content: attr(data-initial);
+  }
+}
+
 .entry-meta {
   display: inline-flex;
   align-items: center;

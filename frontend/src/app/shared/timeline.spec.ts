@@ -28,17 +28,17 @@ describe('describeEntry', () => {
   it('marks everyone mentioned, with their avatar', () => {
     const e = entry({ type: 'OrganiserPromoted', subject: bob });
     expect(describeEntry(e, 2).parts).toEqual([
-      { text: 'Alice', user: true, avatar: { url: null } },
+      { text: 'Alice', user: true, avatar: { url: null, initial: 'A' } },
       { text: ' made ', user: false },
-      { text: 'you', user: true, avatar: { url: null } },
+      { text: 'you', user: true, avatar: { url: null, initial: 'B' } },
       { text: ' an organiser', user: false },
     ]);
 
     const declined = entry({ type: 'JoinRequestDeclined', subject: bob });
     expect(describeEntry(declined, 1).parts).toEqual([
-      { text: 'You', user: true, avatar: { url: null } },
+      { text: 'You', user: true, avatar: { url: null, initial: 'A' } },
       { text: ' declined ', user: false },
-      { text: 'Bob', user: true, avatar: { url: null } },
+      { text: 'Bob', user: true, avatar: { url: null, initial: 'B' } },
       { text: "'s request to join", user: false },
     ]);
   });
@@ -46,7 +46,7 @@ describe('describeEntry', () => {
   it('keeps self-references plain', () => {
     const e = entry({ type: 'DatePollResponded' });
     expect(describeEntry(e, 1).parts).toEqual([
-      { text: 'You', user: true, avatar: { url: null } },
+      { text: 'You', user: true, avatar: { url: null, initial: 'A' } },
       { text: ' updated your availability', user: false },
     ]);
   });
