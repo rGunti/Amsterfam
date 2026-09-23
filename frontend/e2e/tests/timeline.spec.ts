@@ -63,7 +63,7 @@ test('organisers see the full timeline, including organiser-only entries', async
   await expect(entries.nth(0)).toContainText('asked to join via “Attendee link”');
   await expect(entries.nth(0).getByLabel('Only organisers see this')).toBeVisible();
   await expect(entries.nth(1)).toContainText('You created the join link “Attendee link”');
-  await expect(entries.nth(2)).toContainText('You moved the event to Open');
+  await expect(entries.nth(2)).toContainText('You moved the event to “Open”');
   await expect(entries.nth(3)).toContainText('You created the event');
 });
 

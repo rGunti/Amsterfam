@@ -131,8 +131,8 @@ function describeParts(
       return {
         icon: statusIcon(to),
         parts: entry.actor
-          ? t`${actor} moved the event to ${statusLabel(to)}`
-          : t`The event moved to ${statusLabel(to)} automatically`,
+          ? t`${actor} moved the event to “${statusLabel(to)}”`
+          : t`The event moved to “${statusLabel(to)}” automatically`,
       };
     }
     case 'PollRangeChanged':

@@ -57,7 +57,7 @@ describe('describeEntry', () => {
       actor: null,
       data: { from: 'Open', to: 'InProgress' },
     });
-    expect(describeEntry(e, 1).text).toBe('The event moved to In progress automatically');
+    expect(describeEntry(e, 1).text).toBe('The event moved to “In progress” automatically');
   });
 
   it('lists the changed fields', () => {
