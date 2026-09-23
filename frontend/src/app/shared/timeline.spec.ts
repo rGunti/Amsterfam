@@ -25,6 +25,32 @@ describe('describeEntry', () => {
     expect(describeEntry(e, 2).text).toBe('Alice made you an organiser');
   });
 
+  it('marks everyone mentioned, with an avatar for the subject', () => {
+    const e = entry({ type: 'OrganiserPromoted', subject: bob });
+    expect(describeEntry(e, 2).parts).toEqual([
+      { text: 'Alice', user: true },
+      { text: ' made ', user: false },
+      { text: 'you', user: true, avatar: { url: null } },
+      { text: ' an organiser', user: false },
+    ]);
+
+    const declined = entry({ type: 'JoinRequestDeclined', subject: bob });
+    expect(describeEntry(declined, 1).parts).toEqual([
+      { text: 'You', user: true },
+      { text: ' declined ', user: false },
+      { text: 'Bob', user: true, avatar: { url: null } },
+      { text: "'s request to join", user: false },
+    ]);
+  });
+
+  it('keeps self-references plain', () => {
+    const e = entry({ type: 'DatePollResponded' });
+    expect(describeEntry(e, 1).parts).toEqual([
+      { text: 'You', user: true },
+      { text: ' updated your availability', user: false },
+    ]);
+  });
+
   it('describes automatic status changes without an actor', () => {
     const e = entry({
       type: 'StatusChanged',

@@ -67,6 +67,27 @@
   overflow-wrap: anywhere;
 }
 
+.entry-person {
+  white-space: nowrap;
+
+  strong {
+    font-weight: 600;
+    color: var(--mat-sys-primary);
+  }
+}
+
+// Sits on the text line like a letter, so wrapping and line height stay unchanged.
+.entry-person-avatar {
+  width: 16px;
+  height: 16px;
+  margin-right: 3px;
+  border-radius: 50%;
+  object-fit: cover;
+  font-size: 16px;
+  line-height: 16px;
+  vertical-align: -3px;
+}
+
 .entry-private {
   width: 14px;
   height: 14px;
