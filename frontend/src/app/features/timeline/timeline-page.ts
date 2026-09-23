@@ -9,7 +9,7 @@ import { CurrentUserService } from '../../core/api/current-user.service';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { TimelineEntry } from '../../core/models/timeline';
 import { TimelineLine, describeEntry, visibilityNote } from '../../shared/timeline';
-import { dayKey, dayLabel, fullTimestamp, timeOfDay } from '../../shared/timestamp';
+import { fullTimestamp, timelineGroup } from '../../shared/timestamp';
 
 const PAGE_SIZE = 50;
 
@@ -37,27 +37,27 @@ export class TimelinePage implements OnInit {
   readonly error = signal(false);
   readonly hasMore = signal(false);
 
-  /** Entries grouped under a heading per local day, newest first. */
-  readonly days = computed(() => {
+  /** Entries under headings (Today, Yesterday, …, then per month), newest first. */
+  readonly groups = computed(() => {
     const viewerId = this.currentUser.user()?.id ?? null;
     const now = new Date();
-    const days: { key: string; label: string; lines: TimelineLineView[] }[] = [];
+    const groups: { key: string; label: string; lines: TimelineLineView[] }[] = [];
     for (const entry of this.entries()) {
-      const key = dayKey(entry.occurredAt);
-      let day = days.at(-1);
-      if (day?.key !== key) {
-        day = { key, label: dayLabel(entry.occurredAt, now), lines: [] };
-        days.push(day);
+      const { key, label, stamp } = timelineGroup(entry.occurredAt, now);
+      let group = groups.at(-1);
+      if (group?.key !== key) {
+        group = { key, label, lines: [] };
+        groups.push(group);
       }
-      day.lines.push({
+      group.lines.push({
         entry,
         ...describeEntry(entry, viewerId),
         note: visibilityNote(entry.visibility),
-        time: timeOfDay(entry.occurredAt),
+        time: stamp,
         fullTime: fullTimestamp(entry.occurredAt),
       });
     }
-    return days;
+    return groups;
   });
 
   ngOnInit(): void {

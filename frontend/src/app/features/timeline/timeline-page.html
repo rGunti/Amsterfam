@@ -6,11 +6,11 @@
     <p class="note">Everything that changed in this event, newest first.</p>
 
     <ol class="timeline">
-      @for (day of days(); track day.key) {
-        <li class="day">
-          <h3 class="day-label">{{ day.label }}</h3>
+      @for (group of groups(); track group.key) {
+        <li class="group">
+          <h3 class="group-label">{{ group.label }}</h3>
           <ol class="entries">
-            @for (line of day.lines; track line.entry.id) {
+            @for (line of group.lines; track line.entry.id) {
               <li class="entry" [class.entry-automatic]="!line.entry.actor">
                 <span class="entry-icon"
                   ><mat-icon>{{ line.icon }}</mat-icon></span

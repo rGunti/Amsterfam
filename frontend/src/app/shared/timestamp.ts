@@ -1,19 +1,10 @@
 import { APP_LOCALE } from './app-locale';
 
 const TIME = new Intl.DateTimeFormat(APP_LOCALE, { hour: '2-digit', minute: '2-digit' });
-const DAY = new Intl.DateTimeFormat(APP_LOCALE, {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-});
-// en-GB adds a comma after the weekday once a year is included, so the weekday is joined
-// on by hand to match the "Mon 2 Mar" style.
 const WEEKDAY = new Intl.DateTimeFormat(APP_LOCALE, { weekday: 'short' });
-const DATE_WITH_YEAR = new Intl.DateTimeFormat(APP_LOCALE, {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-});
+const DAY_MONTH = new Intl.DateTimeFormat(APP_LOCALE, { day: 'numeric', month: 'short' });
+const MONTH = new Intl.DateTimeFormat(APP_LOCALE, { month: 'long' });
+const MONTH_YEAR = new Intl.DateTimeFormat(APP_LOCALE, { month: 'long', year: 'numeric' });
 const FULL_DATE_TIME = new Intl.DateTimeFormat(APP_LOCALE, {
   day: 'numeric',
   month: 'short',
@@ -23,36 +14,49 @@ const FULL_DATE_TIME = new Intl.DateTimeFormat(APP_LOCALE, {
   second: '2-digit',
 });
 
-const pad = (n: number) => String(n).padStart(2, '0');
-
-/** The local calendar day of a moment as "yyyy-MM-dd", for grouping. */
-export function dayKey(iso: string): string {
-  const at = new Date(iso);
-  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+export interface TimelineGroup {
+  /** Stable per group; consecutive entries with the same key share a heading. */
+  key: string;
+  label: string;
+  /** How an entry in this group shows its time; the heading already covers the rest. */
+  stamp: string;
 }
+
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 /**
- * Heading for a local calendar day: "Today", "Yesterday", the weekday and date earlier
- * this year, and the full date with year before that.
+ * Buckets a past moment relative to `now`, in local time: Today, Yesterday, Earlier this
+ * week (weeks start on Monday), Earlier this month, then one group per month.
  */
-export function dayLabel(iso: string, now = new Date()): string {
-  const key = dayKey(iso);
-  if (key === dayKey(now.toISOString())) {
-    return 'Today';
-  }
-  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  if (key === dayKey(yesterday.toISOString())) {
-    return 'Yesterday';
-  }
+export function timelineGroup(iso: string, now = new Date()): TimelineGroup {
   const at = new Date(iso);
-  return at.getFullYear() === now.getFullYear()
-    ? DAY.format(at)
-    : `${WEEKDAY.format(at)} ${DATE_WITH_YEAR.format(at)}`;
-}
+  const today = startOfDay(now);
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  const weekStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - ((today.getDay() + 6) % 7),
+  );
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const time = TIME.format(at);
 
-/** Local time of day, e.g. "21:30". */
-export function timeOfDay(iso: string): string {
-  return TIME.format(new Date(iso));
+  if (at >= today) {
+    return { key: 'today', label: 'Today', stamp: time };
+  }
+  if (at >= yesterday) {
+    return { key: 'yesterday', label: 'Yesterday', stamp: time };
+  }
+  if (at >= weekStart) {
+    return { key: 'week', label: 'Earlier this week', stamp: `${WEEKDAY.format(at)} ${time}` };
+  }
+  if (at >= monthStart) {
+    return { key: 'month', label: 'Earlier this month', stamp: DAY_MONTH.format(at) };
+  }
+  return {
+    key: `${at.getFullYear()}-${at.getMonth()}`,
+    label: at.getFullYear() === now.getFullYear() ? MONTH.format(at) : MONTH_YEAR.format(at),
+    stamp: DAY_MONTH.format(at),
+  };
 }
 
 /** Full date and time with seconds, e.g. for a tooltip. */
