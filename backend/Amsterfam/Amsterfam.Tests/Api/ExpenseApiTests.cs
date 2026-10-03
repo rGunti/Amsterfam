@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Amsterfam.Api.Dtos;
 using Amsterfam.Tests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Amsterfam.Tests.Api;
 
@@ -311,6 +312,36 @@ public class ExpenseApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         );
         Assert.True(asReceiver!.Payments.Single().CanDelete);
         Assert.Equal(HttpStatusCode.NoContent, (await receiver.DeleteAsync(url)).StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateExpense_WithSameParticipants_KeepsOneSharePerPerson()
+    {
+        var t = await CreateTrip("14");
+        var created = await AddExpenseOk(
+            t.Owner,
+            t.EventId,
+            EqualSplit(10m, t.OwnerId, t.OwnerId, t.GuestId)
+        );
+
+        var response = await t.Owner.PutAsJsonAsync(
+            $"/api/v1/events/{t.EventId}/expenses/{created.Id}",
+            new UpsertExpenseRequest(
+                "Groceries",
+                30m,
+                t.OwnerId,
+                "Exact",
+                [new(t.OwnerId, 10m), new(t.GuestId, 20m)]
+            )
+        );
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        await using var db = await api.CreateDbContextAsync();
+        var shares = (await db.ExpenseShares.Where(s => s.ExpenseId == created.Id).ToListAsync())
+            .Select(s => (s.UserId, s.Amount))
+            .OrderBy(s => s.UserId);
+        (int, decimal)[] expected = [(t.OwnerId, 10m), (t.GuestId, 20m)];
+        Assert.Equal(expected.OrderBy(s => s.Item1), shares);
     }
 
     [Fact]

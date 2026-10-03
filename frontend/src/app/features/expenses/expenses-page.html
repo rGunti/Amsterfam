@@ -97,47 +97,46 @@
             <ul class="rows">
               @for (expense of group.expenses; track expense.id) {
                 <li class="row expense">
-                  <span class="expense-icon">
-                    <mat-icon aria-hidden="true">receipt_long</mat-icon>
-                    <ng-container
-                      *ngTemplateOutlet="
-                        avatar;
-                        context: { userId: expense.paidById, cls: 'payer-avatar' }
-                      "
-                    />
-                  </span>
-                  <span class="row-text">
-                    <span class="title">{{ expense.title }}</span>
-                    <span class="detail" [matTooltip]="shareLines(expense).join(' · ')">
-                      Paid by {{ who(expense.paidById) }}
+                  <!-- The whole row (except the menu) opens the expense, read-only. -->
+                  <button type="button" class="row-main" (click)="viewExpense(expense)">
+                    <span class="expense-icon">
+                      <mat-icon aria-hidden="true">receipt_long</mat-icon>
+                      <ng-container
+                        *ngTemplateOutlet="
+                          avatar;
+                          context: { userId: expense.paidById, cls: 'payer-avatar' }
+                        "
+                      />
                     </span>
-                  </span>
-                  <span class="expense-amount">
-                    <span class="total">{{ money(expense.amount) }}</span>
-                    @if (myShare(expense); as share) {
-                      <span class="my-share" [attr.aria-label]="'Your share ' + money(share)">
-                        <ng-container
-                          *ngTemplateOutlet="
-                            avatar;
-                            context: { userId: myId(), cls: 'share-avatar' }
-                          "
-                        />
-                        {{ money(share) }}
-                      </span>
-                    }
-                    @if (expense.unassigned > 0) {
-                      <span
-                        class="unassigned-chip"
-                        [attr.aria-label]="money(expense.unassigned) + ' unassigned'"
-                        matTooltip="Not split with anyone yet"
-                      >
-                        <mat-icon aria-hidden="true">pending</mat-icon>
-                        {{ money(expense.unassigned) }}
-                        <!-- Dropped on phones to save room; the aria-label keeps it for screen readers. -->
-                        <span class="unassigned-word">unassigned</span>
-                      </span>
-                    }
-                  </span>
+                    <span class="row-text">
+                      <span class="title">{{ expense.title }}</span>
+                      <span class="detail">Paid by {{ who(expense.paidById) }}</span>
+                    </span>
+                    <span class="expense-amount">
+                      <span class="total">{{ money(expense.amount) }}</span>
+                      @let share = myShare(expense);
+                      @if (share !== undefined) {
+                        <span class="my-share">
+                          <span class="cdk-visually-hidden">Your share</span>
+                          <ng-container
+                            *ngTemplateOutlet="
+                              avatar;
+                              context: { userId: myId(), cls: 'share-avatar' }
+                            "
+                          />
+                          {{ money(share) }}
+                        </span>
+                      }
+                      @if (expense.unassigned > 0) {
+                        <span class="unassigned-chip" matTooltip="Not split with anyone yet">
+                          <mat-icon aria-hidden="true">pending</mat-icon>
+                          {{ money(expense.unassigned) }}
+                          <!-- Visually hidden on phones, but still read out. -->
+                          <span class="unassigned-word">unassigned</span>
+                        </span>
+                      }
+                    </span>
+                  </button>
                   @if (expense.canEdit) {
                     <button
                       mat-icon-button

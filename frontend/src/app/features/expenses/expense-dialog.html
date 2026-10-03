@@ -1,4 +1,6 @@
-<h2 mat-dialog-title>{{ data.expense ? 'Edit expense' : 'Add expense' }}</h2>
+<h2 mat-dialog-title>
+  {{ readOnly() ? data.expense?.title : data.expense ? 'Edit expense' : 'Add expense' }}
+</h2>
 <form [formGroup]="form" (ngSubmit)="submit()">
   <mat-dialog-content>
     <mat-form-field appearance="outline" class="full-width">
@@ -55,9 +57,11 @@
 
     <div class="participants-header">
       <span class="label">Shared by</span>
-      <button mat-button type="button" (click)="toggleAll()">
-        {{ allIncluded() ? 'Select none' : 'Select all' }}
-      </button>
+      @if (!readOnly()) {
+        <button mat-button type="button" (click)="toggleAll()">
+          {{ allIncluded() ? 'Select none' : 'Select all' }}
+        </button>
+      }
     </div>
 
     <ul class="participants" formArrayName="participants">
@@ -66,7 +70,8 @@
         track group.controls.userId.value;
         let i = $index
       ) {
-        <li [formGroupName]="i">
+        <!-- The read-only view only lists who's actually on the expense. -->
+        <li [formGroupName]="i" [hidden]="readOnly() && !group.controls.included.value">
           <mat-checkbox formControlName="included">{{
             memberName(group.controls.userId.value)
           }}</mat-checkbox>
@@ -98,7 +103,9 @@
     </ul>
 
     @if (preview().error; as error) {
-      <p class="hint" role="status">{{ error }}</p>
+      @if (!readOnly()) {
+        <p class="hint" role="status">{{ error }}</p>
+      }
     } @else if (preview().unassigned > 0) {
       <div class="unassigned" role="status">
         <mat-icon aria-hidden="true">pending</mat-icon>
@@ -111,14 +118,21 @@
     }
   </mat-dialog-content>
   <mat-dialog-actions align="end">
-    <button mat-button type="button" (click)="dialogRef.close(null)">Cancel</button>
-    <button
-      mat-flat-button
-      color="primary"
-      type="submit"
-      [disabled]="form.invalid || !!preview().error"
-    >
-      Save
-    </button>
+    @if (readOnly()) {
+      <button mat-button type="button" (click)="dialogRef.close(null)">Close</button>
+      @if (data.canEdit) {
+        <button mat-flat-button color="primary" type="button" (click)="startEditing()">Edit</button>
+      }
+    } @else {
+      <button mat-button type="button" (click)="dialogRef.close(null)">Cancel</button>
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        [disabled]="form.invalid || !!preview().error"
+      >
+        Save
+      </button>
+    }
   </mat-dialog-actions>
 </form>

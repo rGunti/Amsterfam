@@ -137,15 +137,9 @@ export class ExpensesPage implements OnInit {
     return [...(this.member(userId)?.displayName.trim() ?? '')][0]?.toUpperCase() ?? '?';
   }
 
-  myShare(expense: Expense): number | null {
-    return expense.shares.find((s) => s.userId === this.myId())?.amount ?? null;
-  }
-
-  shareLines(expense: Expense): string[] {
-    const lines = expense.shares.map((s) => `${this.who(s.userId, true)}: ${this.money(s.amount)}`);
-    return expense.unassigned > 0
-      ? [...lines, `Unassigned: ${this.money(expense.unassigned)}`]
-      : lines;
+  /** Undefined when I'm not on the expense; a share can legitimately be 0. */
+  myShare(expense: Expense): number | undefined {
+    return expense.shares.find((s) => s.userId === this.myId())?.amount;
   }
 
   timestamp(iso: string): string {
@@ -169,8 +163,13 @@ export class ExpensesPage implements OnInit {
       });
   }
 
-  editExpense(expense: Expense): void {
-    this.openExpenseDialog(expense)
+  /** Read-only by default, as when tapping a row; the dialog's Edit unlocks it if allowed. */
+  viewExpense(expense: Expense): void {
+    this.editExpense(expense, true);
+  }
+
+  editExpense(expense: Expense, readOnly = false): void {
+    this.openExpenseDialog(expense, readOnly)
       .pipe(switchMap((request) => this.api.update(this.eventId(), expense.id, request)))
       .subscribe({
         next: () => this.done('Expense updated'),
@@ -241,7 +240,10 @@ export class ExpensesPage implements OnInit {
     );
   }
 
-  private openExpenseDialog(expense: Expense | null): Observable<UpsertExpenseRequest> {
+  private openExpenseDialog(
+    expense: Expense | null,
+    readOnly = false,
+  ): Observable<UpsertExpenseRequest> {
     const list = this.list();
     const me = this.myId();
     if (!list || me === null) {
@@ -256,7 +258,14 @@ export class ExpensesPage implements OnInit {
 
     return this.dialog
       .open<ExpenseDialog, ExpenseDialogData, UpsertExpenseRequest | null>(ExpenseDialog, {
-        data: { expense, members, currency: list.currency, myId: me },
+        data: {
+          expense,
+          members,
+          currency: list.currency,
+          myId: me,
+          readOnly,
+          canEdit: expense?.canEdit ?? true,
+        },
         width: '560px',
         maxWidth: '100vw',
       })

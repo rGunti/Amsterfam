@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormArray,
@@ -16,7 +16,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { startWith } from 'rxjs';
+import { map, startWith } from 'rxjs';
 
 import {
   Expense,
@@ -34,6 +34,9 @@ export interface ExpenseDialogData {
   members: ExpenseMember[];
   currency: string;
   myId: number;
+  /** Opens as a read-only view of `expense`; Edit unlocks the form if `canEdit`. */
+  readOnly?: boolean;
+  canEdit?: boolean;
 }
 
 interface ParticipantForm {
@@ -72,25 +75,34 @@ export class ExpenseDialog {
   readonly data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
   private readonly fb = inject(FormBuilder).nonNullable;
   readonly form: FormGroup<ExpenseForm> = this.buildForm();
+  readonly readOnly = signal(this.data.readOnly ?? false);
 
-  private readonly value = toSignal(this.form.valueChanges.pipe(startWith(this.form.value)), {
-    initialValue: this.form.value,
-  });
+  // The raw value, because `form.value` leaves out disabled controls (all of them when read-only).
+  private readonly value = toSignal(
+    this.form.valueChanges.pipe(
+      map(() => this.form.getRawValue()),
+      startWith(this.form.getRawValue()),
+    ),
+    { initialValue: this.form.getRawValue() },
+  );
 
   readonly preview = computed(() => {
     const raw = this.value();
-    const included = (raw.participants ?? []).filter((p) => p.included);
+    const included = raw.participants.filter((p) => p.included);
     return previewSplit(
-      raw.amount ?? null,
-      raw.splitMode ?? 'Equal',
-      included.map((p) => ({ userId: p.userId!, value: p.value ?? null })),
+      raw.amount,
+      raw.splitMode,
+      included.map((p) => ({ userId: p.userId, value: p.value })),
     );
   });
 
-  readonly allIncluded = computed(() => (this.value().participants ?? []).every((p) => p.included));
-  readonly mode = computed(() => this.value().splitMode ?? 'Equal');
+  readonly allIncluded = computed(() => this.value().participants.every((p) => p.included));
+  readonly mode = computed(() => this.value().splitMode);
 
   constructor() {
+    if (this.readOnly()) {
+      this.form.disable({ emitEvent: false });
+    }
     // Percentages and amounts mean different things, so values don't carry over between
     // modes (41.25 EUR would otherwise become 41.25%). Only fires on user changes.
     this.form.controls.splitMode.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
@@ -148,6 +160,12 @@ export class ExpenseDialog {
 
   unassignedText(): string {
     return formatMoney(this.preview().unassigned, this.data.currency);
+  }
+
+  /** Unlocks the read-only view. No events, so the split-mode reset above doesn't fire. */
+  startEditing(): void {
+    this.readOnly.set(false);
+    this.form.enable({ emitEvent: false });
   }
 
   toggleAll(): void {
