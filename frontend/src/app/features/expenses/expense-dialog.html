@@ -80,7 +80,10 @@
                 <span matTextSuffix>{{ mode() === 'Percentage' ? '%' : data.currency }}</span>
               </mat-form-field>
             }
-            <span class="share">{{ shareText(group.controls.userId.value) }}</span>
+            <!-- In exact mode the share is just the amount typed in, so it's left out. -->
+            @if (mode() !== 'Exact') {
+              <span class="share">{{ shareText(group.controls.userId.value) }}</span>
+            }
           }
         </li>
       }
