@@ -8,6 +8,9 @@ public class Event
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public required string Location { get; set; }
+
+    /// <summary>ISO 4217 code all of the event's expenses are in; see <see cref="Currencies"/>.</summary>
+    public string Currency { get; set; } = Currencies.Default;
     public DateOnly? PollRangeStart { get; set; }
     public DateOnly? PollRangeEnd { get; set; }
     public EventStatus Status { get; set; } = EventStatus.Draft;

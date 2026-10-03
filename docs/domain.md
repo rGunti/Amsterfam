@@ -25,6 +25,7 @@ This app replaces a Google Sheets spreadsheet covering availability, accommodati
    - Preceded by a **date-finding poll**: before `StartDate`/`EndDate` are fixed, the organiser proposes a candidate range and attendees mark weeks Available/Unavailable/Partial (see `DatePollEntry` below) to help pick the actual dates.
 2. **Accommodation management** — room/bed assignments per apartment per night
 3. **Cost tracking** — per-person cost derived from bed-nights occupied (see Cost Model below)
+   - **Expenses** — itemised, Splitwise-style shared spending with balances and repayments (see `Expense` below, ADR-013)
 4. **Comfort & consent preferences** — organiser-defined questions with seeded system defaults
 5. **Activity suggestions & voting** — submit suggestions, vote 1–5, ranked results
 6. **Itinerary** — day-by-day schedule with arrivals/departures and planned activities
@@ -47,6 +48,7 @@ Per user, list of preferred ways for others to pay them back (splitting costs). 
 ### Event
 - `Id` (Guid — external/URL identifier, not a sequential integer, to keep event URLs from being guessable), `Name`, `Description`, `StartDate`, `EndDate`, `Location`
 - `Description` is plain text. The frontend turns `http(s)://` links, `www.` links and bare domains on a common TLD (see `frontend/src/app/shared/tlds.ts`) into clickable links; nothing is stored or rendered as HTML. A plain click on such a link asks for confirmation first because the text was written by another user.
+- `Currency` (ISO 4217, default `EUR`) — all of the event's expenses are in it; can't change once expenses or repayments exist
 - `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable while `Status` is `Draft` or `LookingForDate`, voting only while `LookingForDate`
 - `Status`: Draft | LookingForDate | Open | InProgress | Closed | Archived | Cancelled — see *Event lifecycle* below
 - `AutoTransitionsPaused` (bool) — set when the owner resets an event back to Open; the scheduled job skips it until the next manual transition
@@ -98,9 +100,27 @@ Rules:
 - Organisers perform regular transitions. Cancel and the Danger Zone *reset to Open* (from InProgress / Closed) are **owner only**.
 - Entering Open (other than via reset) requires start and end date, end ≥ start, start ≥ today.
 - Moving backwards keeps all data (dates, poll range, votes).
-- Closed → Archived is blocked while balances are open (`IEventBalanceCheck`; a no-op until cost tracking lands).
+- Closed → Archived is blocked while balances are open (`IEventBalanceCheck`, implemented by `ExpenseBalanceCheck`: any non-zero balance from assigned money blocks it; unassigned money doesn't).
 - Automatic transitions run on a cron schedule (`AutoTransitions:Schedule`, default `5 0 * * *`, server local time) and once at startup: Open → InProgress when `StartDate <= today`, InProgress → Closed when `EndDate < today`.
 - Deleting is a separate owner action, only for Archived or Cancelled events.
+
+### Expense
+Something one attendee paid for, shared among some of the event's attendees (ADR-013). Deleted with the event.
+- `Id`, `EventId`, `Title` (max 100), `Date` (when it was spent; the list is sorted by it, newest first), `Amount` (numeric(10,2), in `Event.Currency`), `PaidById`
+- `SplitMode` (Equal | Percentage | Exact), `CreatedById`, `CreatedAt`, `UpdatedAt?`
+
+### ExpenseShare
+One participant's part of an expense. Shares add up to at most the expense's amount. Anything left over is **unassigned**: it's still owed to the payer, but nobody owes it until the expense is edited (percentage and exact splits only).
+- `ExpenseId`, `UserId` (composite key), `Amount` (resolved money amount for every split mode)
+- `Percentage?` — the entered percentage for Percentage splits, kept for editing
+
+### ExpensePayment
+A repayment from one attendee to another.
+- `Id`, `EventId`, `FromUserId`, `ToUserId`, `Amount`, `Note?` (max 200), `RecordedById`, `CreatedAt`
+
+Derived (not stored):
+- Balance per user = paid for expenses − own shares + repayments sent − repayments received (positive = is owed); includes unassigned money
+- Suggested transfers: the biggest debtor repeatedly pays the biggest creditor, computed without unassigned money
 
 ### EventJoinLink
 Unguessable, revocable link that lets a signed-in user request to join an event. Joining always yields a Pending attendance.
@@ -119,7 +139,7 @@ One recorded change to an event, shown newest-first on the event's timeline (iss
 - `ActorId?` — null for automatic changes (auto-transitions, pre-timeline backfill)
 - `SubjectUserId?` — the attendee the change is about (confirmed, removed, promoted, …)
 - `Data` (jsonb?) — type-specific details, e.g. `{ from, to }` for status changes
-- Visibility per type: join requests/declines/withdrawals, cost overrides and join-link changes are Organisers; organiser-link changes are Owner (the *current* owner, checked at read time); everything else is Everyone.
+- Visibility per type (expense and repayment changes are Everyone): join requests/declines/withdrawals, cost overrides and join-link changes are Organisers; organiser-link changes are Owner (the *current* owner, checked at read time); everything else is Everyone.
 - Date poll saves only record *that* someone responded, never their answers, and repeated saves by the same person within 15 minutes share one entry.
 
 ### EventAttendance

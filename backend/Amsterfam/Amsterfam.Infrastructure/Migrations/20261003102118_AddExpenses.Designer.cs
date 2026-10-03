@@ -3,6 +3,7 @@ using System;
 using Amsterfam.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Amsterfam.Infrastructure.Migrations
 {
     [DbContext(typeof(AmsterfamDbContext))]
-    partial class AmsterfamDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003102118_AddExpenses")]
+    partial class AddExpenses
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -596,9 +599,6 @@ namespace Amsterfam.Infrastructure.Migrations
 
                     b.Property<int>("CreatedById")
                         .HasColumnType("integer");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
 
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");

@@ -1,0 +1,107 @@
+.full-width {
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+
+  mat-form-field {
+    flex: 1 1 160px;
+  }
+}
+
+.label {
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.split-header,
+.participants-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.participants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+
+    mat-checkbox {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+}
+
+// Fixed width so every row lines up and the field doesn't get squeezed on phones.
+.value-field {
+  flex: none;
+  width: 136px;
+
+  // Material's infix has a 180px default width that would overflow the field.
+  ::ng-deep .mat-mdc-form-field-infix {
+    width: auto;
+    min-width: 0;
+  }
+
+  // The spin buttons eat into an already narrow field; typing is easier anyway.
+  input {
+    appearance: textfield;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      appearance: none;
+      margin: 0;
+    }
+  }
+}
+
+.share {
+  flex: none;
+  min-width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--mat-sys-error);
+}
+
+// The "remaining" position: saved as is, but should stand out until it's assigned.
+.unassigned {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+
+  .share {
+    color: inherit;
+    font-weight: 600;
+  }
+}
+
+.unassigned-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+}

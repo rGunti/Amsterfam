@@ -81,6 +81,9 @@ public static class EventEndpoints
         if (dateError is not null)
             return TypedResults.BadRequest(new { error = dateError });
 
+        if (request.Currency is not null && !Currencies.IsSupported(request.Currency))
+            return UnsupportedCurrency(request.Currency);
+
         var user = await currentUser.GetOrCreateAsync();
 
         var ev = new Event
@@ -90,6 +93,7 @@ public static class EventEndpoints
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             Location = request.Location,
+            Currency = request.Currency ?? Currencies.Default,
             CreatedById = user.Id,
         };
 
@@ -150,6 +154,25 @@ public static class EventEndpoints
                 return TypedResults.BadRequest(new { error = dateError });
         }
 
+        var currencyChanged = request.Currency is not null && request.Currency != ev.Currency;
+        if (currencyChanged)
+        {
+            if (!Currencies.IsSupported(request.Currency))
+                return UnsupportedCurrency(request.Currency!);
+
+            // Amounts aren't converted, so switching would silently relabel them.
+            var hasMoney =
+                await db.Expenses.AnyAsync(x => x.EventId == ev.Id)
+                || await db.ExpensePayments.AnyAsync(x => x.EventId == ev.Id);
+            if (hasMoney)
+                return TypedResults.Conflict(
+                    new
+                    {
+                        error = "The currency can't be changed once expenses or repayments have been recorded.",
+                    }
+                );
+        }
+
         var changed = new List<string>();
         if (request.Name != ev.Name)
             changed.Add("name");
@@ -159,12 +182,16 @@ public static class EventEndpoints
             changed.Add("dates");
         if (request.Location != ev.Location)
             changed.Add("location");
+        if (currencyChanged)
+            changed.Add("currency");
 
         ev.Name = request.Name;
         ev.Description = request.Description;
         ev.StartDate = request.StartDate;
         ev.EndDate = request.EndDate;
         ev.Location = request.Location;
+        if (currencyChanged)
+            ev.Currency = request.Currency!;
 
         if (changed.Count > 0)
             log.Record(ev.Id, EventLogType.EventDetailsUpdated, user.Id, data: new { changed });
@@ -254,6 +281,9 @@ public static class EventEndpoints
         return TypedResults.Ok(BuildResponse(ev, user.Id, today));
     }
 
+    private static IResult UnsupportedCurrency(string code) =>
+        TypedResults.BadRequest(new { error = $"Currency '{code}' isn't supported." });
+
     private static bool IsOrganiser(Event ev, int userId) =>
         ev.Attendances.Any(a => a.UserId == userId && a.Role == AttendanceRole.Organiser);
 
@@ -305,6 +335,7 @@ public static class EventEndpoints
             ev.StartDate,
             ev.EndDate,
             ev.Location,
+            ev.Currency,
             ev.PollRangeStart,
             ev.PollRangeEnd,
             ev.Status.ToString(),
@@ -333,6 +364,7 @@ public static class EventEndpoints
             ev.StartDate,
             ev.EndDate,
             ev.Location,
+            ev.Currency,
             null,
             null,
             ev.Status.ToString(),

@@ -81,6 +81,23 @@ describe('describeEntry', () => {
     expect(describeEntry(other, 99).text).toBe("Alice updated Bob's travel dates");
   });
 
+  it('describes expenses with their amount in the event currency', () => {
+    const e = entry({
+      type: 'ExpenseAdded',
+      data: { title: 'Groceries', amount: 42.5, currency: 'EUR' },
+    });
+    expect(describeEntry(e, 99).text).toBe('Alice added the expense “Groceries” (€42.50)');
+  });
+
+  it('describes repayments from the viewer’s point of view', () => {
+    const e = entry({
+      type: 'PaymentRecorded',
+      data: { fromId: 2, from: 'Bob', toId: 1, to: 'Alice', amount: 15, currency: 'GBP' },
+    });
+    expect(describeEntry(e, 99).text).toBe('Alice recorded that Bob paid Alice £15.00');
+    expect(describeEntry(e, 2).text).toBe('Alice recorded that you paid Alice £15.00');
+  });
+
   it('notes restricted visibility', () => {
     expect(visibilityNote('Everyone')).toBeNull();
     expect(visibilityNote('Organisers')).toBe('Only organisers see this');

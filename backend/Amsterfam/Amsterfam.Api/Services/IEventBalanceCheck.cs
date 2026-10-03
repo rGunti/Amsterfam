@@ -1,3 +1,7 @@
+using Amsterfam.Core.Expenses;
+using Amsterfam.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+
 namespace Amsterfam.Api.Services;
 
 /// <summary>
@@ -9,10 +13,21 @@ public interface IEventBalanceCheck
 }
 
 /// <summary>
-/// Placeholder until cost tracking (#27) exists: nothing is ever owed yet.
+/// Open as long as anyone still owes or is owed money from the event's expenses. Unassigned
+/// parts of expenses don't count: they're flagged in the overview but don't block archiving.
 /// </summary>
-public class NoOpEventBalanceCheck : IEventBalanceCheck
+public class ExpenseBalanceCheck(AmsterfamDbContext db) : IEventBalanceCheck
 {
-    public Task<bool> HasOpenBalancesAsync(Guid eventId, CancellationToken ct = default) =>
-        Task.FromResult(false);
+    public async Task<bool> HasOpenBalancesAsync(Guid eventId, CancellationToken ct = default)
+    {
+        var expenses = await db
+            .Expenses.Where(x => x.EventId == eventId)
+            .Include(x => x.Shares)
+            .ToListAsync(ct);
+        var payments = await db.ExpensePayments.Where(p => p.EventId == eventId).ToListAsync(ct);
+
+        return !BalanceCalculator.AllSettled(
+            BalanceCalculator.NetBalances(expenses, payments, includeUnassigned: false)
+        );
+    }
 }

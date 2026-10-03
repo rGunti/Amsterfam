@@ -1,0 +1,264 @@
+.expenses {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 640px;
+  margin: 24px auto;
+}
+
+// On phones the cards run edge to edge (like the timeline) to save space.
+@media (max-width: 599.98px) {
+  .expenses {
+    margin: calc(-1 * var(--page-padding, 24px));
+    max-width: none;
+    gap: 8px;
+
+    mat-card {
+      border-radius: 0;
+    }
+  }
+}
+
+.note {
+  margin: 0 0 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.my-balance {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 500;
+
+  &.owed {
+    color: var(--mat-sys-primary);
+  }
+
+  &.owes {
+    color: var(--mat-sys-error);
+  }
+}
+
+.section-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+
+  & + .row {
+    border-top: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  > mat-icon {
+    flex: none;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &.mine > mat-icon {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.row-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.row-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.title {
+  font-weight: 500;
+}
+
+.detail {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.amount {
+  margin-left: 4px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// Unassigned money is saved, but should stand out until someone assigns it.
+.unassigned-notice,
+.unassigned-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.unassigned-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+}
+
+.unassigned-chip {
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px 2px 6px;
+  font-size: 13px;
+  font-weight: 500;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}
+
+.date-label {
+  margin-top: 12px;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}
+
+.expense-amount {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  .total {
+    font-weight: 600;
+  }
+
+  .my-share {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// Same width as the icon button of the actions menu.
+.menu-spacer {
+  flex: none;
+  width: 40px;
+}
+
+// Receipt icon with the payer's avatar on its corner.
+.expense-icon {
+  position: relative;
+  flex: none;
+  display: flex;
+  width: 32px;
+  height: 32px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.avatar {
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-initial {
+  display: inline-block;
+  overflow: hidden;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-weight: 600;
+  text-align: center;
+
+  &::before {
+    content: attr(data-initial);
+  }
+}
+
+// On the corner of the receipt icon, ringed in the card's colour.
+.payer-avatar {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--mat-sys-surface-container-low);
+  font-size: 10px;
+  line-height: 18px;
+}
+
+.share-avatar {
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  line-height: 16px;
+}
+
+// Same as .cdk-visually-hidden: off screen, but still read out by screen readers.
+@media (max-width: 599.98px) {
+  .unassigned-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+// A plain-looking button, so the row can be tapped or reached with the keyboard.
+.row-main {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: -4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--mat-sys-on-surface) 6%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}

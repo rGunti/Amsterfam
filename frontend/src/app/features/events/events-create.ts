@@ -10,6 +10,7 @@ import {
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -17,6 +18,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { EventApi } from '../../core/api/event.api';
 import { localIsoDate } from '../../shared/local-date';
 import { EVENT_NAME_MAX_LENGTH } from '../../core/models/event';
+import { CURRENCIES, DEFAULT_CURRENCY, currencyName } from '../../shared/money';
 
 interface EventForm {
   name: FormControl<string>;
@@ -24,6 +26,7 @@ interface EventForm {
   startDate: FormControl<string>;
   endDate: FormControl<string>;
   location: FormControl<string>;
+  currency: FormControl<string>;
 }
 
 @Component({
@@ -34,6 +37,7 @@ interface EventForm {
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatButtonModule,
   ],
   templateUrl: './events-create.html',
@@ -48,6 +52,9 @@ export class EventsCreate {
 
   readonly saving = signal(false);
   readonly nameMaxLength = EVENT_NAME_MAX_LENGTH;
+  readonly currencies = CURRENCIES;
+  readonly currencyName = currencyName;
+  readonly currencyHint = 'Expenses are tracked in this currency';
   readonly form: FormGroup<EventForm>;
 
   constructor() {
@@ -57,6 +64,7 @@ export class EventsCreate {
       startDate: [''],
       endDate: [''],
       location: ['', Validators.required],
+      currency: [DEFAULT_CURRENCY],
     });
   }
 
@@ -73,6 +81,7 @@ export class EventsCreate {
         startDate: raw.startDate || null,
         endDate: raw.endDate || null,
         location: raw.location.trim(),
+        currency: raw.currency,
       })
       .subscribe({
         next: (created) => {

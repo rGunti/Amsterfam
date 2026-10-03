@@ -41,6 +41,10 @@ DELETE /api/v1/events/{id}                 (owner only; event must be Archived o
 POST   /api/v1/events/{id}/status          (RPC – body { "target": "<EventStatus>" })
 ```
 
+`POST`/`PUT` take an optional `currency` (ISO 4217, one of `Currencies.Supported`; 400 otherwise).
+On create it defaults to EUR, and on update leaving it out keeps the current one. Changing it is 409
+once the event has expenses or repayments.
+
 `POST /status` runs the event state machine (see `domain.md` → Event lifecycle):
 400 unknown status, 403 not permitted for the caller's role, 409 transition not possible from the
 current state or a guard failed (`{ "error": "..." }`). `EventResponse.allowedTransitions` lists
@@ -125,6 +129,25 @@ GET  /api/v1/events/{id}/costs/me
 POST /api/v1/events/{id}/costs/{userId}/mark-upfront-paid     (RPC)
 POST /api/v1/events/{id}/costs/{userId}/mark-final-paid       (RPC)
 ```
+
+### Expenses
+Confirmed members only (non-members 404, pending 403). Writes are 409 on read-only events.
+See ADR-013.
+```
+GET    /api/v1/events/{id}/expenses                    (currency, members, expenses newest date first, repayments)
+POST   /api/v1/events/{id}/expenses                    (body: title, date, amount, paidById, splitMode, shares[{userId, value}])
+PUT    /api/v1/events/{id}/expenses/{expenseId}        (creator or organiser)
+DELETE /api/v1/events/{id}/expenses/{expenseId}        (creator or organiser)
+GET    /api/v1/events/{id}/expenses/balances           (net balance per user + suggested transfers)
+POST   /api/v1/events/{id}/expenses/payments           (record a repayment; non-organisers only their own)
+DELETE /api/v1/events/{id}/expenses/payments/{paymentId}  (recorder, payer, receiver or organiser)
+```
+
+`date` (`yyyy-MM-dd`) defaults to today on create when left out, and is left unchanged on update. `shares[].value` is the percentage for `Percentage` splits, the amount for `Exact` splits,
+and ignored for `Equal`. Percentage and exact splits may cover less than the total, or
+nobody at all; the rest is returned as `unassigned` on the expense, per payer in the balances,
+and as a total. Suggested transfers ignore it. Splits covering more than the total, and
+non-members, are 400 with `{ "error": "..." }`.
 
 ### Activities
 ```

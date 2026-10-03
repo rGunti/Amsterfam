@@ -97,4 +97,5 @@ dotnet ef database update
 - This is a **close-knit friend group app**, not a generic events platform. Keep suggestions appropriately scoped — no need for enterprise-scale patterns.
 - The **comfort & consent preference questions** (e.g. hugs, photos, support at nights out) are a deliberate, thoughtful feature. Treat them with care.
 - **Cost tracking** is per bed-night occupied, derived from BedAssignments.
+- **Expenses** (ADR-013) are separate, Splitwise-style shared spending: one currency per event, shares stored as resolved cents, balances computed on read.
 - Primary login is **Discord OAuth** via Authentik. Do not suggest replacing Authentik with a simpler auth approach unless explicitly asked.

@@ -2,6 +2,7 @@ import { TimelineEntry, TimelineUser, TimelineVisibility } from '../core/models/
 import { EventStatus } from '../core/models/event';
 import { APP_LOCALE } from './app-locale';
 import { statusIcon, statusLabel } from './event-status';
+import { formatMoney } from './money';
 
 /**
  * A run of sentence text. `user` marks a reference to a person so it can be highlighted;
@@ -63,6 +64,7 @@ const FIELD_NAMES: Record<string, string> = {
   dates: 'dates',
   location: 'location',
   banner: 'banner image',
+  currency: 'currency',
 };
 
 /** "a", "a and b", "a, b and c". */
@@ -70,6 +72,14 @@ function listOf(items: string[]): string {
   return items.length <= 1
     ? (items[0] ?? '')
     : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+function money(data: Record<string, unknown>): string {
+  const amount = data['amount'];
+  const currency = data['currency'];
+  return typeof amount === 'number' && typeof currency === 'string'
+    ? formatMoney(amount, currency)
+    : '?';
 }
 
 function shortDate(iso: unknown): string {
@@ -196,6 +206,32 @@ function describeParts(
       return { icon: 'link_off', parts: t`${actor} revoked the join link “${data['label']}”` };
     case 'JoinLinkRegenerated':
       return { icon: 'autorenew', parts: t`${actor} regenerated the join link “${data['label']}”` };
+    case 'ExpenseAdded':
+      return {
+        icon: 'receipt_long',
+        parts: t`${actor} added the expense “${data['title']}” (${money(data)})`,
+      };
+    case 'ExpenseUpdated':
+      return {
+        icon: 'receipt_long',
+        parts: t`${actor} edited the expense “${data['title']}” (${money(data)})`,
+      };
+    case 'ExpenseDeleted':
+      return {
+        icon: 'receipt_long',
+        parts: t`${actor} deleted the expense “${data['title']}” (${money(data)})`,
+      };
+    case 'PaymentRecorded':
+    case 'PaymentDeleted': {
+      const name = (id: unknown, fallback: unknown) =>
+        id === viewerId ? 'you' : String(fallback ?? 'someone');
+      const from = name(data['fromId'], data['from']);
+      const to = name(data['toId'], data['to']);
+      const payment = `${from} paid ${to} ${money(data)}`;
+      return entry.type === 'PaymentRecorded'
+        ? { icon: 'payments', parts: t`${actor} recorded that ${payment}` }
+        : { icon: 'payments', parts: t`${actor} removed the repayment: ${payment}` };
+    }
     default:
       return { icon: 'history', parts: t`${actor} changed something` };
   }

@@ -24,6 +24,7 @@ import { InstallPromptService } from './core/install-prompt/install-prompt.servi
 import {
   canManageJoinLinks,
   canUseDatePoll,
+  canViewExpenses,
   canViewTimeline,
   statusClass,
   statusIcon,
@@ -78,6 +79,7 @@ export class App {
   protected readonly canUseDatePoll = canUseDatePoll;
   protected readonly canManageJoinLinks = canManageJoinLinks;
   protected readonly canViewTimeline = canViewTimeline;
+  protected readonly canViewExpenses = canViewExpenses;
 
   protected readonly frontendVersion = `${environment.version}+${environment.sha}`;
   protected readonly backendVersion = toSignal(

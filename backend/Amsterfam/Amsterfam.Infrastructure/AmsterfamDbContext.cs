@@ -26,6 +26,9 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<EventJoinLink> EventJoinLinks => Set<EventJoinLink>();
     public DbSet<EventLogEntry> EventLogEntries => Set<EventLogEntry>();
     public DbSet<EventFile> EventFiles => Set<EventFile>();
+    public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<ExpenseShare> ExpenseShares => Set<ExpenseShare>();
+    public DbSet<ExpensePayment> ExpensePayments => Set<ExpensePayment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +42,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         {
             e.Property(ev => ev.Id).ValueGeneratedNever();
             e.Property(ev => ev.Status).HasConversion<string>();
+            e.Property(ev => ev.Currency).HasMaxLength(3).HasDefaultValue(Currencies.Default);
             e.Property(ev => ev.CreatedAt).HasDefaultValueSql("now()");
             e.HasOne(ev => ev.CreatedBy)
                 .WithMany()
@@ -172,6 +176,64 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         modelBuilder.Entity<ShoppingItem>(e =>
         {
             e.Property(s => s.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<Expense>(e =>
+        {
+            e.HasIndex(x => x.EventId);
+            e.Property(x => x.Title).HasMaxLength(Expense.MaxTitleLength);
+            e.Property(x => x.Amount).HasPrecision(10, 2);
+            e.Property(x => x.SplitMode).HasConversion<string>().HasMaxLength(20);
+            e.HasOne(x => x.Event)
+                .WithMany()
+                .HasForeignKey(x => x.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.PaidBy)
+                .WithMany()
+                .HasForeignKey(x => x.PaidById)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CreatedBy)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ExpenseShare>(e =>
+        {
+            e.HasKey(s => new { s.ExpenseId, s.UserId });
+            e.Property(s => s.Amount).HasPrecision(10, 2);
+            e.Property(s => s.Percentage).HasPrecision(5, 2);
+            e.HasOne(s => s.Expense)
+                .WithMany(x => x.Shares)
+                .HasForeignKey(s => s.ExpenseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ExpensePayment>(e =>
+        {
+            e.HasIndex(p => p.EventId);
+            e.Property(p => p.Amount).HasPrecision(10, 2);
+            e.Property(p => p.Note).HasMaxLength(ExpensePayment.MaxNoteLength);
+            e.HasOne(p => p.Event)
+                .WithMany()
+                .HasForeignKey(p => p.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.FromUser)
+                .WithMany()
+                .HasForeignKey(p => p.FromUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(p => p.ToUser)
+                .WithMany()
+                .HasForeignKey(p => p.ToUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(p => p.RecordedBy)
+                .WithMany()
+                .HasForeignKey(p => p.RecordedById)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PaymentMethod>(e =>

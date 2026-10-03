@@ -9,6 +9,7 @@ public record EventResponse(
     DateOnly? StartDate,
     DateOnly? EndDate,
     string Location,
+    string Currency,
     DateOnly? PollRangeStart,
     DateOnly? PollRangeEnd,
     string Status,
@@ -30,15 +31,18 @@ public record CreateEventRequest(
     string? Description,
     DateOnly? StartDate,
     DateOnly? EndDate,
-    string Location
+    string Location,
+    string? Currency = null
 );
 
+/// <summary>A null <see cref="Currency"/> leaves the event's currency unchanged.</summary>
 public record UpdateEventRequest(
     string Name,
     string? Description,
     DateOnly? StartDate,
     DateOnly? EndDate,
-    string Location
+    string Location,
+    string? Currency = null
 );
 
 public record TransitionEventRequest(string Target);

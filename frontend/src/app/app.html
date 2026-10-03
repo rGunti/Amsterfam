@@ -131,6 +131,19 @@
             <span matListItemTitle>Timeline</span>
           </a>
         }
+        @if (canViewExpenses(currentEvent)) {
+          <a
+            mat-list-item
+            [routerLink]="['/events', currentEvent.id, 'expenses']"
+            routerLinkActive
+            #expensesActive="routerLinkActive"
+            [activated]="expensesActive.isActive"
+            (click)="onNavLinkClick()"
+          >
+            <mat-icon matListItemIcon>receipt_long</mat-icon>
+            <span matListItemTitle>Expenses</span>
+          </a>
+        }
         @if (canManageJoinLinks(currentEvent)) {
           <a
             mat-list-item

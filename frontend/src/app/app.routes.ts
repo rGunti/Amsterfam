@@ -6,6 +6,7 @@ import { cancelledEventGuard } from './core/event/cancelled-event.guard';
 import { joinLinksGuard } from './features/join-links/join-links.guard';
 import { datePollGuard } from './features/date-poll/date-poll.guard';
 import { timelineGuard } from './features/timeline/timeline.guard';
+import { expensesGuard } from './features/expenses/expenses.guard';
 import type { StatusPageData } from './shared/status-page/status-page';
 
 const loadStatusPage = () => import('./shared/status-page/status-page').then((m) => m.StatusPage);
@@ -56,6 +57,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/timeline/timeline-page').then((m) => m.TimelinePage),
         canActivate: [timelineGuard],
+      },
+      {
+        path: 'expenses',
+        loadComponent: () =>
+          import('./features/expenses/expenses-page').then((m) => m.ExpensesPage),
+        canActivate: [expensesGuard],
       },
       {
         path: 'join-links',
