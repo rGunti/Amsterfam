@@ -50,7 +50,9 @@ This is separate from the bed-night cost model in #27, which isn't built yet.
   ~20 people and a few hundred rows per trip, that's cheap.
 - A single payer keeps both the model and the form simple. If two people paid, it's two expenses.
 - One currency per event, without conversion, avoids exchange rates. Locking the currency
-  once money is recorded stops amounts from being silently relabelled.
+  once money is recorded stops amounts from being silently relabelled. The check and the
+  currency change aren't atomic, so an expense added at the same moment could slip through.
+  That's accepted at this scale rather than adding a lock.
 
 ## Rejected alternatives
 

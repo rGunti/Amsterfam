@@ -15,6 +15,8 @@ export interface SplitPreview {
 }
 
 const toCents = (value: number) => Math.round(value * 100);
+/** Like the server, only whole cents (or hundredths of a percent) are accepted. */
+const isWholeCents = (value: number) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6;
 
 /**
  * Mirrors ExpenseSplitter on the backend so the form can preview shares as you type. The
@@ -31,6 +33,9 @@ export function previewSplit(
   const fail = (error: string): SplitPreview => ({ shares: new Map(), unassigned: 0, error });
   if (total === null || !(total > 0)) {
     return fail('Enter an amount.');
+  }
+  if (!isWholeCents(total)) {
+    return fail('The amount can have at most two decimal places.');
   }
   const cents = toCents(total);
   const result = (shareCents: Map<number, number>): SplitPreview => {
@@ -52,6 +57,13 @@ export function previewSplit(
   if (participants.some((p) => !(p.value !== null && p.value > 0))) {
     return fail(
       mode === 'Exact' ? 'Enter an amount for everyone.' : 'Enter a percentage for everyone.',
+    );
+  }
+  if (participants.some((p) => !isWholeCents(p.value!))) {
+    return fail(
+      mode === 'Exact'
+        ? 'Amounts can have at most two decimal places.'
+        : 'Percentages can have at most two decimal places.',
     );
   }
 

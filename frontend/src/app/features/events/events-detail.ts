@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import {
   FormBuilder,
@@ -96,6 +97,7 @@ interface EventForm {
 export class EventsDetail implements OnInit {
   private readonly eventApi = inject(EventApi);
   private readonly expenseApi = inject(ExpenseApi);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly attendanceApi = inject(AttendanceApi);
   private readonly userApi = inject(UserApi);
   private readonly currentEventService = inject(CurrentEventService);
@@ -522,16 +524,23 @@ export class EventsDetail implements OnInit {
     const control = this.form.controls.currency;
     control.enable();
     this.currencyHint.set('Expenses are tracked in this currency');
-    this.expenseApi.list(eventId).subscribe({
-      next: (list) => {
-        if (list.expenses.length > 0 || list.payments.length > 0) {
-          control.disable();
-          this.currencyHint.set('Fixed once expenses have been recorded');
-        }
-      },
-      // The server rejects the change anyway; this only saves a round trip.
-      error: () => undefined,
-    });
+    this.expenseApi
+      .list(eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          // Editing may have been cancelled meanwhile; then there's nothing to lock.
+          if (!this.editing()) {
+            return;
+          }
+          if (list.expenses.length > 0 || list.payments.length > 0) {
+            control.disable();
+            this.currencyHint.set('Fixed once expenses have been recorded');
+          }
+        },
+        // The server rejects the change anyway; this only saves a round trip.
+        error: () => undefined,
+      });
   }
 
   cancelEdit(): void {

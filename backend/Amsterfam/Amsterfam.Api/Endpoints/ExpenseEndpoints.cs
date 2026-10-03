@@ -29,7 +29,7 @@ public static class ExpenseEndpoints
         return app;
     }
 
-    private record Caller(int UserId, bool IsOrganiser, string Currency);
+    private record Caller(int UserId, bool IsOrganiser, string Currency, bool IsWritable);
 
     /// <summary>
     /// Non-members get 404 (as for the event itself), pending members 403. Writes also need
@@ -42,11 +42,12 @@ public static class ExpenseEndpoints
         bool write
     )
     {
-        var currency = await db
+        // One query for everything the checks below need, rather than one per EventGuards call.
+        var ev = await db
             .Events.Where(e => e.Id == eventId)
-            .Select(e => e.Currency)
+            .Select(e => new { e.Currency, e.Status })
             .FirstOrDefaultAsync();
-        if (currency is null)
+        if (ev is null)
             return (null, TypedResults.NotFound());
 
         var user = await currentUser.GetOrCreateAsync();
@@ -55,12 +56,15 @@ public static class ExpenseEndpoints
             return (null, TypedResults.NotFound());
         if (!EventGuards.IsConfirmed(role))
             return (null, TypedResults.Forbid());
-        if (await EventGuards.EnsureVisibleAsync(db, eventId, user.Id) is { } hidden)
-            return (null, hidden);
-        if (write && await EventGuards.EnsureWritableAsync(db, eventId) is { } readOnly)
-            return (null, readOnly);
 
-        return (new Caller(user.Id, role == AttendanceRole.Organiser, currency), null);
+        var isOrganiser = role == AttendanceRole.Organiser;
+        if (EventStateMachine.IsHiddenFrom(ev.Status, isOrganiser))
+            return (null, TypedResults.Forbid());
+        var isWritable = !EventStateMachine.IsReadOnly(ev.Status);
+        if (write && !isWritable)
+            return (null, EventGuards.ReadOnlyConflict(ev.Status));
+
+        return (new Caller(user.Id, isOrganiser, ev.Currency, isWritable), null);
     }
 
     private static async Task<IResult> GetExpenses(
@@ -75,15 +79,14 @@ public static class ExpenseEndpoints
 
         var expenses = await LoadExpenses(db, eventId);
         var payments = await LoadPayments(db, eventId);
-        var canEdit = await EventGuards.EnsureWritableAsync(db, eventId) is null;
 
         return TypedResults.Ok(
             new ExpenseListResponse(
                 caller.Currency,
-                canEdit,
+                caller.IsWritable,
                 await LoadMembers(db, eventId, expenses, payments),
-                expenses.Select(x => ToResponse(x, caller, canEdit)).ToList(),
-                payments.Select(p => ToResponse(p, caller, canEdit)).ToList()
+                expenses.Select(x => ToResponse(x, caller, caller.IsWritable)).ToList(),
+                payments.Select(p => ToResponse(p, caller, caller.IsWritable)).ToList()
             )
         );
     }
@@ -205,6 +208,8 @@ public static class ExpenseEndpoints
         expense.PaidById = request.PaidById;
         expense.SplitMode = mode;
         expense.UpdatedAt = time.GetUtcNow();
+        // Replacing all shares is simpler than diffing them, and cheap at a few dozen rows.
+        // EF turns a removed and re-added share for the same user into an update.
         expense.Shares.Clear();
         foreach (var share in ToShares(split!))
             expense.Shares.Add(share);

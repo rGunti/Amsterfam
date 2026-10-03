@@ -61,6 +61,13 @@ describe('previewSplit', () => {
     expect(preview.unassigned).toBe(0);
   });
 
+  it('rejects fractions of a cent, like the server', () => {
+    expect(previewSplit(10.005, 'Equal', [{ userId: 1, value: null }]).error).not.toBeNull();
+    expect(previewSplit(20, 'Exact', [{ userId: 1, value: 10.005 }]).error).not.toBeNull();
+    expect(previewSplit(20, 'Percentage', [{ userId: 1, value: 33.333 }]).error).not.toBeNull();
+    expect(previewSplit(0.3, 'Exact', [{ userId: 1, value: 0.1 + 0.2 }]).error).toBeNull();
+  });
+
   it('needs an amount and participants', () => {
     expect(previewSplit(null, 'Equal', people(1)).error).not.toBeNull();
     expect(previewSplit(10, 'Equal', []).error).not.toBeNull();
