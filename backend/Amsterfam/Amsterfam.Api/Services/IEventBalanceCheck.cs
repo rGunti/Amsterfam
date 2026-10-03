@@ -1,3 +1,7 @@
+using Amsterfam.Core.Expenses;
+using Amsterfam.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+
 namespace Amsterfam.Api.Services;
 
 /// <summary>
@@ -8,11 +12,17 @@ public interface IEventBalanceCheck
     Task<bool> HasOpenBalancesAsync(Guid eventId, CancellationToken ct = default);
 }
 
-/// <summary>
-/// Placeholder until cost tracking (#27) exists: nothing is ever owed yet.
-/// </summary>
-public class NoOpEventBalanceCheck : IEventBalanceCheck
+/// <summary>Open as long as anyone still owes or is owed money from the event's expenses.</summary>
+public class ExpenseBalanceCheck(AmsterfamDbContext db) : IEventBalanceCheck
 {
-    public Task<bool> HasOpenBalancesAsync(Guid eventId, CancellationToken ct = default) =>
-        Task.FromResult(false);
+    public async Task<bool> HasOpenBalancesAsync(Guid eventId, CancellationToken ct = default)
+    {
+        var expenses = await db
+            .Expenses.Where(x => x.EventId == eventId)
+            .Include(x => x.Shares)
+            .ToListAsync(ct);
+        var payments = await db.ExpensePayments.Where(p => p.EventId == eventId).ToListAsync(ct);
+
+        return !BalanceCalculator.AllSettled(BalanceCalculator.NetBalances(expenses, payments));
+    }
 }

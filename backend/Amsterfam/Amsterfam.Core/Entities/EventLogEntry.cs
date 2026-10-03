@@ -68,6 +68,11 @@ public enum EventLogType
     JoinLinkCreated,
     JoinLinkRevoked,
     JoinLinkRegenerated,
+    ExpenseAdded,
+    ExpenseUpdated,
+    ExpenseDeleted,
+    PaymentRecorded,
+    PaymentDeleted,
 }
 
 public enum EventLogVisibility

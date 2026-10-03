@@ -24,6 +24,8 @@ export interface EventResponse {
   startDate: string | null; // DateOnly "yyyy-MM-dd"
   endDate: string | null;
   location: string;
+  /** ISO 4217 code all of the event's expenses are in. */
+  currency: string;
   pollRangeStart: string | null;
   pollRangeEnd: string | null;
   status: EventStatus;
@@ -53,6 +55,8 @@ export interface UpdateEventRequest {
   startDate: string | null;
   endDate: string | null;
   location: string;
+  /** Omit to keep the current currency. */
+  currency?: string;
 }
 
 export interface CreateEventRequest {
@@ -61,4 +65,5 @@ export interface CreateEventRequest {
   startDate: string | null;
   endDate: string | null;
   location: string;
+  currency: string;
 }

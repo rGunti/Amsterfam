@@ -67,6 +67,17 @@ internal static class EventGuards
     public static Task<bool> IsMember(AmsterfamDbContext db, Guid eventId, int userId) =>
         db.EventAttendances.AnyAsync(a => a.EventId == eventId && a.UserId == userId);
 
+    /// <summary>The user's role in the event, or null if they aren't a member.</summary>
+    public static Task<AttendanceRole?> RoleOf(AmsterfamDbContext db, Guid eventId, int userId) =>
+        db
+            .EventAttendances.Where(a => a.EventId == eventId && a.UserId == userId)
+            .Select(a => (AttendanceRole?)a.Role)
+            .FirstOrDefaultAsync();
+
+    /// <summary>Attendees and organisers; pending members don't take part yet.</summary>
+    public static bool IsConfirmed(AttendanceRole? role) =>
+        role is AttendanceRole.Attendee or AttendanceRole.Organiser;
+
     public static Task<bool> IsOwner(AmsterfamDbContext db, Guid eventId, int userId) =>
         db.Events.AnyAsync(e => e.Id == eventId && e.CreatedById == userId);
 }

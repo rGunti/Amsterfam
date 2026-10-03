@@ -33,7 +33,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddScoped<IEventBalanceCheck, NoOpEventBalanceCheck>();
+builder.Services.AddScoped<IEventBalanceCheck, ExpenseBalanceCheck>();
 builder.Services.AddScoped<EventAutoTransitioner>();
 builder.Services.AddScoped<EventLog>();
 
@@ -129,6 +129,7 @@ app.MapJoinLinkEndpoints();
 app.MapDatePollEndpoints();
 app.MapPaymentMethodEndpoints();
 app.MapTimelineEndpoints();
+app.MapExpenseEndpoints();
 
 app.Run();
 

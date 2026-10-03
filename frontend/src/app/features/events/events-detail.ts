@@ -12,6 +12,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -30,6 +31,7 @@ import {
 } from '../../shared/payment-methods-viewer-dialog/payment-methods-viewer-dialog';
 
 import { EventApi } from '../../core/api/event.api';
+import { ExpenseApi } from '../../core/api/expense.api';
 import { AttendanceApi } from '../../core/api/attendance.api';
 import { UserApi } from '../../core/api/user.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
@@ -55,6 +57,7 @@ import {
   transitionActions,
 } from '../../shared/event-status';
 import { localIsoDate } from '../../shared/local-date';
+import { CURRENCIES, currencyName } from '../../shared/money';
 
 interface EventForm {
   name: FormControl<string>;
@@ -62,6 +65,7 @@ interface EventForm {
   startDate: FormControl<string>;
   endDate: FormControl<string>;
   location: FormControl<string>;
+  currency: FormControl<string>;
 }
 
 @Component({
@@ -73,6 +77,7 @@ interface EventForm {
     MatChipsModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatButtonModule,
     MatIconModule,
     MatListModule,
@@ -90,6 +95,7 @@ interface EventForm {
 })
 export class EventsDetail implements OnInit {
   private readonly eventApi = inject(EventApi);
+  private readonly expenseApi = inject(ExpenseApi);
   private readonly attendanceApi = inject(AttendanceApi);
   private readonly userApi = inject(UserApi);
   private readonly currentEventService = inject(CurrentEventService);
@@ -140,6 +146,9 @@ export class EventsDetail implements OnInit {
   /** Local "yyyy-MM-dd", the earliest start date the backend accepts. */
   readonly today = localIsoDate();
   readonly nameMaxLength = EVENT_NAME_MAX_LENGTH;
+  readonly currencies = CURRENCIES;
+  readonly currencyName = currencyName;
+  readonly currencyHint = signal('');
   readonly form: FormGroup<EventForm>;
 
   constructor() {
@@ -149,6 +158,7 @@ export class EventsDetail implements OnInit {
       startDate: [''],
       endDate: [''],
       location: ['', Validators.required],
+      currency: [''],
     });
   }
 
@@ -445,7 +455,9 @@ export class EventsDetail implements OnInit {
       startDate: ev.startDate ?? '',
       endDate: ev.endDate ?? '',
       location: ev.location,
+      currency: ev.currency,
     });
+    this.lockCurrencyIfUsed(ev.id);
     // Disabled controls still come back through getRawValue(), so locked dates round-trip
     // unchanged and the backend's date lock never trips.
     for (const control of [this.form.controls.startDate, this.form.controls.endDate]) {
@@ -505,6 +517,23 @@ export class EventsDetail implements OnInit {
     this.snackBar.open(message ?? 'Could not update the banner', 'Dismiss', { duration: 3000 });
   }
 
+  /** Amounts aren't converted, so the currency is fixed once any money has been recorded. */
+  private lockCurrencyIfUsed(eventId: string): void {
+    const control = this.form.controls.currency;
+    control.enable();
+    this.currencyHint.set('Expenses are tracked in this currency');
+    this.expenseApi.list(eventId).subscribe({
+      next: (list) => {
+        if (list.expenses.length > 0 || list.payments.length > 0) {
+          control.disable();
+          this.currencyHint.set('Fixed once expenses have been recorded');
+        }
+      },
+      // The server rejects the change anyway; this only saves a round trip.
+      error: () => undefined,
+    });
+  }
+
   cancelEdit(): void {
     this.editing.set(false);
   }
@@ -523,6 +552,7 @@ export class EventsDetail implements OnInit {
         startDate: raw.startDate || null,
         endDate: raw.endDate || null,
         location: raw.location.trim(),
+        currency: raw.currency,
       })
       .subscribe({
         next: (updated) => {

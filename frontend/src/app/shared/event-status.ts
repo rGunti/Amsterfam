@@ -94,6 +94,11 @@ export function canViewTimeline(ev: EventResponse): boolean {
   return ev.currentUserRole === 'Attendee' || ev.currentUserRole === 'Organiser';
 }
 
+/** Confirmed members share expenses; pending requests don't take part yet. */
+export function canViewExpenses(ev: EventResponse): boolean {
+  return ev.currentUserRole === 'Attendee' || ev.currentUserRole === 'Organiser';
+}
+
 /**
  * Whether the overview's share button applies. Drafts only take organiser links, which
  * only the owner can create; attendee links work while joins are accepted.

@@ -1,0 +1,109 @@
+<h2 mat-dialog-title>{{ data.expense ? 'Edit expense' : 'Add expense' }}</h2>
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <mat-dialog-content>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Title</mat-label>
+      <input matInput formControlName="title" placeholder="Groceries, Taxi, Museum tickets…" />
+      @if (form.controls.title.hasError('required')) {
+        <mat-error>Title is required</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Amount ({{ data.currency }})</mat-label>
+        <input
+          matInput
+          type="number"
+          inputmode="decimal"
+          min="0.01"
+          step="0.01"
+          formControlName="amount"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Paid by</mat-label>
+        <mat-select formControlName="paidById">
+          @for (m of data.members; track m.userId) {
+            <mat-option [value]="m.userId">{{ memberName(m.userId) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="split-header">
+      <span class="label">Split</span>
+      <mat-button-toggle-group
+        formControlName="splitMode"
+        aria-label="Split mode"
+        hideSingleSelectionIndicator
+      >
+        <mat-button-toggle value="Equal">Equally</mat-button-toggle>
+        <mat-button-toggle value="Percentage">By %</mat-button-toggle>
+        <mat-button-toggle value="Exact">Exact amounts</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
+    <div class="participants-header">
+      <span class="label">Shared by</span>
+      <button mat-button type="button" (click)="toggleAll()">
+        {{ allIncluded() ? 'Select none' : 'Select all' }}
+      </button>
+    </div>
+
+    <ul class="participants" formArrayName="participants">
+      @for (
+        group of form.controls.participants.controls;
+        track group.controls.userId.value;
+        let i = $index
+      ) {
+        <li [formGroupName]="i">
+          <mat-checkbox formControlName="included">{{
+            memberName(group.controls.userId.value)
+          }}</mat-checkbox>
+          @if (group.controls.included.value) {
+            @if (mode() !== 'Equal') {
+              <mat-form-field appearance="outline" class="value-field" subscriptSizing="dynamic">
+                <input
+                  matInput
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="0.01"
+                  formControlName="value"
+                  [attr.aria-label]="
+                    (mode() === 'Percentage' ? 'Percentage for ' : 'Amount for ') +
+                    memberName(group.controls.userId.value)
+                  "
+                />
+                <span matTextSuffix>{{ mode() === 'Percentage' ? '%' : data.currency }}</span>
+              </mat-form-field>
+            }
+            <span class="share">{{ shareText(group.controls.userId.value) }}</span>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (preview().error; as error) {
+      <p class="hint" role="status">
+        {{ error }}
+        @if (preview().remaining !== 0) {
+          ({{ remainingText() }})
+        }
+      </p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="dialogRef.close(null)">Cancel</button>
+    <button
+      mat-flat-button
+      color="primary"
+      type="submit"
+      [disabled]="form.invalid || !!preview().error"
+    >
+      Save
+    </button>
+  </mat-dialog-actions>
+</form>

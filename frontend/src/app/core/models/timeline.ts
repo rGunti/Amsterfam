@@ -17,7 +17,12 @@ export type TimelineEntryType =
   | 'CostOverrideChanged'
   | 'JoinLinkCreated'
   | 'JoinLinkRevoked'
-  | 'JoinLinkRegenerated';
+  | 'JoinLinkRegenerated'
+  | 'ExpenseAdded'
+  | 'ExpenseUpdated'
+  | 'ExpenseDeleted'
+  | 'PaymentRecorded'
+  | 'PaymentDeleted';
 
 /** Who can see an entry: everyone in the event, organisers, or only the owner. */
 export type TimelineVisibility = 'Everyone' | 'Organisers' | 'Owner';

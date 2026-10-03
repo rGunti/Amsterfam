@@ -1,0 +1,167 @@
+<div class="expenses">
+  @if (loading()) {
+    <p class="note">Loading…</p>
+  } @else if (error()) {
+    <p class="note">Could not load the expenses.</p>
+  } @else if (list(); as list) {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Balances</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="my-balance" [class.owed]="myBalance() > 0" [class.owes]="myBalance() < 0">
+          @if (myBalance() > 0) {
+            You're owed {{ money(myBalance()) }} in total.
+          } @else if (myBalance() < 0) {
+            You owe {{ money(-myBalance()) }} in total.
+          } @else {
+            You're all settled up.
+          }
+        </p>
+
+        @if (transfers().length > 0) {
+          <h3 class="section-label">Suggested repayments</h3>
+          <ul class="rows">
+            @for (t of transfers(); track t.fromUserId + '-' + t.toUserId) {
+              <li class="row" [class.mine]="involvesMe(t)">
+                <mat-icon aria-hidden="true">east</mat-icon>
+                <span class="row-text">
+                  <span>
+                    <strong>{{ who(t.fromUserId, true) }}</strong>
+                    {{ t.fromUserId === myId() ? 'pay' : 'pays' }}
+                    <strong>{{ who(t.toUserId) }}</strong>
+                    <span class="amount">{{ money(t.amount) }}</span>
+                  </span>
+                </span>
+                <span class="row-actions">
+                  @if (t.fromUserId === myId()) {
+                    <button
+                      mat-icon-button
+                      (click)="viewPaymentMethods(t.toUserId)"
+                      [matTooltip]="'How to pay ' + who(t.toUserId)"
+                      [attr.aria-label]="'How to pay ' + who(t.toUserId)"
+                    >
+                      <mat-icon>account_balance_wallet</mat-icon>
+                    </button>
+                  }
+                  @if (canRecord(t)) {
+                    <button mat-stroked-button (click)="recordPayment(t)">Mark as paid</button>
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        } @else if (list.expenses.length > 0) {
+          <p class="note">Everyone is settled up.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Expenses</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (canEdit()) {
+          <div class="card-actions">
+            <button mat-flat-button color="primary" (click)="addExpense()">
+              <mat-icon>add</mat-icon>
+              Add expense
+            </button>
+          </div>
+        }
+
+        @if (list.expenses.length === 0) {
+          <p class="note">
+            No expenses yet. Add what you paid for the group and the app works out who owes whom.
+          </p>
+        } @else {
+          <ul class="rows">
+            @for (expense of list.expenses; track expense.id) {
+              <li class="row expense">
+                <mat-icon aria-hidden="true">receipt_long</mat-icon>
+                <span class="row-text">
+                  <span class="title">{{ expense.title }}</span>
+                  <span class="detail" [matTooltip]="shareLines(expense).join(' · ')">
+                    {{ who(expense.paidById, true) }} paid {{ money(expense.amount) }},
+                    {{ splitSummary(expense) }}
+                  </span>
+                  @if (myShare(expense); as share) {
+                    <span class="detail">Your share: {{ money(share) }}</span>
+                  }
+                </span>
+                @if (expense.canEdit) {
+                  <button
+                    mat-icon-button
+                    [matMenuTriggerFor]="menu"
+                    [attr.aria-label]="'Actions for ' + expense.title"
+                  >
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #menu="matMenu">
+                    <button mat-menu-item (click)="editExpense(expense)">
+                      <mat-icon>edit</mat-icon>
+                      <span>Edit</span>
+                    </button>
+                    <button mat-menu-item (click)="deleteExpense(expense)">
+                      <mat-icon>delete</mat-icon>
+                      <span>Delete</span>
+                    </button>
+                  </mat-menu>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Repayments</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (canEdit()) {
+          <div class="card-actions">
+            <button mat-stroked-button (click)="recordPayment()">
+              <mat-icon>payments</mat-icon>
+              Record a repayment
+            </button>
+          </div>
+        }
+
+        @if (list.payments.length === 0) {
+          <p class="note">No repayments recorded yet.</p>
+        } @else {
+          <ul class="rows">
+            @for (payment of list.payments; track payment.id) {
+              <li class="row">
+                <mat-icon aria-hidden="true">payments</mat-icon>
+                <span class="row-text">
+                  <span>
+                    <strong>{{ who(payment.fromUserId, true) }}</strong> paid
+                    <strong>{{ who(payment.toUserId) }}</strong>
+                    <span class="amount">{{ money(payment.amount) }}</span>
+                  </span>
+                  <span class="detail" [matTooltip]="timestamp(payment.createdAt)">
+                    {{ payment.note ?? 'Recorded by ' + who(payment.recordedById) }}
+                  </span>
+                </span>
+                @if (payment.canDelete) {
+                  <button
+                    mat-icon-button
+                    (click)="deletePayment(payment)"
+                    matTooltip="Remove repayment"
+                    aria-label="Remove repayment"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>
