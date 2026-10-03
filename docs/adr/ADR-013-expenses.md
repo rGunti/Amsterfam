@@ -34,7 +34,8 @@ This is separate from the bed-night cost model in #27, which isn't built yet.
   - Unassigned money doesn't block archiving; the overview flags it instead.
 - **Permissions:**
   - Confirmed members (Attendee or Organiser) add expenses and record repayments.
-  - Whoever created an expense, or recorded a repayment, can change or remove it, and so can any organiser.
+  - Only whoever created an expense, and organisers, can change or remove it. Participants who think an expense is wrong go through an organiser; the timeline shows who created it.
+  - Whoever recorded a repayment, both people in it, and organisers can remove it. A recorded repayment cancels a debt, and only the receiver knows whether the money actually arrived.
   - Non-organisers can only record repayments they made or received.
   - Pending members see nothing.
 - **Former members:** people who have left stay in existing expenses. They can still settle up, but can't be added to new expenses.

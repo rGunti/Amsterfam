@@ -199,7 +199,8 @@ public static class ExpenseEndpoints
             return invalid;
 
         expense.Title = request.Title.Trim();
-        expense.Date = request.Date ?? time.Today();
+        // Left out means unchanged here; only new expenses default to today.
+        expense.Date = request.Date ?? expense.Date;
         expense.Amount = request.Amount;
         expense.PaidById = request.PaidById;
         expense.SplitMode = mode;
@@ -338,7 +339,7 @@ public static class ExpenseEndpoints
         );
         if (payment is null)
             return TypedResults.NotFound();
-        if (!CanChange(payment.RecordedById, caller))
+        if (!CanDelete(payment, caller))
             return TypedResults.Forbid();
 
         db.ExpensePayments.Remove(payment);
@@ -404,6 +405,15 @@ public static class ExpenseEndpoints
 
         return (split, mode, null);
     }
+
+    /// <summary>
+    /// Besides the recorder and organisers, both people in a repayment may remove it, so
+    /// whoever was supposedly paid can undo one that never arrived.
+    /// </summary>
+    private static bool CanDelete(ExpensePayment p, Caller caller) =>
+        CanChange(p.RecordedById, caller)
+        || caller.UserId == p.FromUserId
+        || caller.UserId == p.ToUserId;
 
     private static bool CanChange(int ownerId, Caller caller) =>
         caller.IsOrganiser || ownerId == caller.UserId;
@@ -536,6 +546,6 @@ public static class ExpenseEndpoints
             p.Note,
             p.RecordedById,
             p.CreatedAt,
-            canEdit && CanChange(p.RecordedById, caller)
+            canEdit && CanDelete(p, caller)
         );
 }

@@ -140,10 +140,10 @@ PUT    /api/v1/events/{id}/expenses/{expenseId}        (creator or organiser)
 DELETE /api/v1/events/{id}/expenses/{expenseId}        (creator or organiser)
 GET    /api/v1/events/{id}/expenses/balances           (net balance per user + suggested transfers)
 POST   /api/v1/events/{id}/expenses/payments           (record a repayment; non-organisers only their own)
-DELETE /api/v1/events/{id}/expenses/payments/{paymentId}  (recorder or organiser)
+DELETE /api/v1/events/{id}/expenses/payments/{paymentId}  (recorder, payer, receiver or organiser)
 ```
 
-`date` (`yyyy-MM-dd`) defaults to today when left out. `shares[].value` is the percentage for `Percentage` splits, the amount for `Exact` splits,
+`date` (`yyyy-MM-dd`) defaults to today on create when left out, and is left unchanged on update. `shares[].value` is the percentage for `Percentage` splits, the amount for `Exact` splits,
 and ignored for `Equal`. Percentage and exact splits may cover less than the total, or
 nobody at all; the rest is returned as `unassigned` on the expense, per payer in the balances,
 and as a total. Suggested transfers ignore it. Splits covering more than the total, and

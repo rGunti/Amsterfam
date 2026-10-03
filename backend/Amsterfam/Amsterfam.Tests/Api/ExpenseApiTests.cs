@@ -257,6 +257,63 @@ public class ExpenseApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task UpdateExpense_WithoutDate_KeepsTheStoredDate()
+    {
+        var t = await CreateTrip("12");
+        var created = await AddExpenseOk(
+            t.Owner,
+            t.EventId,
+            EqualSplit(10m, t.OwnerId, t.OwnerId) with
+            {
+                Date = new DateOnly(2030, 7, 2),
+            }
+        );
+
+        var response = await t.Owner.PutAsJsonAsync(
+            $"/api/v1/events/{t.EventId}/expenses/{created.Id}",
+            EqualSplit(12m, t.OwnerId, t.OwnerId)
+        );
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var updated = (await response.Content.ReadFromJsonAsync<ExpenseResponse>())!;
+        Assert.Equal(new DateOnly(2030, 7, 2), updated.Date);
+    }
+
+    [Fact]
+    public async Task DeletePayment_AllowedForTheReceiver_NotOtherAttendees()
+    {
+        var t = await CreateTrip("13");
+        async Task<(HttpClient Client, int Id)> Confirmed(string name)
+        {
+            var client = api.CreateClientWithUser($"discord|exp-{name}-13");
+            (await client.JoinAsync(api, t.EventId)).EnsureSuccessStatusCode();
+            var id = await MyId(client);
+            (
+                await t.Owner.PostAsync($"/api/v1/events/{t.EventId}/attendees/{id}/confirm", null)
+            ).EnsureSuccessStatusCode();
+            return (client, id);
+        }
+        var (receiver, receiverId) = await Confirmed("receiver");
+        var (bystander, _) = await Confirmed("bystander");
+
+        // The guest claims to have paid someone who never got the money.
+        var recorded = await t.Guest.PostAsJsonAsync(
+            $"/api/v1/events/{t.EventId}/expenses/payments",
+            new RecordPaymentRequest(t.GuestId, receiverId, 100m, null)
+        );
+        recorded.EnsureSuccessStatusCode();
+        var payment = (await recorded.Content.ReadFromJsonAsync<ExpensePaymentResponse>())!;
+        var url = $"/api/v1/events/{t.EventId}/expenses/payments/{payment.Id}";
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await bystander.DeleteAsync(url)).StatusCode);
+        var asReceiver = await receiver.GetFromJsonAsync<ExpenseListResponse>(
+            $"/api/v1/events/{t.EventId}/expenses/"
+        );
+        Assert.True(asReceiver!.Payments.Single().CanDelete);
+        Assert.Equal(HttpStatusCode.NoContent, (await receiver.DeleteAsync(url)).StatusCode);
+    }
+
+    [Fact]
     public async Task Expenses_HiddenFromPendingAndNonMembers()
     {
         var t = await CreateTrip("5");

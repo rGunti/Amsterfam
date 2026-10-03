@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormArray,
   FormBuilder,
@@ -89,6 +89,16 @@ export class ExpenseDialog {
 
   readonly allIncluded = computed(() => (this.value().participants ?? []).every((p) => p.included));
   readonly mode = computed(() => this.value().splitMode ?? 'Equal');
+
+  constructor() {
+    // Percentages and amounts mean different things, so values don't carry over between
+    // modes (41.25 EUR would otherwise become 41.25%). Only fires on user changes.
+    this.form.controls.splitMode.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      for (const group of this.form.controls.participants.controls) {
+        group.controls.value.setValue(null);
+      }
+    });
+  }
 
   private buildForm(): FormGroup<ExpenseForm> {
     const fb = this.fb;
