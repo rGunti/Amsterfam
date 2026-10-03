@@ -100,7 +100,7 @@ Rules:
 - Organisers perform regular transitions. Cancel and the Danger Zone *reset to Open* (from InProgress / Closed) are **owner only**.
 - Entering Open (other than via reset) requires start and end date, end ≥ start, start ≥ today.
 - Moving backwards keeps all data (dates, poll range, votes).
-- Closed → Archived is blocked while balances are open (`IEventBalanceCheck`, implemented by `ExpenseBalanceCheck`: any non-zero expense balance blocks it).
+- Closed → Archived is blocked while balances are open (`IEventBalanceCheck`, implemented by `ExpenseBalanceCheck`: any non-zero balance from assigned money blocks it; unassigned money doesn't).
 - Automatic transitions run on a cron schedule (`AutoTransitions:Schedule`, default `5 0 * * *`, server local time) and once at startup: Open → InProgress when `StartDate <= today`, InProgress → Closed when `EndDate < today`.
 - Deleting is a separate owner action, only for Archived or Cancelled events.
 
@@ -110,7 +110,7 @@ Something one attendee paid for, shared among some of the event's attendees (ADR
 - `SplitMode` (Equal | Percentage | Exact), `CreatedById`, `CreatedAt`, `UpdatedAt?`
 
 ### ExpenseShare
-One participant's part of an expense. Shares of an expense always add up to its amount exactly.
+One participant's part of an expense. Shares add up to at most the expense's amount. Anything left over is **unassigned**: it's still owed to the payer, but nobody owes it until the expense is edited (percentage and exact splits only).
 - `ExpenseId`, `UserId` (composite key), `Amount` (resolved money amount for every split mode)
 - `Percentage?` — the entered percentage for Percentage splits, kept for editing
 
@@ -119,8 +119,8 @@ A repayment from one attendee to another.
 - `Id`, `EventId`, `FromUserId`, `ToUserId`, `Amount`, `Note?` (max 200), `RecordedById`, `CreatedAt`
 
 Derived (not stored):
-- Balance per user = paid for expenses − own shares + repayments sent − repayments received (positive = is owed)
-- Suggested transfers: the biggest debtor repeatedly pays the biggest creditor
+- Balance per user = paid for expenses − own shares + repayments sent − repayments received (positive = is owed); includes unassigned money
+- Suggested transfers: the biggest debtor repeatedly pays the biggest creditor, computed without unassigned money
 
 ### EventJoinLink
 Unguessable, revocable link that lets a signed-in user request to join an event. Joining always yields a Pending attendance.

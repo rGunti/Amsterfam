@@ -80,3 +80,28 @@
   margin: 8px 0 0;
   color: var(--mat-sys-error);
 }
+
+// The "remaining" position: saved as is, but should stand out until it's assigned.
+.unassigned {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+
+  .share {
+    color: inherit;
+    font-weight: 600;
+  }
+}
+
+.unassigned-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+}

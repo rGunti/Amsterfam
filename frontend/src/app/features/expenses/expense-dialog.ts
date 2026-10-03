@@ -13,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { startWith } from 'rxjs';
@@ -57,6 +58,7 @@ interface ExpenseForm {
     MatButtonToggleModule,
     MatCheckboxModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
     MatSelectModule,
   ],
@@ -131,11 +133,8 @@ export class ExpenseDialog {
     return amount === undefined ? '' : formatMoney(amount, this.data.currency);
   }
 
-  remainingText(): string {
-    const remaining = this.preview().remaining;
-    return this.mode() === 'Percentage'
-      ? `${remaining}% left to assign`
-      : `${formatMoney(remaining, this.data.currency)} left to assign`;
+  unassignedText(): string {
+    return formatMoney(this.preview().unassigned, this.data.currency);
   }
 
   toggleAll(): void {

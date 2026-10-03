@@ -76,6 +76,22 @@ public class BalanceCalculatorTests
     }
 
     [Fact]
+    public void UnassignedMoney_IsOwedToPayerButLeftOutOfTransfers()
+    {
+        // Alice paid 100 that isn't assigned yet; Carol owes Bob 10 for something else.
+        Expense[] expenses = [Paid(1, 100m), Paid(2, 20m, (2, 10m), (3, 10m))];
+
+        var balances = BalanceCalculator.NetBalances(expenses, []);
+        var assigned = BalanceCalculator.NetBalances(expenses, [], includeUnassigned: false);
+
+        Assert.Equal(100m, balances[1]);
+        Assert.Equal(100m, BalanceCalculator.UnassignedByPayer(expenses)[1]);
+        // Carol must pay Bob, not Alice, even though Alice is "owed" more.
+        var transfer = Assert.Single(BalanceCalculator.SuggestTransfers(assigned));
+        Assert.Equal(new Transfer(3, 2, 10m), transfer);
+    }
+
+    [Fact]
     public void SuggestTransfers_IsEmptyWhenSettled()
     {
         Assert.Empty(BalanceCalculator.SuggestTransfers(new Dictionary<int, decimal> { [1] = 0m }));

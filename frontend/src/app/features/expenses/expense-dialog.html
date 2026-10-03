@@ -90,12 +90,16 @@
     </ul>
 
     @if (preview().error; as error) {
-      <p class="hint" role="status">
-        {{ error }}
-        @if (preview().remaining !== 0) {
-          ({{ remainingText() }})
-        }
-      </p>
+      <p class="hint" role="status">{{ error }}</p>
+    } @else if (preview().unassigned > 0) {
+      <div class="unassigned" role="status">
+        <mat-icon aria-hidden="true">pending</mat-icon>
+        <span class="unassigned-text">
+          <strong>Unassigned</strong>
+          <span>Not split with anyone yet. You can assign it later by editing the expense.</span>
+        </span>
+        <span class="share">{{ unassignedText() }}</span>
+      </div>
     }
   </mat-dialog-content>
   <mat-dialog-actions align="end">

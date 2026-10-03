@@ -144,8 +144,10 @@ DELETE /api/v1/events/{id}/expenses/payments/{paymentId}  (recorder or organiser
 ```
 
 `shares[].value` is the percentage for `Percentage` splits, the amount for `Exact` splits,
-and ignored for `Equal`. Invalid splits (percentages not adding up to 100, amounts not
-matching the total, non-members) are 400 with `{ "error": "..." }`.
+and ignored for `Equal`. Percentage and exact splits may cover less than the total, or
+nobody at all; the rest is returned as `unassigned` on the expense, per payer in the balances,
+and as a total. Suggested transfers ignore it. Splits covering more than the total, and
+non-members, are 400 with `{ "error": "..." }`.
 
 ### Activities
 ```

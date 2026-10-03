@@ -26,6 +26,8 @@ export interface Expense {
   createdAt: string;
   updatedAt: string | null;
   canEdit: boolean;
+  /** Part of the amount not split with anyone yet; still owed to the payer. */
+  unassigned: number;
 }
 
 export interface ExpensePayment {
@@ -52,6 +54,8 @@ export interface Balance {
   userId: number;
   /** Positive: owed money. Negative: owes money. */
   balance: number;
+  /** The part of `balance` from unassigned expenses, which nobody owes yet. */
+  unassigned: number;
 }
 
 export interface Transfer {
@@ -63,7 +67,10 @@ export interface Transfer {
 export interface Balances {
   currency: string;
   balances: Balance[];
+  /** Settle the assigned money only. */
   transfers: Transfer[];
+  /** Total not assigned to anyone, across all expenses. */
+  unassigned: number;
 }
 
 export interface ExpenseShareRequest {

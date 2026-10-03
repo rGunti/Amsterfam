@@ -13,9 +13,11 @@ public record SplitResult(IReadOnlyList<ResolvedShare> Shares, string? Error)
 }
 
 /// <summary>
-/// Resolves an expense's split into exact money amounts. Shares are whole cents and always
-/// add up to the total: cents left over after rounding down go one each to the shares that
-/// lost the most to rounding, ties broken by user id so the result is stable.
+/// Resolves an expense's split into exact money amounts, in whole cents. Equal splits always
+/// cover the total. Percentage and exact splits may cover less: the rest stays unassigned
+/// (it can be assigned later by editing the expense), but they can never cover more.
+/// Cents left over after rounding down go one each to the shares that lost the most to
+/// rounding, ties broken by user id so the result is stable.
 /// </summary>
 public static class ExpenseSplitter
 {
@@ -32,7 +34,8 @@ public static class ExpenseSplitter
             return SplitResult.Fail("The amount must be greater than zero.");
         if (!IsWholeCents(total))
             return SplitResult.Fail("The amount can have at most two decimal places.");
-        if (participants.Count == 0)
+        // Percentage and exact splits may leave everything unassigned for now.
+        if (participants.Count == 0 && mode == ExpenseSplitMode.Equal)
             return SplitResult.Fail("Choose at least one participant.");
         if (participants.Select(p => p.UserId).Distinct().Count() != participants.Count)
             return SplitResult.Fail("Each participant can only be listed once.");
@@ -48,7 +51,10 @@ public static class ExpenseSplitter
 
     private static SplitResult SplitEqually(decimal total, IReadOnlyList<SplitParticipant> ps) =>
         new(
-            Distribute(total, ps.Select(p => (p.UserId, Weight: 1m, (decimal?)null)).ToList()),
+            Distribute(
+                total * 100,
+                ps.Select(p => (p.UserId, Weight: 1m, (decimal?)null)).ToList()
+            ),
             null
         );
 
@@ -58,11 +64,16 @@ public static class ExpenseSplitter
             return SplitResult.Fail("Every participant needs a percentage greater than zero.");
         if (ps.Any(p => !IsWholeCents(p.Value!.Value)))
             return SplitResult.Fail("Percentages can have at most two decimal places.");
-        if (ps.Sum(p => p.Value!.Value) != 100m)
-            return SplitResult.Fail("The percentages must add up to 100%.");
+        var percent = ps.Sum(p => p.Value!.Value);
+        if (percent > 100m)
+            return SplitResult.Fail("The percentages can't add up to more than 100%.");
+        if (ps.Count == 0)
+            return new([], null);
 
+        // Below 100% only that part of the total is shared out; the rest stays unassigned.
+        var assignedCents = Math.Floor(total * 100 * percent / 100m);
         return new(
-            Distribute(total, ps.Select(p => (p.UserId, p.Value!.Value, p.Value)).ToList()),
+            Distribute(assignedCents, ps.Select(p => (p.UserId, p.Value!.Value, p.Value)).ToList()),
             null
         );
     }
@@ -73,8 +84,8 @@ public static class ExpenseSplitter
             return SplitResult.Fail("Every participant needs an amount greater than zero.");
         if (ps.Any(p => !IsWholeCents(p.Value!.Value)))
             return SplitResult.Fail("Amounts can have at most two decimal places.");
-        if (ps.Sum(p => p.Value!.Value) != total)
-            return SplitResult.Fail("The amounts must add up to the total.");
+        if (ps.Sum(p => p.Value!.Value) > total)
+            return SplitResult.Fail("The amounts can't add up to more than the total.");
 
         return new(
             ps.Select(p => new ResolvedShare(p.UserId, p.Value!.Value, null)).ToList(),
@@ -82,13 +93,12 @@ public static class ExpenseSplitter
         );
     }
 
-    /// <summary>Splits <paramref name="total"/> in proportion to the weights, in whole cents.</summary>
+    /// <summary>Splits <paramref name="cents"/> in proportion to the weights, in whole cents.</summary>
     private static List<ResolvedShare> Distribute(
-        decimal total,
+        decimal cents,
         List<(int UserId, decimal Weight, decimal? Percentage)> parts
     )
     {
-        var cents = total * 100;
         var weightSum = parts.Sum(p => p.Weight);
 
         var raw = parts

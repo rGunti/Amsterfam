@@ -14,9 +14,14 @@ public static class BalanceCalculator
     /// Net balance per user: positive means the user is owed money, negative that they owe.
     /// Users who never took part in anything are left out. Expects shares to be loaded.
     /// </summary>
+    /// <param name="includeUnassigned">
+    /// Whether payers are credited with the unassigned part of their expenses too. Nobody owes
+    /// that part yet, so leave it out when working out who should pay whom.
+    /// </param>
     public static Dictionary<int, decimal> NetBalances(
         IEnumerable<Expense> expenses,
-        IEnumerable<ExpensePayment> payments
+        IEnumerable<ExpensePayment> payments,
+        bool includeUnassigned = true
     )
     {
         var balances = new Dictionary<int, decimal>();
@@ -25,7 +30,7 @@ public static class BalanceCalculator
 
         foreach (var expense in expenses)
         {
-            Add(expense.PaidById, expense.Amount);
+            Add(expense.PaidById, includeUnassigned ? expense.Amount : Assigned(expense));
             foreach (var share in expense.Shares)
                 Add(share.UserId, -share.Amount);
         }
@@ -39,12 +44,26 @@ public static class BalanceCalculator
         return balances;
     }
 
+    public static decimal Assigned(Expense expense) => expense.Shares.Sum(s => s.Amount);
+
+    /// <summary>The part of the expense not shared with anyone yet.</summary>
+    public static decimal Unassigned(Expense expense) => expense.Amount - Assigned(expense);
+
+    /// <summary>Unassigned money per payer, for payers who have any.</summary>
+    public static Dictionary<int, decimal> UnassignedByPayer(IEnumerable<Expense> expenses) =>
+        expenses
+            .GroupBy(x => x.PaidById)
+            .Select(g => (UserId: g.Key, Amount: g.Sum(Unassigned)))
+            .Where(x => x.Amount != 0)
+            .ToDictionary(x => x.UserId, x => x.Amount);
+
     public static bool AllSettled(IReadOnlyDictionary<int, decimal> balances) =>
         balances.Values.All(b => b == 0);
 
     /// <summary>
     /// A short list of repayments that settles every balance: the biggest debtor repeatedly
     /// pays the biggest creditor. Not always the fewest possible, but close and predictable.
+    /// Pass balances without unassigned money, or debtors may be sent to the wrong person.
     /// </summary>
     public static List<Transfer> SuggestTransfers(IReadOnlyDictionary<int, decimal> balances)
     {

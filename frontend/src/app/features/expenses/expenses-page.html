@@ -18,6 +18,22 @@
             You're all settled up.
           }
         </p>
+        @if (myUnassigned() > 0) {
+          <p class="note">
+            {{ money(myUnassigned()) }} of that is from your expenses that aren't split with anyone
+            yet, so nobody owes it until they're assigned.
+          </p>
+        }
+        @if (unassignedTotal() > 0) {
+          <p class="unassigned-notice" role="status">
+            <mat-icon aria-hidden="true">pending</mat-icon>
+            <span>
+              {{ money(unassignedTotal()) }} across {{ unassignedCount() }}
+              {{ unassignedCount() === 1 ? 'expense isn’t' : 'expenses aren’t' }} assigned to anyone
+              yet.
+            </span>
+          </p>
+        }
 
         @if (transfers().length > 0) {
           <h3 class="section-label">Suggested repayments</h3>
@@ -51,7 +67,7 @@
               </li>
             }
           </ul>
-        } @else if (list.expenses.length > 0) {
+        } @else if (list.expenses.length > 0 && unassignedTotal() === 0) {
           <p class="note">Everyone is settled up.</p>
         }
       </mat-card-content>
@@ -88,6 +104,12 @@
                   </span>
                   @if (myShare(expense); as share) {
                     <span class="detail">Your share: {{ money(share) }}</span>
+                  }
+                  @if (expense.unassigned > 0) {
+                    <span class="unassigned-chip">
+                      <mat-icon aria-hidden="true">pending</mat-icon>
+                      {{ money(expense.unassigned) }} unassigned
+                    </span>
                   }
                 </span>
                 @if (expense.canEdit) {

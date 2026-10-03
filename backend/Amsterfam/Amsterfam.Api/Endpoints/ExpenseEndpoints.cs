@@ -98,10 +98,13 @@ public static class ExpenseEndpoints
         if (caller is null)
             return error!;
 
-        var balances = BalanceCalculator.NetBalances(
-            await LoadExpenses(db, eventId),
-            await LoadPayments(db, eventId)
-        );
+        var expenses = await LoadExpenses(db, eventId);
+        var payments = await LoadPayments(db, eventId);
+        // Payers are owed their unassigned money too, but nobody can be told to pay it yet,
+        // so repayments are suggested from the assigned part only.
+        var balances = BalanceCalculator.NetBalances(expenses, payments);
+        var assigned = BalanceCalculator.NetBalances(expenses, payments, includeUnassigned: false);
+        var unassigned = BalanceCalculator.UnassignedByPayer(expenses);
 
         return TypedResults.Ok(
             new BalancesResponse(
@@ -109,12 +112,17 @@ public static class ExpenseEndpoints
                 balances
                     .Where(b => b.Value != 0)
                     .OrderByDescending(b => b.Value)
-                    .Select(b => new BalanceResponse(b.Key, b.Value))
+                    .Select(b => new BalanceResponse(
+                        b.Key,
+                        b.Value,
+                        unassigned.GetValueOrDefault(b.Key)
+                    ))
                     .ToList(),
                 BalanceCalculator
-                    .SuggestTransfers(balances)
+                    .SuggestTransfers(assigned)
                     .Select(t => new TransferResponse(t.FromUserId, t.ToUserId, t.Amount))
-                    .ToList()
+                    .ToList(),
+                unassigned.Values.Sum()
             )
         );
     }
@@ -507,7 +515,8 @@ public static class ExpenseEndpoints
             x.CreatedById,
             x.CreatedAt,
             x.UpdatedAt,
-            canEdit && CanChange(x.CreatedById, caller)
+            canEdit && CanChange(x.CreatedById, caller),
+            BalanceCalculator.Unassigned(x)
         );
 
     private static ExpensePaymentResponse ToResponse(

@@ -20,20 +20,35 @@ describe('previewSplit', () => {
     expect(preview.shares.get(2)).toBe(0.07);
   });
 
-  it('reports what is left to assign', () => {
+  it('leaves what is not covered unassigned instead of failing', () => {
     const percent = previewSplit(50, 'Percentage', [
       { userId: 1, value: 60 },
       { userId: 2, value: 30 },
     ]);
-    expect(percent.error).not.toBeNull();
-    expect(percent.remaining).toBe(10);
+    expect(percent.error).toBeNull();
+    expect(percent.shares.get(1)).toBe(30);
+    expect(percent.unassigned).toBe(5);
 
     const exact = previewSplit(25, 'Exact', [
       { userId: 1, value: 20 },
       { userId: 2, value: 4.5 },
     ]);
-    expect(exact.error).not.toBeNull();
-    expect(exact.remaining).toBe(0.5);
+    expect(exact.error).toBeNull();
+    expect(exact.unassigned).toBe(0.5);
+
+    const nobody = previewSplit(25, 'Exact', []);
+    expect(nobody.error).toBeNull();
+    expect(nobody.unassigned).toBe(25);
+  });
+
+  it('rejects splits that cover more than the total', () => {
+    expect(
+      previewSplit(10, 'Percentage', [
+        { userId: 1, value: 60 },
+        { userId: 2, value: 50 },
+      ]).error,
+    ).not.toBeNull();
+    expect(previewSplit(10, 'Exact', [{ userId: 1, value: 10.01 }]).error).not.toBeNull();
   });
 
   it('accepts exact amounts that add up', () => {
@@ -43,6 +58,7 @@ describe('previewSplit', () => {
     ]);
     expect(preview.error).toBeNull();
     expect(preview.shares.get(2)).toBe(5);
+    expect(preview.unassigned).toBe(0);
   });
 
   it('needs an amount and participants', () => {

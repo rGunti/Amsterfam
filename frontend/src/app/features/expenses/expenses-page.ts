@@ -61,8 +61,15 @@ export class ExpensesPage implements OnInit {
   readonly currency = computed(() => this.list()?.currency ?? this.event()?.currency ?? 'EUR');
   readonly canEdit = computed(() => this.list()?.canEdit ?? false);
 
-  readonly myBalance = computed(
-    () => this.balances()?.balances.find((b) => b.userId === this.myId())?.balance ?? 0,
+  private readonly mine = computed(() =>
+    this.balances()?.balances.find((b) => b.userId === this.myId()),
+  );
+  readonly myBalance = computed(() => this.mine()?.balance ?? 0);
+  /** The part of my balance from my own unassigned expenses. */
+  readonly myUnassigned = computed(() => this.mine()?.unassigned ?? 0);
+  readonly unassignedTotal = computed(() => this.balances()?.unassigned ?? 0);
+  readonly unassignedCount = computed(
+    () => this.list()?.expenses.filter((x) => x.unassigned > 0).length ?? 0,
   );
 
   /** Mine first, so what the viewer has to do is at the top. */
@@ -99,11 +106,16 @@ export class ExpensesPage implements OnInit {
 
   splitSummary(expense: Expense): string {
     const count = expense.shares.length;
-    return `split ${SPLIT_LABELS[expense.splitMode]} between ${count} ${count === 1 ? 'person' : 'people'}`;
+    return count === 0
+      ? 'not split with anyone yet'
+      : `split ${SPLIT_LABELS[expense.splitMode]} between ${count} ${count === 1 ? 'person' : 'people'}`;
   }
 
   shareLines(expense: Expense): string[] {
-    return expense.shares.map((s) => `${this.who(s.userId, true)}: ${this.money(s.amount)}`);
+    const lines = expense.shares.map((s) => `${this.who(s.userId, true)}: ${this.money(s.amount)}`);
+    return expense.unassigned > 0
+      ? [...lines, `Unassigned: ${this.money(expense.unassigned)}`]
+      : lines;
   }
 
   timestamp(iso: string): string {

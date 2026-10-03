@@ -26,13 +26,19 @@ This is separate from the bed-night cost model in #27, which isn't built yet.
   share down and give the leftover cents, one each, to the shares that lost most to
   rounding, ties broken by user id. Shares therefore always add up to the total exactly,
   and the frontend preview (`shared/expense-split.ts`) gives the same result.
+- **Unassigned remainders:**
+  - Percentage and exact splits may cover less than the total, even nothing at all. The rest is saved as unassigned and can be assigned later by editing the expense.
+  - Covering more than the total is still an error, and equal splits always cover everything.
+  - The payer is credited with the full amount, so the unassigned part shows up in their balance and in the overview.
+  - Suggested repayments ignore unassigned money. Otherwise debtors could be sent to a payer who is only "owed" money nobody owes yet, instead of to the person they really owe.
+  - Unassigned money doesn't block archiving; the overview flags it instead.
 - **Permissions:**
   - Confirmed members (Attendee or Organiser) add expenses and record repayments.
   - Whoever created an expense, or recorded a repayment, can change or remove it, and so can any organiser.
   - Non-organisers can only record repayments they made or received.
   - Pending members see nothing.
 - **Former members:** people who have left stay in existing expenses. They can still settle up, but can't be added to new expenses.
-- **Archiving:** Closed → Archived is blocked while any balance is non-zero (`ExpenseBalanceCheck`).
+- **Archiving:** Closed → Archived is blocked while any balance from assigned money is non-zero (`ExpenseBalanceCheck`).
 - **Timeline:** expense and repayment changes are logged for everyone, with the title or the people involved and the amount.
 
 ## Reasons

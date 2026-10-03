@@ -192,10 +192,41 @@ public class ExpenseApiTests(ApiFixture api) : IClassFixture<ApiFixture>
                 10m,
                 t.OwnerId,
                 "Percentage",
-                [new(t.OwnerId, 60m), new(t.GuestId, 30m)]
+                [new(t.OwnerId, 60m), new(t.GuestId, 50m)]
             )
         );
         Assert.Equal(HttpStatusCode.BadRequest, badPercent.StatusCode);
+    }
+
+    [Fact]
+    public async Task UnassignedRemainder_IsSaved_OwedToPayer_AndDoesNotBlockArchiving()
+    {
+        var t = await CreateTrip("10");
+        var created = await AddExpenseOk(
+            t.Owner,
+            t.EventId,
+            new UpsertExpenseRequest("Receipt", 50m, t.OwnerId, "Exact", [new(t.GuestId, 20m)])
+        );
+        Assert.Equal(30m, created.Unassigned);
+
+        var balances = await Balances(t.Guest, t.EventId);
+        Assert.Equal(30m, balances.Unassigned);
+        var owner = balances.Balances.Single(b => b.UserId == t.OwnerId);
+        Assert.Equal((50m, 30m), (owner.Balance, owner.Unassigned));
+        // Only the assigned part is suggested as a repayment.
+        var transfer = Assert.Single(balances.Transfers);
+        Assert.Equal(20m, transfer.Amount);
+
+        (
+            await t.Guest.PostAsJsonAsync(
+                $"/api/v1/events/{t.EventId}/expenses/payments",
+                new RecordPaymentRequest(t.GuestId, t.OwnerId, 20m, null)
+            )
+        ).EnsureSuccessStatusCode();
+        Assert.Equal(
+            HttpStatusCode.OK,
+            (await t.Owner.TransitionAsync(t.EventId, "Archived")).StatusCode
+        );
     }
 
     [Fact]

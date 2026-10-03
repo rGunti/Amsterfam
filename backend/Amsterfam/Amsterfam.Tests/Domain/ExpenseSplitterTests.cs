@@ -79,12 +79,22 @@ public class ExpenseSplitterTests
     }
 
     [Fact]
-    public void Percentage_FailsWhenNotAddingUpTo100()
+    public void Percentage_BelowHundredLeavesTheRestUnassigned()
+    {
+        var shares = Amounts(
+            ExpenseSplitter.Split(100m, ExpenseSplitMode.Percentage, [new(1, 50m), new(2, 40m)])
+        );
+
+        Assert.Equal(new Dictionary<int, decimal> { [1] = 50m, [2] = 40m }, shares);
+    }
+
+    [Fact]
+    public void Percentage_FailsAboveHundred()
     {
         var result = ExpenseSplitter.Split(
             100m,
             ExpenseSplitMode.Percentage,
-            [new(1, 50m), new(2, 40m)]
+            [new(1, 60m), new(2, 50m)]
         );
 
         Assert.NotNull(result.Error);
@@ -101,11 +111,32 @@ public class ExpenseSplitterTests
     }
 
     [Fact]
-    public void Exact_FailsWhenNotMatchingTheTotal()
+    public void Exact_BelowTheTotalLeavesTheRestUnassigned()
     {
-        var result = ExpenseSplitter.Split(25m, ExpenseSplitMode.Exact, [new(1, 20m), new(2, 4m)]);
+        var shares = Amounts(
+            ExpenseSplitter.Split(25m, ExpenseSplitMode.Exact, [new(1, 20m), new(2, 4m)])
+        );
+
+        Assert.Equal(24m, shares.Values.Sum());
+    }
+
+    [Fact]
+    public void Exact_FailsAboveTheTotal()
+    {
+        var result = ExpenseSplitter.Split(25m, ExpenseSplitMode.Exact, [new(1, 20m), new(2, 6m)]);
 
         Assert.NotNull(result.Error);
+    }
+
+    [Theory]
+    [InlineData(ExpenseSplitMode.Percentage)]
+    [InlineData(ExpenseSplitMode.Exact)]
+    public void Split_AllowsLeavingEverythingUnassigned(ExpenseSplitMode mode)
+    {
+        var result = ExpenseSplitter.Split(10m, mode, []);
+
+        Assert.Null(result.Error);
+        Assert.Empty(result.Shares);
     }
 
     [Theory]

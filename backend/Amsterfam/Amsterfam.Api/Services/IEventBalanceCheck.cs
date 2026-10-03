@@ -12,7 +12,10 @@ public interface IEventBalanceCheck
     Task<bool> HasOpenBalancesAsync(Guid eventId, CancellationToken ct = default);
 }
 
-/// <summary>Open as long as anyone still owes or is owed money from the event's expenses.</summary>
+/// <summary>
+/// Open as long as anyone still owes or is owed money from the event's expenses. Unassigned
+/// parts of expenses don't count: they're flagged in the overview but don't block archiving.
+/// </summary>
 public class ExpenseBalanceCheck(AmsterfamDbContext db) : IEventBalanceCheck
 {
     public async Task<bool> HasOpenBalancesAsync(Guid eventId, CancellationToken ct = default)
@@ -23,6 +26,8 @@ public class ExpenseBalanceCheck(AmsterfamDbContext db) : IEventBalanceCheck
             .ToListAsync(ct);
         var payments = await db.ExpensePayments.Where(p => p.EventId == eventId).ToListAsync(ct);
 
-        return !BalanceCalculator.AllSettled(BalanceCalculator.NetBalances(expenses, payments));
+        return !BalanceCalculator.AllSettled(
+            BalanceCalculator.NetBalances(expenses, payments, includeUnassigned: false)
+        );
     }
 }

@@ -15,7 +15,8 @@ public record ExpenseResponse(
     int CreatedById,
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt,
-    bool CanEdit
+    bool CanEdit,
+    decimal Unassigned
 );
 
 public record ExpensePaymentResponse(
@@ -37,14 +38,17 @@ public record ExpenseListResponse(
     IReadOnlyList<ExpensePaymentResponse> Payments
 );
 
-public record BalanceResponse(int UserId, decimal Balance);
+/// <summary><see cref="Unassigned"/> is the part of <see cref="Balance"/> nobody owes yet.</summary>
+public record BalanceResponse(int UserId, decimal Balance, decimal Unassigned);
 
 public record TransferResponse(int FromUserId, int ToUserId, decimal Amount);
 
+/// <summary>Transfers settle the assigned money only; <see cref="Unassigned"/> is the total left over.</summary>
 public record BalancesResponse(
     string Currency,
     IReadOnlyList<BalanceResponse> Balances,
-    IReadOnlyList<TransferResponse> Transfers
+    IReadOnlyList<TransferResponse> Transfers,
+    decimal Unassigned
 );
 
 /// <summary><see cref="Value"/> is the percentage or exact amount, depending on the split mode.</summary>

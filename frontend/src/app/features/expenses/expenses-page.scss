@@ -106,3 +106,34 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+// Unassigned money is saved, but should stand out until someone assigns it.
+.unassigned-notice,
+.unassigned-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.unassigned-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+}
+
+.unassigned-chip {
+  align-self: flex-start;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px 2px 6px;
+  font-size: 13px;
+  font-weight: 500;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}
