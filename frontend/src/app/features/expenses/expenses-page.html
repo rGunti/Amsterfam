@@ -97,15 +97,29 @@
             <ul class="rows">
               @for (expense of group.expenses; track expense.id) {
                 <li class="row expense">
-                  <mat-icon aria-hidden="true">receipt_long</mat-icon>
+                  <span class="expense-icon">
+                    <mat-icon aria-hidden="true">receipt_long</mat-icon>
+                    <!-- The payer's picture, or their initial drawn via CSS. -->
+                    @if (member(expense.paidById)?.avatarUrl; as url) {
+                      <img class="payer-avatar" [src]="url" alt="" />
+                    } @else {
+                      <span
+                        class="payer-avatar payer-initial"
+                        [attr.data-initial]="initial(expense.paidById)"
+                        aria-hidden="true"
+                      ></span>
+                    }
+                  </span>
                   <span class="row-text">
                     <span class="title">{{ expense.title }}</span>
                     <span class="detail" [matTooltip]="shareLines(expense).join(' · ')">
-                      {{ who(expense.paidById, true) }} paid {{ money(expense.amount) }},
-                      {{ splitSummary(expense) }}
+                      Paid by {{ who(expense.paidById) }}
                     </span>
+                  </span>
+                  <span class="expense-amount">
+                    <span class="total">{{ money(expense.amount) }}</span>
                     @if (myShare(expense); as share) {
-                      <span class="detail">Your share: {{ money(share) }}</span>
+                      <span class="my-share">Your share {{ money(share) }}</span>
                     }
                     @if (expense.unassigned > 0) {
                       <span class="unassigned-chip">
@@ -132,6 +146,9 @@
                         <span>Delete</span>
                       </button>
                     </mat-menu>
+                  } @else {
+                    <!-- Keeps the amount lined up with rows that have a menu. -->
+                    <span class="menu-spacer" aria-hidden="true"></span>
                   }
                 </li>
               }

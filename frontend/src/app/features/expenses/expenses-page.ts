@@ -16,6 +16,7 @@ import {
   Balances,
   Expense,
   ExpenseList,
+  ExpenseMember,
   ExpensePayment,
   RecordPaymentRequest,
   Transfer,
@@ -31,12 +32,6 @@ import { formatMoney } from '../../shared/money';
 import { fullTimestamp } from '../../shared/timestamp';
 import { ExpenseDialog, ExpenseDialogData } from './expense-dialog';
 import { PaymentDialog, PaymentDialogData } from './payment-dialog';
-
-const SPLIT_LABELS: Record<Expense['splitMode'], string> = {
-  Equal: 'equally',
-  Percentage: 'by percentage',
-  Exact: 'by exact amounts',
-};
 
 /** "Fri 3 Jul 2030" for a "yyyy-MM-dd" date. */
 function dateLabel(iso: string): string {
@@ -105,8 +100,8 @@ export class ExpensesPage implements OnInit {
     return [...all.filter(involvesMe), ...all.filter((t) => !involvesMe(t))];
   });
 
-  private readonly names = computed(
-    () => new Map((this.list()?.members ?? []).map((m) => [m.userId, m.displayName])),
+  private readonly members = computed(
+    () => new Map((this.list()?.members ?? []).map((m) => [m.userId, m])),
   );
 
   ngOnInit(): void {
@@ -122,18 +117,20 @@ export class ExpensesPage implements OnInit {
     if (userId === this.myId()) {
       return capitalise ? 'You' : 'you';
     }
-    return this.names().get(userId) ?? 'Someone';
+    return this.members().get(userId)?.displayName ?? 'Someone';
+  }
+
+  member(userId: number): ExpenseMember | undefined {
+    return this.members().get(userId);
+  }
+
+  /** First letter of the name, for people without a picture. */
+  initial(userId: number): string {
+    return [...(this.member(userId)?.displayName.trim() ?? '')][0]?.toUpperCase() ?? '?';
   }
 
   myShare(expense: Expense): number | null {
     return expense.shares.find((s) => s.userId === this.myId())?.amount ?? null;
-  }
-
-  splitSummary(expense: Expense): string {
-    const count = expense.shares.length;
-    return count === 0
-      ? 'not split with anyone yet'
-      : `split ${SPLIT_LABELS[expense.splitMode]} between ${count} ${count === 1 ? 'person' : 'people'}`;
   }
 
   shareLines(expense: Expense): string[] {
