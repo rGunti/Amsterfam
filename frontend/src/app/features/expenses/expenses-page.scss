@@ -158,6 +158,10 @@
   }
 
   .my-share {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
     font-size: 12px;
     color: var(--mat-sys-on-surface-variant);
   }
@@ -179,6 +183,26 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.avatar {
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-initial {
+  display: inline-block;
+  overflow: hidden;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-weight: 600;
+  text-align: center;
+
+  &::before {
+    content: attr(data-initial);
+  }
+}
+
+// On the corner of the receipt icon, ringed in the card's colour.
 .payer-avatar {
   position: absolute;
   right: -2px;
@@ -186,20 +210,19 @@
   width: 18px;
   height: 18px;
   border: 2px solid var(--mat-sys-surface-container-low);
-  border-radius: 50%;
-  object-fit: cover;
+  font-size: 10px;
+  line-height: 18px;
 }
 
-.payer-initial {
-  overflow: hidden;
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 18px;
-  text-align: center;
+.share-avatar {
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  line-height: 16px;
+}
 
-  &::before {
-    content: attr(data-initial);
+@media (max-width: 599.98px) {
+  .unassigned-word {
+    display: none;
   }
 }
