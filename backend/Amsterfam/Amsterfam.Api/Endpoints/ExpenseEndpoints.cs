@@ -148,6 +148,7 @@ public static class ExpenseEndpoints
         {
             EventId = eventId,
             Title = request.Title.Trim(),
+            Date = request.Date ?? time.Today(),
             Amount = request.Amount,
             PaidById = request.PaidById,
             SplitMode = mode,
@@ -198,6 +199,7 @@ public static class ExpenseEndpoints
             return invalid;
 
         expense.Title = request.Title.Trim();
+        expense.Date = request.Date ?? time.Today();
         expense.Amount = request.Amount;
         expense.PaidById = request.PaidById;
         expense.SplitMode = mode;
@@ -422,7 +424,8 @@ public static class ExpenseEndpoints
         db
             .Expenses.Where(x => x.EventId == eventId)
             .Include(x => x.Shares)
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderByDescending(x => x.Date)
+            .ThenByDescending(x => x.CreatedAt)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
 
@@ -506,6 +509,7 @@ public static class ExpenseEndpoints
         new(
             x.Id,
             x.Title,
+            x.Date,
             x.Amount,
             x.PaidById,
             x.SplitMode.ToString(),

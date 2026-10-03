@@ -25,6 +25,7 @@ import {
   UpsertExpenseRequest,
 } from '../../core/models/expense';
 import { previewSplit } from '../../shared/expense-split';
+import { localIsoDate } from '../../shared/local-date';
 import { formatMoney } from '../../shared/money';
 
 export interface ExpenseDialogData {
@@ -43,6 +44,7 @@ interface ParticipantForm {
 
 interface ExpenseForm {
   title: FormControl<string>;
+  date: FormControl<string>;
   amount: FormControl<number | null>;
   paidById: FormControl<number>;
   splitMode: FormControl<ExpenseSplitMode>;
@@ -95,6 +97,7 @@ export class ExpenseDialog {
 
     return fb.group({
       title: [expense?.title ?? '', [Validators.required, Validators.maxLength(100)]],
+      date: [expense?.date ?? localIsoDate(), Validators.required],
       amount: fb.control<number | null>(expense?.amount ?? null, [
         Validators.required,
         Validators.min(0.01),
@@ -151,6 +154,7 @@ export class ExpenseDialog {
     const raw = this.form.getRawValue();
     this.dialogRef.close({
       title: raw.title.trim(),
+      date: raw.date,
       amount: raw.amount!,
       paidById: raw.paidById,
       splitMode: raw.splitMode,

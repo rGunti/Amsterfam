@@ -8,6 +8,7 @@ public record ExpenseShareResponse(int UserId, decimal Amount, decimal? Percenta
 public record ExpenseResponse(
     int Id,
     string Title,
+    DateOnly Date,
     decimal Amount,
     int PaidById,
     string SplitMode,
@@ -54,12 +55,14 @@ public record BalancesResponse(
 /// <summary><see cref="Value"/> is the percentage or exact amount, depending on the split mode.</summary>
 public record ExpenseShareRequest(int UserId, decimal? Value);
 
+/// <summary>A null <see cref="Date"/> means today.</summary>
 public record UpsertExpenseRequest(
     string Title,
     decimal Amount,
     int PaidById,
     string SplitMode,
-    IReadOnlyList<ExpenseShareRequest> Shares
+    IReadOnlyList<ExpenseShareRequest> Shares,
+    DateOnly? Date = null
 );
 
 public record RecordPaymentRequest(int FromUserId, int ToUserId, decimal Amount, string? Note);

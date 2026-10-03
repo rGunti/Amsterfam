@@ -92,48 +92,51 @@
             No expenses yet. Add what you paid for the group and the app works out who owes whom.
           </p>
         } @else {
-          <ul class="rows">
-            @for (expense of list.expenses; track expense.id) {
-              <li class="row expense">
-                <mat-icon aria-hidden="true">receipt_long</mat-icon>
-                <span class="row-text">
-                  <span class="title">{{ expense.title }}</span>
-                  <span class="detail" [matTooltip]="shareLines(expense).join(' · ')">
-                    {{ who(expense.paidById, true) }} paid {{ money(expense.amount) }},
-                    {{ splitSummary(expense) }}
-                  </span>
-                  @if (myShare(expense); as share) {
-                    <span class="detail">Your share: {{ money(share) }}</span>
-                  }
-                  @if (expense.unassigned > 0) {
-                    <span class="unassigned-chip">
-                      <mat-icon aria-hidden="true">pending</mat-icon>
-                      {{ money(expense.unassigned) }} unassigned
+          @for (group of expenseGroups(); track group.date) {
+            <h3 class="section-label date-label">{{ group.label }}</h3>
+            <ul class="rows">
+              @for (expense of group.expenses; track expense.id) {
+                <li class="row expense">
+                  <mat-icon aria-hidden="true">receipt_long</mat-icon>
+                  <span class="row-text">
+                    <span class="title">{{ expense.title }}</span>
+                    <span class="detail" [matTooltip]="shareLines(expense).join(' · ')">
+                      {{ who(expense.paidById, true) }} paid {{ money(expense.amount) }},
+                      {{ splitSummary(expense) }}
                     </span>
+                    @if (myShare(expense); as share) {
+                      <span class="detail">Your share: {{ money(share) }}</span>
+                    }
+                    @if (expense.unassigned > 0) {
+                      <span class="unassigned-chip">
+                        <mat-icon aria-hidden="true">pending</mat-icon>
+                        {{ money(expense.unassigned) }} unassigned
+                      </span>
+                    }
+                  </span>
+                  @if (expense.canEdit) {
+                    <button
+                      mat-icon-button
+                      [matMenuTriggerFor]="menu"
+                      [attr.aria-label]="'Actions for ' + expense.title"
+                    >
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #menu="matMenu">
+                      <button mat-menu-item (click)="editExpense(expense)">
+                        <mat-icon>edit</mat-icon>
+                        <span>Edit</span>
+                      </button>
+                      <button mat-menu-item (click)="deleteExpense(expense)">
+                        <mat-icon>delete</mat-icon>
+                        <span>Delete</span>
+                      </button>
+                    </mat-menu>
                   }
-                </span>
-                @if (expense.canEdit) {
-                  <button
-                    mat-icon-button
-                    [matMenuTriggerFor]="menu"
-                    [attr.aria-label]="'Actions for ' + expense.title"
-                  >
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
-                  <mat-menu #menu="matMenu">
-                    <button mat-menu-item (click)="editExpense(expense)">
-                      <mat-icon>edit</mat-icon>
-                      <span>Edit</span>
-                    </button>
-                    <button mat-menu-item (click)="deleteExpense(expense)">
-                      <mat-icon>delete</mat-icon>
-                      <span>Delete</span>
-                    </button>
-                  </mat-menu>
-                }
-              </li>
-            }
-          </ul>
+                </li>
+              }
+            </ul>
+          }
         }
       </mat-card-content>
     </mat-card>

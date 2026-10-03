@@ -134,8 +134,8 @@ POST /api/v1/events/{id}/costs/{userId}/mark-final-paid       (RPC)
 Confirmed members only (non-members 404, pending 403). Writes are 409 on read-only events.
 See ADR-013.
 ```
-GET    /api/v1/events/{id}/expenses                    (currency, members, expenses, repayments)
-POST   /api/v1/events/{id}/expenses                    (body: title, amount, paidById, splitMode, shares[{userId, value}])
+GET    /api/v1/events/{id}/expenses                    (currency, members, expenses newest date first, repayments)
+POST   /api/v1/events/{id}/expenses                    (body: title, date, amount, paidById, splitMode, shares[{userId, value}])
 PUT    /api/v1/events/{id}/expenses/{expenseId}        (creator or organiser)
 DELETE /api/v1/events/{id}/expenses/{expenseId}        (creator or organiser)
 GET    /api/v1/events/{id}/expenses/balances           (net balance per user + suggested transfers)
@@ -143,7 +143,7 @@ POST   /api/v1/events/{id}/expenses/payments           (record a repayment; non-
 DELETE /api/v1/events/{id}/expenses/payments/{paymentId}  (recorder or organiser)
 ```
 
-`shares[].value` is the percentage for `Percentage` splits, the amount for `Exact` splits,
+`date` (`yyyy-MM-dd`) defaults to today when left out. `shares[].value` is the percentage for `Percentage` splits, the amount for `Exact` splits,
 and ignored for `Equal`. Percentage and exact splits may cover less than the total, or
 nobody at all; the rest is returned as `unassigned` on the expense, per payer in the balances,
 and as a total. Suggested transfers ignore it. Splits covering more than the total, and

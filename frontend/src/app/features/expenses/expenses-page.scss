@@ -137,3 +137,11 @@
     font-size: 16px;
   }
 }
+
+.date-label {
+  margin-top: 12px;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}

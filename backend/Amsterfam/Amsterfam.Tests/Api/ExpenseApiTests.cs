@@ -230,6 +230,33 @@ public class ExpenseApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Expenses_AreListedByDate_NewestFirst_DefaultingToToday()
+    {
+        var t = await CreateTrip("11");
+        UpsertExpenseRequest On(string title, DateOnly? date) =>
+            EqualSplit(10m, t.OwnerId, t.OwnerId) with
+            {
+                Title = title,
+                Date = date,
+            };
+
+        await AddExpenseOk(t.Owner, t.EventId, On("Middle", new DateOnly(2030, 7, 3)));
+        await AddExpenseOk(t.Owner, t.EventId, On("Earliest", new DateOnly(2030, 7, 1)));
+        var undated = await AddExpenseOk(t.Owner, t.EventId, On("Undated", null));
+        await AddExpenseOk(t.Owner, t.EventId, On("Latest", new DateOnly(2030, 7, 5)));
+
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now), undated.Date);
+        var list = await t.Owner.GetFromJsonAsync<ExpenseListResponse>(
+            $"/api/v1/events/{t.EventId}/expenses/"
+        );
+        // Today is before the 2030 trip dates, so the undated one comes last.
+        Assert.Equal(
+            ["Latest", "Middle", "Earliest", "Undated"],
+            list!.Expenses.Select(x => x.Title)
+        );
+    }
+
+    [Fact]
     public async Task Expenses_HiddenFromPendingAndNonMembers()
     {
         var t = await CreateTrip("5");

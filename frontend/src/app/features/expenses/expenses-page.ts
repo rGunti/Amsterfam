@@ -26,6 +26,7 @@ import {
   PaymentMethodsViewerDialog,
   PaymentMethodsViewerDialogData,
 } from '../../shared/payment-methods-viewer-dialog/payment-methods-viewer-dialog';
+import { APP_LOCALE } from '../../shared/app-locale';
 import { formatMoney } from '../../shared/money';
 import { fullTimestamp } from '../../shared/timestamp';
 import { ExpenseDialog, ExpenseDialogData } from './expense-dialog';
@@ -36,6 +37,16 @@ const SPLIT_LABELS: Record<Expense['splitMode'], string> = {
   Percentage: 'by percentage',
   Exact: 'by exact amounts',
 };
+
+/** "Fri 3 Jul 2030" for a "yyyy-MM-dd" date. */
+function dateLabel(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(APP_LOCALE, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 @Component({
   selector: 'app-expenses-page',
@@ -68,6 +79,20 @@ export class ExpensesPage implements OnInit {
   /** The part of my balance from my own unassigned expenses. */
   readonly myUnassigned = computed(() => this.mine()?.unassigned ?? 0);
   readonly unassignedTotal = computed(() => this.balances()?.unassigned ?? 0);
+  /** Expenses under a heading per date, newest first (the server already sorts them). */
+  readonly expenseGroups = computed(() => {
+    const groups: { date: string; label: string; expenses: Expense[] }[] = [];
+    for (const expense of this.list()?.expenses ?? []) {
+      let group = groups.at(-1);
+      if (group?.date !== expense.date) {
+        group = { date: expense.date, label: dateLabel(expense.date), expenses: [] };
+        groups.push(group);
+      }
+      group.expenses.push(expense);
+    }
+    return groups;
+  });
+
   readonly unassignedCount = computed(
     () => this.list()?.expenses.filter((x) => x.unassigned > 0).length ?? 0,
   );

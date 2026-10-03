@@ -18,6 +18,8 @@ export interface ExpenseShare {
 export interface Expense {
   id: number;
   title: string;
+  /** "yyyy-MM-dd": when the money was spent. The list is sorted by it, newest first. */
+  date: string;
   amount: number;
   paidById: number;
   splitMode: ExpenseSplitMode;
@@ -81,6 +83,7 @@ export interface ExpenseShareRequest {
 
 export interface UpsertExpenseRequest {
   title: string;
+  date: string;
   amount: number;
   paidById: number;
   splitMode: ExpenseSplitMode;

@@ -11,6 +11,14 @@
 
     <div class="row">
       <mat-form-field appearance="outline">
+        <mat-label>Date</mat-label>
+        <input matInput type="date" formControlName="date" />
+        @if (form.controls.date.hasError('required')) {
+          <mat-error>Date is required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
         <mat-label>Amount ({{ data.currency }})</mat-label>
         <input
           matInput

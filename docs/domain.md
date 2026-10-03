@@ -106,7 +106,7 @@ Rules:
 
 ### Expense
 Something one attendee paid for, shared among some of the event's attendees (ADR-013). Deleted with the event.
-- `Id`, `EventId`, `Title` (max 100), `Amount` (numeric(10,2), in `Event.Currency`), `PaidById`
+- `Id`, `EventId`, `Title` (max 100), `Date` (when it was spent; the list is sorted by it, newest first), `Amount` (numeric(10,2), in `Event.Currency`), `PaidById`
 - `SplitMode` (Equal | Percentage | Exact), `CreatedById`, `CreatedAt`, `UpdatedAt?`
 
 ### ExpenseShare

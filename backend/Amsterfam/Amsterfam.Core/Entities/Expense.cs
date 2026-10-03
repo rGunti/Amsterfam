@@ -9,6 +9,9 @@ public class Expense
     public int Id { get; set; }
     public Guid EventId { get; set; }
     public required string Title { get; set; }
+
+    /// <summary>When the money was spent, for sorting and grouping the list.</summary>
+    public DateOnly Date { get; set; }
     public decimal Amount { get; set; }
     public int PaidById { get; set; }
     public ExpenseSplitMode SplitMode { get; set; }
