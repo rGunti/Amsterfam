@@ -113,7 +113,8 @@ public static class UserEndpoints
 
         // Routing decodes every escape in a route value except %2F, which would otherwise
         // be a path separator. Handles may contain "/", so undo just that one; decoding
-        // everything again would mangle a handle that literally contains "%41".
+        // everything again would mangle a handle that literally contains "%41". The cost: a
+        // handle containing the literal text "%2F" can't be looked up. Rare enough to accept.
         handle = handle.Replace("%2F", "/", StringComparison.OrdinalIgnoreCase);
 
         var userId = await FindByProfileHandle(db, handle);

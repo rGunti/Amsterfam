@@ -31,11 +31,18 @@ const FALLBACK_ICON = 'login';
  * different people.
  */
 @Component({
-  selector: 'app-auth-source-chip',
+  selector: 'app-auth-source-icon',
   imports: [MatIconModule, MatTooltipModule],
   template: `
     @if (source(); as source) {
-      <span class="source" role="img" [attr.aria-label]="label()" [matTooltip]="label()">
+      <!-- Focusable so keyboard users get the tooltip too. -->
+      <span
+        class="source"
+        role="img"
+        tabindex="0"
+        [attr.aria-label]="label()"
+        [matTooltip]="label()"
+      >
         @if (source === 'discord') {
           <!-- Discord's mark, as shipped with Authentik (web/authentik/sources/discord.svg). -->
           <svg class="discord" viewBox="0 -28.5 256 256" aria-hidden="true">
@@ -66,7 +73,7 @@ const FALLBACK_ICON = 'login';
     }
   `,
 })
-export class AuthSourceChip {
+export class AuthSourceIcon {
   readonly source = input<string | null>(null);
 
   readonly label = computed(() => {

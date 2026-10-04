@@ -25,7 +25,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Observable } from 'rxjs';
 
-import { AuthSourceChip } from '../../shared/auth-source-chip/auth-source-chip';
+import { AuthSourceIcon } from '../../shared/auth-source-icon/auth-source-icon';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { UserProfileDetails } from '../../shared/user-profile-details/user-profile-details';
 import { AboutMeForm } from './about-me-form';
@@ -51,7 +51,7 @@ import { PaymentMethod } from '../../core/models/payment-method';
     MatTooltipModule,
     UserProfileDetails,
     AboutMeForm,
-    AuthSourceChip,
+    AuthSourceIcon,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',

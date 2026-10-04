@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthSourceChip, authSourceLabel } from './auth-source-chip';
+import { AuthSourceIcon, authSourceLabel } from './auth-source-icon';
 
 describe('authSourceLabel', () => {
   it('names the known sources', () => {
@@ -13,9 +13,9 @@ describe('authSourceLabel', () => {
   });
 });
 
-describe('AuthSourceChip', () => {
+describe('AuthSourceIcon', () => {
   function render(source: string | null): HTMLElement {
-    const fixture = TestBed.createComponent(AuthSourceChip);
+    const fixture = TestBed.createComponent(AuthSourceIcon);
     fixture.componentRef.setInput('source', source);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;

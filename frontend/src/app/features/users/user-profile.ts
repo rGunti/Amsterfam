@@ -10,7 +10,7 @@ import { Observable, catchError, concat, map, of, switchMap } from 'rxjs';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { UserApi } from '../../core/api/user.api';
 import { UserProfile as UserProfileModel } from '../../core/models/user';
-import { AuthSourceChip } from '../../shared/auth-source-chip/auth-source-chip';
+import { AuthSourceIcon } from '../../shared/auth-source-icon/auth-source-icon';
 import { UserProfileDetails } from '../../shared/user-profile-details/user-profile-details';
 
 type ProfileState =
@@ -21,7 +21,7 @@ type ProfileState =
 /** Someone else's profile, read-only. Only people on a trip with them can open it. */
 @Component({
   selector: 'app-user-profile',
-  imports: [AuthSourceChip, MatButtonModule, MatCardModule, MatIconModule, UserProfileDetails],
+  imports: [AuthSourceIcon, MatButtonModule, MatCardModule, MatIconModule, UserProfileDetails],
   templateUrl: './user-profile.html',
   styleUrl: './user-profile.scss',
 })
