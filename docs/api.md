@@ -21,9 +21,11 @@ REST with RPC-style endpoints (`POST` + verb in path) where actions don't map cl
 GET  /api/v1/me
 PUT  /api/v1/me
 PUT  /api/v1/me/about
-GET  /api/v1/users/{userId}/profile
+GET  /api/v1/users/{handle}/profile
 GET  /api/v1/dietary-options
 ```
+
+`GET /me` also returns `authSource` and `profileHandle`; attendee lists include each person's `profileHandle` for profile links.
 
 `PUT /me` sets `{ displayName, avatarUrl }` only. The display name is trimmed, blank becomes `null`, and it can be at most 100 characters.
 
@@ -31,7 +33,7 @@ GET  /api/v1/dietary-options
 `{ pronouns, location, bio, birthday: { month, day, year | null } | null, dietaryOptionIds: number[], dietaryNotes }`.
 They live on their own endpoint so an older client that only knows `PUT /me` can never wipe them. Text is trimmed and blank becomes `null`. Too-long text, an impossible birthday (e.g. 31 April, or 29 February in a given non-leap year), or an unknown dietary option id returns `400 { error }`.
 
-`GET /users/{userId}/profile` returns the same "about me" fields plus `id`, `handle`, `displayName` and `avatarUrl`, without `email`. You can see your own profile, those of people who are confirmed members (Attendee/Organiser) of an event with you, and, as an Organiser, those of people pending on your event. Anyone else gets `404`, the same as an unknown id.
+`GET /users/{handle}/profile` looks the user up by their profile handle, `handle@source` (e.g. `klaus@discord`). The part after the last `@` is the source; if nothing matches, the whole string is tried as a handle whose source isn't known yet. It returns the same "about me" fields plus `id`, `handle`, `authSource`, `profileHandle`, `displayName` and `avatarUrl`, without `email`. You can see your own profile, those of people who are confirmed members (Attendee/Organiser) of an event with you, and, as an Organiser, those of people pending on your event. Anyone else gets `404`, the same as an unknown handle.
 
 `GET /dietary-options` lists the seeded options as `{ id, key, label }`, in display order.
 

@@ -7,6 +7,8 @@ public record DietaryOptionResponse(int Id, string Key, string Label);
 public record UserResponse(
     int Id,
     string Handle,
+    string? AuthSource,
+    string ProfileHandle,
     string? DisplayName,
     string Email,
     string? AvatarUrl,
@@ -37,6 +39,8 @@ public record UpdateAboutRequest(
 public record UserProfileResponse(
     int Id,
     string Handle,
+    string? AuthSource,
+    string ProfileHandle,
     string? DisplayName,
     string? AvatarUrl,
     string? Pronouns,

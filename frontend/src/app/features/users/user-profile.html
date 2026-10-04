@@ -12,7 +12,7 @@
       </div>
       <div class="profile-header-text">
         <mat-card-title>{{ p.displayName ?? p.handle }}</mat-card-title>
-        <p class="handle">&#64;{{ p.handle }}</p>
+        <p class="handle">&#64;{{ p.handle }}<app-auth-source-icon [source]="p.authSource" /></p>
       </div>
     </div>
   </mat-card>

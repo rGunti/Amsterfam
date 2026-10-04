@@ -10,6 +10,7 @@ import { Observable, catchError, concat, map, of, switchMap } from 'rxjs';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { UserApi } from '../../core/api/user.api';
 import { UserProfile as UserProfileModel } from '../../core/models/user';
+import { AuthSourceIcon } from '../../shared/auth-source-icon/auth-source-icon';
 import { UserProfileDetails } from '../../shared/user-profile-details/user-profile-details';
 
 type ProfileState =
@@ -20,7 +21,7 @@ type ProfileState =
 /** Someone else's profile, read-only. Only people on a trip with them can open it. */
 @Component({
   selector: 'app-user-profile',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, UserProfileDetails],
+  imports: [AuthSourceIcon, MatButtonModule, MatCardModule, MatIconModule, UserProfileDetails],
   templateUrl: './user-profile.html',
   styleUrl: './user-profile.scss',
 })
@@ -32,12 +33,12 @@ export class UserProfile {
 
   // Follows the route rather than a snapshot: going from one profile straight to another
   // reuses this component.
-  private readonly userIdChanges = inject(ActivatedRoute).paramMap.pipe(
-    map((params) => Number(params.get('id'))),
+  private readonly handleChanges = inject(ActivatedRoute).paramMap.pipe(
+    map((params) => params.get('handle') ?? ''),
   );
-  private readonly userId = toSignal(this.userIdChanges, { requireSync: true });
+  private readonly handle = toSignal(this.handleChanges, { requireSync: true });
 
-  private readonly state = toSignal(this.userIdChanges.pipe(switchMap((id) => this.load(id))), {
+  private readonly state = toSignal(this.handleChanges.pipe(switchMap((h) => this.load(h))), {
     initialValue: { kind: 'loading' } as ProfileState,
   });
 
@@ -52,7 +53,7 @@ export class UserProfile {
     // Your own profile lives at /profile, where it's editable. Waits for the current user to
     // load, so opening your own link directly still redirects.
     effect(() => {
-      if (this.currentUser()?.id === this.userId()) {
+      if (this.currentUser()?.profileHandle === this.handle()) {
         void this.router.navigate(['/profile'], { replaceUrl: true });
       }
     });
@@ -62,13 +63,13 @@ export class UserProfile {
     this.location.back();
   }
 
-  private load(id: number): Observable<ProfileState> {
-    if (!Number.isInteger(id)) {
+  private load(handle: string): Observable<ProfileState> {
+    if (!handle) {
       return of({ kind: 'unavailable' });
     }
     return concat(
       of<ProfileState>({ kind: 'loading' }),
-      this.userApi.getProfile(id).pipe(
+      this.userApi.getProfile(handle).pipe(
         map((profile): ProfileState => ({ kind: 'loaded', profile })),
         catchError(() => of<ProfileState>({ kind: 'unavailable' })),
       ),

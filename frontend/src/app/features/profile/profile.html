@@ -46,7 +46,9 @@
             </button>
           </div>
         }
-        <p class="handle">&#64;{{ currentUser.handle }}</p>
+        <p class="handle">
+          &#64;{{ currentUser.handle }}<app-auth-source-icon [source]="currentUser.authSource" />
+        </p>
         @if (currentUser.email) {
           <p class="email">
             <mat-icon>email</mat-icon>

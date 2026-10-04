@@ -10,6 +10,14 @@ function asUser(externalId: string) {
   return { [USER_HEADER]: externalId, Authorization: 'Bearer e2e-fake-token' };
 }
 
+/**
+ * Profile pages are addressed by handle. E2E users carry no auth source, so that's just the
+ * handle, which the router percent-encodes (spaces become %20).
+ */
+function profileUrl(handle: string): RegExp {
+  return new RegExp(`/users/${encodeURIComponent(handle)}$`);
+}
+
 async function createOpenEvent(request: APIRequestContext, organiser: string): Promise<number> {
   const create = await request.post(`${API}/api/v1/events/`, {
     headers: asUser(organiser),
@@ -113,7 +121,7 @@ test.describe('profile fields', () => {
     await rosterCard.getByRole('button', { name: `Test User ${other}` }).click();
     await page.getByRole('menuitem', { name: 'View profile' }).click();
 
-    await expect(page).toHaveURL(/\/users\/\d+$/);
+    await expect(page).toHaveURL(profileUrl(`Test User ${other}`));
     await expect(page.getByText(`@Test User ${other}`)).toBeVisible();
     const about = page.locator('mat-card', { hasText: 'About' }).last();
     await expect(about.getByText('29 February')).toBeVisible();
@@ -141,7 +149,7 @@ test.describe('profile fields', () => {
       .getByRole('link', { name: `View Test User ${pendingUser}'s profile` })
       .click();
 
-    await expect(page).toHaveURL(/\/users\/\d+$/);
+    await expect(page).toHaveURL(profileUrl(`Test User ${pendingUser}`));
     await expect(page.getByText('he/they')).toBeVisible();
   });
 });

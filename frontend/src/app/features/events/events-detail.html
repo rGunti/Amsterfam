@@ -322,7 +322,7 @@
 
           <mat-menu #attendeeMenu="matMenu">
             @if (menuAttendee(); as ma) {
-              <a mat-menu-item [routerLink]="['/users', ma.userId]">
+              <a mat-menu-item [routerLink]="['/users', ma.profileHandle]">
                 <mat-icon>person</mat-icon> View profile
               </a>
               <button

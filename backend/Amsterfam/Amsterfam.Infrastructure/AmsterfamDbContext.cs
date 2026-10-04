@@ -36,6 +36,10 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         modelBuilder.Entity<User>(e =>
         {
             e.HasIndex(u => u.ExternalId).IsUnique();
+            // NULLS NOT DISTINCT, so two users whose source isn't known yet still can't share
+            // a handle — the profile page looks people up by it.
+            e.HasIndex(u => new { u.Handle, u.AuthSource }).IsUnique().AreNullsDistinct(false);
+            e.Property(u => u.AuthSource).HasMaxLength(User.MaxAuthSourceLength);
             e.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
             e.Property(u => u.DisplayName).HasMaxLength(User.MaxDisplayNameLength);
             e.Property(u => u.Pronouns).HasMaxLength(User.MaxPronounsLength);

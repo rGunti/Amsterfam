@@ -202,7 +202,10 @@ resource "authentik_provider_oauth2" "amsterfam" {
 
   property_mappings = concat(
     data.authentik_property_mapping_provider_scope.scopes.ids,
-    [authentik_property_mapping_provider_scope.picture.id],
+    [
+      authentik_property_mapping_provider_scope.picture.id,
+      authentik_property_mapping_provider_scope.auth_source.id,
+    ],
   )
 }
 
@@ -221,6 +224,25 @@ resource "authentik_property_mapping_provider_scope" "picture" {
   name       = "Amsterfam: OpenID 'profile' picture"
   scope_name = "profile"
   expression = "return {\"picture\": request.user.avatar}"
+}
+
+# Handles are only unique per sign-in source (Discord "klaus" and an internal
+# account "klaus" are different people), so the backend needs to know where an
+# account comes from. Emits the slug of the user's oldest linked source, which
+# stays put when they link more later, or "internal" for a plain Authentik
+# account. Read by CurrentUserService (AuthSourceClaim).
+resource "authentik_property_mapping_provider_scope" "auth_source" {
+  name       = "Amsterfam: OpenID 'profile' auth_source"
+  scope_name = "profile"
+  expression = <<-EOT
+    connection = (
+        request.user.usersourceconnection_set
+        .select_related("source")
+        .order_by("created")
+        .first()
+    )
+    return {"auth_source": connection.source.slug if connection else "internal"}
+  EOT
 }
 
 # ── Application ───────────────────────────────────────────────────────────────

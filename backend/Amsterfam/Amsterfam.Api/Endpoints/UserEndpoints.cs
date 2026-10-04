@@ -21,7 +21,7 @@ public static class UserEndpoints
             .MapPut("/about", UpdateAbout)
             .NotLoggedToTimeline("Profile changes aren't tied to an event.");
 
-        app.MapGet("/api/v1/users/{userId:int}/profile", GetProfile).RequireAuthorization();
+        app.MapGet("/api/v1/users/{handle}/profile", GetProfile).RequireAuthorization();
         app.MapGet("/api/v1/dietary-options", GetDietaryOptions).RequireAuthorization();
 
         return app;
@@ -99,28 +99,42 @@ public static class UserEndpoints
         return TypedResults.Ok(ToResponse(user));
     }
 
+    /// <summary>
+    /// Looks the user up by their qualified handle ("klaus@discord"). Unknown handles get the
+    /// same 404 as profiles you can't see, so handles can't be probed.
+    /// </summary>
     private static async Task<IResult> GetProfile(
-        int userId,
+        string handle,
         ICurrentUserService currentUser,
         AmsterfamDbContext db
     )
     {
         var viewer = await currentUser.GetOrCreateAsync();
 
-        if (viewer.Id != userId && !await CanSeeProfile(db, viewer.Id, userId))
+        // Routing decodes every escape in a route value except %2F, which would otherwise
+        // be a path separator. Handles may contain "/", so undo just that one; decoding
+        // everything again would mangle a handle that literally contains "%41". The cost: a
+        // handle containing the literal text "%2F" can't be looked up. Rare enough to accept.
+        handle = handle.Replace("%2F", "/", StringComparison.OrdinalIgnoreCase);
+
+        var userId = await FindByProfileHandle(db, handle);
+        if (userId is null)
+            return TypedResults.NotFound();
+
+        if (viewer.Id != userId && !await CanSeeProfile(db, viewer.Id, userId.Value))
             return TypedResults.NotFound();
 
         var user = await db
             .Users.AsNoTracking()
             .Include(u => u.DietaryOptions)
-            .FirstOrDefaultAsync(u => u.Id == userId);
-        if (user is null)
-            return TypedResults.NotFound();
+            .FirstAsync(u => u.Id == userId);
 
         return TypedResults.Ok(
             new UserProfileResponse(
                 user.Id,
                 user.Handle,
+                user.AuthSource,
+                UserHandle.Format(user.Handle, user.AuthSource),
                 user.DisplayName,
                 user.AvatarUrl,
                 user.Pronouns,
@@ -131,6 +145,26 @@ public static class UserEndpoints
                 user.DietaryNotes
             )
         );
+    }
+
+    /// <summary>
+    /// Tries "handle@source" first, then the whole string as a handle whose source isn't
+    /// known yet — an internal account's handle may itself contain an "@".
+    /// </summary>
+    private static async Task<int?> FindByProfileHandle(AmsterfamDbContext db, string qualified)
+    {
+        var (handle, authSource) = UserHandle.Parse(qualified);
+        var id = await db
+            .Users.Where(u => u.Handle == handle && u.AuthSource == authSource)
+            .Select(u => (int?)u.Id)
+            .FirstOrDefaultAsync();
+        if (id is not null || authSource is null)
+            return id;
+
+        return await db
+            .Users.Where(u => u.Handle == qualified && u.AuthSource == null)
+            .Select(u => (int?)u.Id)
+            .FirstOrDefaultAsync();
     }
 
     /// <summary>
@@ -166,6 +200,8 @@ public static class UserEndpoints
         new(
             user.Id,
             user.Handle,
+            user.AuthSource,
+            UserHandle.Format(user.Handle, user.AuthSource),
             user.DisplayName,
             user.Email,
             user.AvatarUrl,

@@ -38,9 +38,11 @@ Out of scope (for now): carpool coordination.
 ## Entities
 
 ### User
-- `Id`, `ExternalId` (Authentik subject), `Handle` (synced from the login provider), `DisplayName` (optional nickname, max 100, falls back to `Handle`), `Email`, `AvatarUrl`, `CreatedAt`
+- `Id`, `ExternalId` (Authentik subject), `Handle` (synced from the login provider), `AuthSource` (slug of the user's oldest linked Authentik source, e.g. `discord`, or `internal` for a plain Authentik account; `null` until the first sign-in carrying the claim), `DisplayName` (optional nickname, max 100, falls back to `Handle`), `Email`, `AvatarUrl`, `CreatedAt`
 - Optional "about me" profile fields, all free text unless noted: `Pronouns` (max 40), `Location` (max 100), `Bio` (max 1000), `DietaryNotes` (max 500, for anything the dietary options don't cover)
 - Birthday as `BirthdayDay` + `BirthdayMonth` (set together) and an optional `BirthYear`, so nobody has to share their age. 29 February is allowed without a year.
+- `Handle` is unique per `AuthSource` (unique index on both, nulls not distinct). Together they form the profile handle, `handle@source` (just `handle` while the source is unknown).
+- Known limitation (accepted for now, #78): if a **new** user's handle + source is already taken, their account can't be created and every request fails with a 500 (`HandleTakenException`). Authentik keeps usernames unique, so this takes a rename racing a first sign-in. Handle it when it actually happens. An **existing** user hitting the same clash on sign-in just keeps their old handle.
 - `DietaryOptions`: many-to-many to `DietaryOption` (join table `UserDietaryOptions`)
 - The profile fields are visible to the user themselves, to anyone who is a confirmed member (Attendee/Organiser) of at least one event with them, and to the Organisers of an event they're pending on. They're saved through their own endpoint, separate from name and avatar. `Email` is never shown to others. Profile changes are not tied to an event and aren't logged to any timeline.
 

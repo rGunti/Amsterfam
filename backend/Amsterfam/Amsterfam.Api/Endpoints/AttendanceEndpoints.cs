@@ -51,6 +51,7 @@ public static class AttendanceEndpoints
         // Which link someone came in through is only useful to organisers.
         var attendees = rows.Select(a => new AttendeeResponse(
                 a.UserId,
+                UserHandle.Format(a.User.Handle, a.User.AuthSource),
                 a.User.DisplayName ?? a.User.Handle,
                 a.User.AvatarUrl,
                 a.Role.ToString(),

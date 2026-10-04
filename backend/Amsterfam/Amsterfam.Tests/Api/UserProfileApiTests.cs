@@ -8,8 +8,16 @@ namespace Amsterfam.Tests.Api;
 
 public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 {
-    private async Task<int> MeAsync(HttpClient client) =>
-        (await client.GetFromJsonAsync<UserResponse>("/api/v1/me/"))!.Id;
+    private record Me(int Id, string ProfileUrl);
+
+    private static async Task<Me> MeAsync(HttpClient client)
+    {
+        var me = (await client.GetFromJsonAsync<UserResponse>("/api/v1/me/"))!;
+        return new(me.Id, ProfileUrl(me.ProfileHandle));
+    }
+
+    private static string ProfileUrl(string profileHandle) =>
+        $"/api/v1/users/{Uri.EscapeDataString(profileHandle)}/profile";
 
     /// <summary>Puts each user on one fresh event with the given role.</summary>
     private async Task SeedEventAsync(params (int UserId, AttendanceRole Role)[] members)
@@ -30,7 +38,7 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     [Fact]
     public async Task GetProfile_Returns401_WhenUnauthenticated()
     {
-        var response = await api.CreateClient().GetAsync("/api/v1/users/1/profile");
+        var response = await api.CreateClient().GetAsync(ProfileUrl("anyone"));
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
@@ -38,9 +46,9 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task GetProfile_ReturnsOwnProfile()
     {
         var client = api.CreateClientWithUser("discord|profile-self");
-        var id = await MeAsync(client);
+        var me = await MeAsync(client);
 
-        var response = await client.GetAsync($"/api/v1/users/{id}/profile");
+        var response = await client.GetAsync(me.ProfileUrl);
 
         response.EnsureSuccessStatusCode();
     }
@@ -50,8 +58,8 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     {
         var viewer = api.CreateClientWithUser("discord|profile-viewer");
         var target = api.CreateClientWithUser("discord|profile-target");
-        var viewerId = await MeAsync(viewer);
-        var targetId = await MeAsync(target);
+        var viewerMe = await MeAsync(viewer);
+        var targetMe = await MeAsync(target);
         await target.PutAsJsonAsync("/api/v1/me/", new UpdateUserRequest("Target", null));
         await target.PutAsJsonAsync(
             "/api/v1/me/about",
@@ -63,11 +71,11 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             )
         );
         await SeedEventAsync(
-            (viewerId, AttendanceRole.Organiser),
-            (targetId, AttendanceRole.Attendee)
+            (viewerMe.Id, AttendanceRole.Organiser),
+            (targetMe.Id, AttendanceRole.Attendee)
         );
 
-        var response = await viewer.GetAsync($"/api/v1/users/{targetId}/profile");
+        var response = await viewer.GetAsync(targetMe.ProfileUrl);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();
@@ -86,9 +94,9 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var viewer = api.CreateClientWithUser("discord|profile-stranger-a");
         var target = api.CreateClientWithUser("discord|profile-stranger-b");
         await MeAsync(viewer);
-        var targetId = await MeAsync(target);
+        var targetMe = await MeAsync(target);
 
-        var response = await viewer.GetAsync($"/api/v1/users/{targetId}/profile");
+        var response = await viewer.GetAsync(targetMe.ProfileUrl);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -106,11 +114,11 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var suffix = $"{viewerRole}-{targetRole}";
         var viewer = api.CreateClientWithUser($"discord|profile-pending-{suffix}-v");
         var target = api.CreateClientWithUser($"discord|profile-pending-{suffix}-t");
-        var viewerId = await MeAsync(viewer);
-        var targetId = await MeAsync(target);
-        await SeedEventAsync((viewerId, viewerRole), (targetId, targetRole));
+        var viewerMe = await MeAsync(viewer);
+        var targetMe = await MeAsync(target);
+        await SeedEventAsync((viewerMe.Id, viewerRole), (targetMe.Id, targetRole));
 
-        var response = await viewer.GetAsync($"/api/v1/users/{targetId}/profile");
+        var response = await viewer.GetAsync(targetMe.ProfileUrl);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -120,14 +128,14 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     {
         var organiser = api.CreateClientWithUser("discord|profile-org-sees-pending-o");
         var pending = api.CreateClientWithUser("discord|profile-org-sees-pending-p");
-        var organiserId = await MeAsync(organiser);
-        var pendingId = await MeAsync(pending);
+        var organiserMe = await MeAsync(organiser);
+        var pendingMe = await MeAsync(pending);
         await SeedEventAsync(
-            (organiserId, AttendanceRole.Organiser),
-            (pendingId, AttendanceRole.Pending)
+            (organiserMe.Id, AttendanceRole.Organiser),
+            (pendingMe.Id, AttendanceRole.Pending)
         );
 
-        var response = await organiser.GetAsync($"/api/v1/users/{pendingId}/profile");
+        var response = await organiser.GetAsync(pendingMe.ProfileUrl);
 
         response.EnsureSuccessStatusCode();
     }
@@ -138,17 +146,17 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var organiser = api.CreateClientWithUser("discord|profile-other-event-o");
         var pending = api.CreateClientWithUser("discord|profile-other-event-p");
         var someoneElse = api.CreateClientWithUser("discord|profile-other-event-x");
-        var organiserId = await MeAsync(organiser);
-        var pendingId = await MeAsync(pending);
-        var someoneElseId = await MeAsync(someoneElse);
+        var organiserMe = await MeAsync(organiser);
+        var pendingMe = await MeAsync(pending);
+        var someoneElseMe = await MeAsync(someoneElse);
         // The organiser runs one event; the pending user waits on a different one.
-        await SeedEventAsync((organiserId, AttendanceRole.Organiser));
+        await SeedEventAsync((organiserMe.Id, AttendanceRole.Organiser));
         await SeedEventAsync(
-            (someoneElseId, AttendanceRole.Organiser),
-            (pendingId, AttendanceRole.Pending)
+            (someoneElseMe.Id, AttendanceRole.Organiser),
+            (pendingMe.Id, AttendanceRole.Pending)
         );
 
-        var response = await organiser.GetAsync($"/api/v1/users/{pendingId}/profile");
+        var response = await organiser.GetAsync(pendingMe.ProfileUrl);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -158,8 +166,91 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     {
         var client = api.CreateClientWithUser("discord|profile-unknown");
 
-        var response = await client.GetAsync("/api/v1/users/999999/profile");
+        var response = await client.GetAsync(ProfileUrl("nobody@discord"));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetProfile_FindsUser_ByHandleAndSource()
+    {
+        var viewer = api.CreateClientWithUser("discord|profile-by-source-v", "discord");
+        var target = api.CreateClientWithUser("discord|profile-by-source-t", "discord");
+        var viewerMe = await MeAsync(viewer);
+        var targetMe = await MeAsync(target);
+        await SeedEventAsync(
+            (viewerMe.Id, AttendanceRole.Attendee),
+            (targetMe.Id, AttendanceRole.Attendee)
+        );
+
+        var profile = await viewer.GetFromJsonAsync<UserProfileResponse>(
+            ProfileUrl("Test User discord|profile-by-source-t@discord")
+        );
+
+        Assert.Equal(targetMe.Id, profile!.Id);
+        Assert.Equal("discord", profile.AuthSource);
+    }
+
+    [Fact]
+    public async Task GetProfile_FallsBackToHandleWithAt_WhenSourceIsUnknown()
+    {
+        // An internal account can use an email as username; before its source is known the
+        // whole string is the handle, so "@example.com" must not be read as a source.
+        var viewer = api.CreateClientWithUser("discord|profile-email-handle-v");
+        var viewerMe = await MeAsync(viewer);
+        int targetId;
+        await using (var db = await api.CreateDbContextAsync())
+        {
+            var target = new User
+            {
+                ExternalId = "internal|profile-email-handle-t",
+                Handle = "mila@example.com",
+                Email = "mila@example.com",
+            };
+            db.Users.Add(target);
+            await db.SaveChangesAsync();
+            targetId = target.Id;
+        }
+        await SeedEventAsync(
+            (viewerMe.Id, AttendanceRole.Attendee),
+            (targetId, AttendanceRole.Attendee)
+        );
+
+        var profile = await viewer.GetFromJsonAsync<UserProfileResponse>(
+            ProfileUrl("mila@example.com")
+        );
+
+        Assert.Equal(targetId, profile!.Id);
+    }
+
+    [Fact]
+    public async Task GetProfile_FindsUser_WhoseHandleContainsASlash()
+    {
+        var viewer = api.CreateClientWithUser("discord|profile-slash-handle-v");
+        var viewerMe = await MeAsync(viewer);
+        int targetId;
+        await using (var db = await api.CreateDbContextAsync())
+        {
+            var target = new User
+            {
+                ExternalId = "internal|profile-slash-handle-t",
+                Handle = "a/b",
+                AuthSource = "internal",
+                Email = "slash@example.com",
+            };
+            db.Users.Add(target);
+            await db.SaveChangesAsync();
+            targetId = target.Id;
+        }
+        await SeedEventAsync(
+            (viewerMe.Id, AttendanceRole.Attendee),
+            (targetId, AttendanceRole.Attendee)
+        );
+
+        var profile = await viewer.GetFromJsonAsync<UserProfileResponse>(
+            ProfileUrl("a/b@internal")
+        );
+
+        Assert.Equal(targetId, profile!.Id);
     }
 }

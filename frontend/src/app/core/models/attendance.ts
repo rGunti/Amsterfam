@@ -2,6 +2,8 @@ import { AttendanceRole } from './event';
 
 export interface AttendeeResponse {
   userId: number;
+  /** Key for the profile link, /users/:handle. */
+  profileHandle: string;
   displayName: string;
   avatarUrl: string | null;
   role: AttendanceRole;
