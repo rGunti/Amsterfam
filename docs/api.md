@@ -20,15 +20,18 @@ REST with RPC-style endpoints (`POST` + verb in path) where actions don't map cl
 ```
 GET  /api/v1/me
 PUT  /api/v1/me
+PUT  /api/v1/me/about
 GET  /api/v1/users/{userId}/profile
 GET  /api/v1/dietary-options
 ```
 
-`PUT /me` replaces the whole profile, so send every field:
-`{ displayName, avatarUrl, pronouns, location, bio, birthday: { month, day, year | null } | null, dietaryOptionIds: number[], dietaryNotes }`.
-Text is trimmed and blank becomes `null`. Too-long text, an impossible birthday (e.g. 31 April, or 29 February in a given non-leap year), or an unknown dietary option id returns `400 { error }`.
+`PUT /me` sets `{ displayName, avatarUrl }` only. The display name is trimmed, blank becomes `null`, and it can be at most 100 characters.
 
-`GET /users/{userId}/profile` returns the same "about me" fields plus `id`, `handle`, `displayName` and `avatarUrl`, without `email`. You can only see your own profile and those of people who are confirmed members (Attendee/Organiser) of an event with you; anyone else gets `404`, the same as an unknown id.
+`PUT /me/about` replaces all of the "about me" fields at once:
+`{ pronouns, location, bio, birthday: { month, day, year | null } | null, dietaryOptionIds: number[], dietaryNotes }`.
+They live on their own endpoint so an older client that only knows `PUT /me` can never wipe them. Text is trimmed and blank becomes `null`. Too-long text, an impossible birthday (e.g. 31 April, or 29 February in a given non-leap year), or an unknown dietary option id returns `400 { error }`.
+
+`GET /users/{userId}/profile` returns the same "about me" fields plus `id`, `handle`, `displayName` and `avatarUrl`, without `email`. You can see your own profile, those of people who are confirmed members (Attendee/Organiser) of an event with you, and, as an Organiser, those of people pending on your event. Anyone else gets `404`, the same as an unknown id.
 
 `GET /dietary-options` lists the seeded options as `{ id, key, label }`, in display order.
 

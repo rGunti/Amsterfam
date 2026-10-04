@@ -23,10 +23,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { Observable } from 'rxjs';
 
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { UserProfileDetails } from '../../shared/user-profile-details/user-profile-details';
-import { AboutMeChanges, AboutMeForm } from './about-me-form';
+import { AboutMeForm } from './about-me-form';
 import { PaymentMethodDialog, PaymentMethodDialogData } from './payment-method-dialog';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -34,7 +35,7 @@ import { UserApi } from '../../core/api/user.api';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { PaymentMethodApi } from '../../core/api/payment-method.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
-import { UpdateUserRequest, User, toUpdateRequest } from '../../core/models/user';
+import { MAX_DISPLAY_NAME_LENGTH, UpdateAboutRequest, User } from '../../core/models/user';
 import { PaymentMethod } from '../../core/models/payment-method';
 
 @Component({
@@ -76,7 +77,7 @@ export class Profile implements OnInit {
 
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
-      displayName: ['', [Validators.maxLength(100)]],
+      displayName: ['', [Validators.maxLength(MAX_DISPLAY_NAME_LENGTH)]],
     });
 
     let resizeObserver: ResizeObserver | undefined;
@@ -227,24 +228,21 @@ export class Profile implements OnInit {
 
     const trimmedDisplayName = this.form.getRawValue().displayName.trim();
     this.update(
-      toUpdateRequest(currentUser, {
+      this.userApi.updateMe({
         displayName: trimmedDisplayName.length > 0 ? trimmedDisplayName : null,
+        avatarUrl: currentUser.avatarUrl,
       }),
       () => this.editingName.set(false),
     );
   }
 
-  saveAbout(changes: AboutMeChanges): void {
-    const currentUser = this.user();
-    if (!currentUser) {
-      return;
-    }
-    this.update(toUpdateRequest(currentUser, changes), () => this.editingAbout.set(false));
+  saveAbout(request: UpdateAboutRequest): void {
+    this.update(this.userApi.updateAbout(request), () => this.editingAbout.set(false));
   }
 
-  private update(request: UpdateUserRequest, done: () => void): void {
+  private update(request: Observable<User>, done: () => void): void {
     this.saving.set(true);
-    this.userApi.updateMe(request).subscribe({
+    request.subscribe({
       next: (updated) => {
         this.currentUserService.setUser(updated);
         this.saving.set(false);

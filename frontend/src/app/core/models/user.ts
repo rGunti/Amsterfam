@@ -36,10 +36,13 @@ export interface UserProfile extends ProfileDetails {
   avatarUrl: string | null;
 }
 
-/** PUT /me replaces the whole profile, so every field is sent each time. */
 export interface UpdateUserRequest {
   displayName: string | null;
   avatarUrl: string | null;
+}
+
+/** PUT /me/about replaces all of the "about me" fields at once. */
+export interface UpdateAboutRequest {
   pronouns: string | null;
   location: string | null;
   bio: string | null;
@@ -48,21 +51,7 @@ export interface UpdateUserRequest {
   dietaryNotes: string | null;
 }
 
-/** The current profile as an update request, with `patch` applied on top. */
-export function toUpdateRequest(user: User, patch: Partial<UpdateUserRequest>): UpdateUserRequest {
-  return {
-    displayName: user.displayName,
-    avatarUrl: user.avatarUrl,
-    pronouns: user.pronouns,
-    location: user.location,
-    bio: user.bio,
-    birthday: user.birthday,
-    dietaryOptionIds: user.dietaryOptions.map((o) => o.id),
-    dietaryNotes: user.dietaryNotes,
-    ...patch,
-  };
-}
-
+export const MAX_DISPLAY_NAME_LENGTH = 100;
 export const MAX_PRONOUNS_LENGTH = 40;
 export const MAX_LOCATION_LENGTH = 100;
 export const MAX_DIETARY_NOTES_LENGTH = 500;

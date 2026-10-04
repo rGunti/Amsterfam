@@ -18,9 +18,13 @@ public record UserResponse(
     string? DietaryNotes
 );
 
-public record UpdateUserRequest(
-    string? DisplayName,
-    string? AvatarUrl,
+public record UpdateUserRequest(string? DisplayName, string? AvatarUrl);
+
+/// <summary>
+/// The "about me" fields, saved separately from <see cref="UpdateUserRequest"/> so an older
+/// client that only knows about name and avatar can never wipe them. Replaces all of them.
+/// </summary>
+public record UpdateAboutRequest(
     string? Pronouns = null,
     string? Location = null,
     string? Bio = null,

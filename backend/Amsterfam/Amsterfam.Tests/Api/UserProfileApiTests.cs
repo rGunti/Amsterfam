@@ -52,11 +52,10 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var target = api.CreateClientWithUser("discord|profile-target");
         var viewerId = await MeAsync(viewer);
         var targetId = await MeAsync(target);
+        await target.PutAsJsonAsync("/api/v1/me/", new UpdateUserRequest("Target", null));
         await target.PutAsJsonAsync(
-            "/api/v1/me/",
-            new UpdateUserRequest(
-                "Target",
-                null,
+            "/api/v1/me/about",
+            new UpdateAboutRequest(
                 Pronouns: "she/her",
                 Birthday: new Birthday(3, 1, null),
                 DietaryOptionIds: [1],
@@ -96,19 +95,60 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
     [Theory]
     [InlineData(AttendanceRole.Pending, AttendanceRole.Attendee)]
+    [InlineData(AttendanceRole.Pending, AttendanceRole.Organiser)]
     [InlineData(AttendanceRole.Attendee, AttendanceRole.Pending)]
-    public async Task GetProfile_Returns404_WhenEitherSideIsOnlyPending(
+    [InlineData(AttendanceRole.Pending, AttendanceRole.Pending)]
+    public async Task GetProfile_Returns404_ForPendingUnlessViewerIsOrganiser(
         AttendanceRole viewerRole,
         AttendanceRole targetRole
     )
     {
-        var viewer = api.CreateClientWithUser($"discord|profile-pending-{viewerRole}-v");
-        var target = api.CreateClientWithUser($"discord|profile-pending-{viewerRole}-t");
+        var suffix = $"{viewerRole}-{targetRole}";
+        var viewer = api.CreateClientWithUser($"discord|profile-pending-{suffix}-v");
+        var target = api.CreateClientWithUser($"discord|profile-pending-{suffix}-t");
         var viewerId = await MeAsync(viewer);
         var targetId = await MeAsync(target);
         await SeedEventAsync((viewerId, viewerRole), (targetId, targetRole));
 
         var response = await viewer.GetAsync($"/api/v1/users/{targetId}/profile");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetProfile_OrganiserSeesPendingMemberOfTheirEvent()
+    {
+        var organiser = api.CreateClientWithUser("discord|profile-org-sees-pending-o");
+        var pending = api.CreateClientWithUser("discord|profile-org-sees-pending-p");
+        var organiserId = await MeAsync(organiser);
+        var pendingId = await MeAsync(pending);
+        await SeedEventAsync(
+            (organiserId, AttendanceRole.Organiser),
+            (pendingId, AttendanceRole.Pending)
+        );
+
+        var response = await organiser.GetAsync($"/api/v1/users/{pendingId}/profile");
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task GetProfile_PendingOnOneEvent_DoesNotLeakToOrganiserOfAnother()
+    {
+        var organiser = api.CreateClientWithUser("discord|profile-other-event-o");
+        var pending = api.CreateClientWithUser("discord|profile-other-event-p");
+        var someoneElse = api.CreateClientWithUser("discord|profile-other-event-x");
+        var organiserId = await MeAsync(organiser);
+        var pendingId = await MeAsync(pending);
+        var someoneElseId = await MeAsync(someoneElse);
+        // The organiser runs one event; the pending user waits on a different one.
+        await SeedEventAsync((organiserId, AttendanceRole.Organiser));
+        await SeedEventAsync(
+            (someoneElseId, AttendanceRole.Organiser),
+            (pendingId, AttendanceRole.Pending)
+        );
+
+        var response = await organiser.GetAsync($"/api/v1/users/{pendingId}/profile");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

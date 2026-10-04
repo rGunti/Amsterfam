@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,7 +16,7 @@ import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/co
 /** Requests waiting for approval. Hidden when there are none. */
 @Component({
   selector: 'app-pending-attendees-card',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, MatListModule],
+  imports: [MatButtonModule, MatCardModule, MatIconModule, MatListModule, RouterLink],
   templateUrl: './pending-attendees-card.html',
   styleUrl: './pending-attendees-card.scss',
 })

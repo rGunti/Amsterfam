@@ -17,6 +17,9 @@ public static class UserEndpoints
 
         group.MapGet("/", GetMe);
         group.MapPut("/", UpdateMe).NotLoggedToTimeline("Profile changes aren't tied to an event.");
+        group
+            .MapPut("/about", UpdateAbout)
+            .NotLoggedToTimeline("Profile changes aren't tied to an event.");
 
         app.MapGet("/api/v1/users/{userId:int}/profile", GetProfile).RequireAuthorization();
         app.MapGet("/api/v1/dietary-options", GetDietaryOptions).RequireAuthorization();
@@ -33,6 +36,25 @@ public static class UserEndpoints
 
     private static async Task<IResult> UpdateMe(
         [FromBody] UpdateUserRequest request,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var displayName = Clean(request.DisplayName);
+        if (TooLong("Display name", displayName, User.MaxDisplayNameLength) is { } error)
+            return TypedResults.BadRequest(new { error });
+
+        var user = await currentUser.GetOrCreateAsync();
+        user.DisplayName = displayName;
+        user.AvatarUrl = request.AvatarUrl;
+        await db.SaveChangesAsync();
+
+        await db.Entry(user).Collection(u => u.DietaryOptions).LoadAsync();
+        return TypedResults.Ok(ToResponse(user));
+    }
+
+    private static async Task<IResult> UpdateAbout(
+        [FromBody] UpdateAboutRequest request,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
         TimeProvider time
@@ -62,8 +84,6 @@ public static class UserEndpoints
         var user = await currentUser.GetOrCreateAsync();
         await db.Entry(user).Collection(u => u.DietaryOptions).LoadAsync();
 
-        user.DisplayName = request.DisplayName;
-        user.AvatarUrl = request.AvatarUrl;
         user.Pronouns = pronouns;
         user.Location = location;
         user.Bio = bio;
@@ -87,24 +107,8 @@ public static class UserEndpoints
     {
         var viewer = await currentUser.GetOrCreateAsync();
 
-        // Profiles are only visible to people you're actually on a trip with. Everyone else
-        // gets the same 404 as an unknown id, so ids can't be probed.
-        if (viewer.Id != userId)
-        {
-            var sharesEvent = await db
-                .EventAttendances.Where(a =>
-                    a.UserId == viewer.Id
-                    && (a.Role == AttendanceRole.Attendee || a.Role == AttendanceRole.Organiser)
-                )
-                .AnyAsync(a =>
-                    a.Event.Attendances.Any(o =>
-                        o.UserId == userId
-                        && (o.Role == AttendanceRole.Attendee || o.Role == AttendanceRole.Organiser)
-                    )
-                );
-            if (!sharesEvent)
-                return TypedResults.NotFound();
-        }
+        if (viewer.Id != userId && !await CanSeeProfile(db, viewer.Id, userId))
+            return TypedResults.NotFound();
 
         var user = await db
             .Users.AsNoTracking()
@@ -128,6 +132,26 @@ public static class UserEndpoints
             )
         );
     }
+
+    /// <summary>
+    /// Profiles are visible to people you're actually on a trip with: confirmed members see
+    /// each other, and organisers also see who's pending on their event, to help decide
+    /// whether to confirm them. Everyone else gets the same 404 as an unknown id, so ids
+    /// can't be probed.
+    /// </summary>
+    private static Task<bool> CanSeeProfile(AmsterfamDbContext db, int viewerId, int targetId) =>
+        db.EventAttendances.AnyAsync(v =>
+            v.UserId == viewerId
+            && v.Event.Attendances.Any(t =>
+                t.UserId == targetId
+                && (
+                    (
+                        (v.Role == AttendanceRole.Attendee || v.Role == AttendanceRole.Organiser)
+                        && (t.Role == AttendanceRole.Attendee || t.Role == AttendanceRole.Organiser)
+                    ) || (v.Role == AttendanceRole.Organiser && t.Role == AttendanceRole.Pending)
+                )
+            )
+        );
 
     private static async Task<IResult> GetDietaryOptions(AmsterfamDbContext db)
     {

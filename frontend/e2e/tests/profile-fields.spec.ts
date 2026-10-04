@@ -94,11 +94,9 @@ test.describe('profile fields', () => {
     await joinAndConfirm(request, eventId, organiser, other);
     await joinAndConfirm(request, eventId, organiser, BROWSER_USER);
 
-    const update = await request.put(`${API}/api/v1/me`, {
+    const update = await request.put(`${API}/api/v1/me/about`, {
       headers: asUser(other),
       data: {
-        displayName: null,
-        avatarUrl: null,
         pronouns: 'she/her',
         location: 'Amsterdam',
         bio: null,
@@ -121,5 +119,29 @@ test.describe('profile fields', () => {
     await expect(about.getByText('29 February')).toBeVisible();
     await expect(about.getByText('Vegan')).toBeVisible();
     await expect(page.getByText(`${other}@test.example`)).toBeHidden();
+  });
+
+  test('organiser opens a pending member’s profile from the join links page', async ({
+    page,
+    request,
+  }) => {
+    const pendingUser = `pf-pending-${Date.now()}`;
+    const eventId = await createOpenEvent(request, BROWSER_USER);
+    await joinViaLink(request, eventId, BROWSER_USER, pendingUser);
+
+    const update = await request.put(`${API}/api/v1/me/about`, {
+      headers: asUser(pendingUser),
+      data: { pronouns: 'he/they', dietaryOptionIds: [] },
+    });
+    expect(update.ok()).toBeTruthy();
+
+    await page.goto(`/events/${eventId}/join-links`);
+    const pendingCard = page.locator('mat-card', { hasText: 'Pending attendees' });
+    await pendingCard
+      .getByRole('link', { name: `View Test User ${pendingUser}'s profile` })
+      .click();
+
+    await expect(page).toHaveURL(/\/users\/\d+$/);
+    await expect(page.getByText('he/they')).toBeVisible();
   });
 });

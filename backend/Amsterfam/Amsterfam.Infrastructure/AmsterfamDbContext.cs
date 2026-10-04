@@ -37,6 +37,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         {
             e.HasIndex(u => u.ExternalId).IsUnique();
             e.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(u => u.DisplayName).HasMaxLength(User.MaxDisplayNameLength);
             e.Property(u => u.Pronouns).HasMaxLength(User.MaxPronounsLength);
             e.Property(u => u.Location).HasMaxLength(User.MaxLocationLength);
             e.Property(u => u.Bio).HasMaxLength(User.MaxBioLength);

@@ -138,15 +138,62 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task PutMe_RoundTripsProfileFields()
+    public async Task PutMe_EnforcesDisplayNameLimit()
+    {
+        var client = api.CreateClientWithUser("discord|display-name-limit");
+
+        var atMax = await client.PutAsJsonAsync(
+            "/api/v1/me/",
+            new UpdateUserRequest(new string('x', User.MaxDisplayNameLength), null)
+        );
+        Assert.Equal(HttpStatusCode.OK, atMax.StatusCode);
+
+        var overMax = await client.PutAsJsonAsync(
+            "/api/v1/me/",
+            new UpdateUserRequest(new string('x', User.MaxDisplayNameLength + 1), null)
+        );
+        Assert.Equal(HttpStatusCode.BadRequest, overMax.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutMe_LeavesAboutFieldsAlone()
+    {
+        // An older client (e.g. a PWA still on a cached build) only sends name + avatar.
+        var client = api.CreateClientWithUser("discord|put-me-keeps-about");
+        (
+            await client.PutAsJsonAsync(
+                "/api/v1/me/about",
+                new UpdateAboutRequest(
+                    Pronouns: "he/him",
+                    Birthday: new Birthday(5, 5, null),
+                    DietaryOptionIds: [3]
+                )
+            )
+        ).EnsureSuccessStatusCode();
+
+        var response = await client.PutAsJsonAsync(
+            "/api/v1/me/",
+            new { displayName = "Renamed", avatarUrl = (string?)null }
+        );
+        response.EnsureSuccessStatusCode();
+
+        var user = await (
+            await client.GetAsync("/api/v1/me/")
+        ).Content.ReadFromJsonAsync<UserResponse>();
+        Assert.Equal("Renamed", user!.DisplayName);
+        Assert.Equal("he/him", user.Pronouns);
+        Assert.Equal(new Birthday(5, 5, null), user.Birthday);
+        Assert.Equal(["pescatarian"], user.DietaryOptions.Select(o => o.Key));
+    }
+
+    [Fact]
+    public async Task PutAbout_RoundTripsProfileFields()
     {
         var client = api.CreateClientWithUser("discord|profile-fields");
 
         var response = await client.PutAsJsonAsync(
-            "/api/v1/me/",
-            new UpdateUserRequest(
-                "Sam",
-                null,
+            "/api/v1/me/about",
+            new UpdateAboutRequest(
                 Pronouns: "  they/them ",
                 Location: "Zürich",
                 Bio: "Here for the stroopwafels.",
@@ -169,13 +216,13 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task PutMe_StoresBlankTextAsNull()
+    public async Task PutAbout_StoresBlankTextAsNull()
     {
         var client = api.CreateClientWithUser("discord|profile-blank");
 
         var response = await client.PutAsJsonAsync(
-            "/api/v1/me/",
-            new UpdateUserRequest(null, null, Pronouns: "   ", Bio: "", DietaryNotes: " ")
+            "/api/v1/me/about",
+            new UpdateAboutRequest(Pronouns: "   ", Bio: "", DietaryNotes: " ")
         );
         response.EnsureSuccessStatusCode();
 
@@ -186,21 +233,25 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Theory]
-    [InlineData("pronouns")]
-    [InlineData("location")]
-    [InlineData("bio")]
-    [InlineData("dietaryNotes")]
-    public async Task PutMe_Returns400_WhenTextTooLong(string field)
+    [InlineData("pronouns", User.MaxPronounsLength)]
+    [InlineData("location", User.MaxLocationLength)]
+    [InlineData("bio", User.MaxBioLength)]
+    [InlineData("dietaryNotes", User.MaxDietaryNotesLength)]
+    public async Task PutAbout_EnforcesTextLimit_PerField(string field, int max)
     {
-        var client = api.CreateClientWithUser($"discord|profile-long-{field}");
-        var tooLong = new string('x', User.MaxBioLength + 1);
+        var client = api.CreateClientWithUser($"discord|profile-limit-{field}");
 
-        var response = await client.PutAsJsonAsync(
-            "/api/v1/me/",
-            new Dictionary<string, object?> { [field] = tooLong }
+        var atMax = await client.PutAsJsonAsync(
+            "/api/v1/me/about",
+            new Dictionary<string, object?> { [field] = new string('x', max) }
         );
+        Assert.Equal(HttpStatusCode.OK, atMax.StatusCode);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var overMax = await client.PutAsJsonAsync(
+            "/api/v1/me/about",
+            new Dictionary<string, object?> { [field] = new string('x', max + 1) }
+        );
+        Assert.Equal(HttpStatusCode.BadRequest, overMax.StatusCode);
     }
 
     [Theory]
@@ -210,26 +261,26 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     [InlineData(1, 0, null)]
     [InlineData(1, 1, 1850)]
     [InlineData(1, 1, 2999)]
-    public async Task PutMe_Returns400_ForInvalidBirthday(int month, int day, int? year)
+    public async Task PutAbout_Returns400_ForInvalidBirthday(int month, int day, int? year)
     {
         var client = api.CreateClientWithUser("discord|profile-bad-birthday");
 
         var response = await client.PutAsJsonAsync(
-            "/api/v1/me/",
-            new UpdateUserRequest(null, null, Birthday: new Birthday(month, day, year))
+            "/api/v1/me/about",
+            new UpdateAboutRequest(Birthday: new Birthday(month, day, year))
         );
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task PutMe_AcceptsLeapDay_WithoutYear()
+    public async Task PutAbout_AcceptsLeapDay_WithoutYear()
     {
         var client = api.CreateClientWithUser("discord|profile-leap-day");
 
         var response = await client.PutAsJsonAsync(
-            "/api/v1/me/",
-            new UpdateUserRequest(null, null, Birthday: new Birthday(2, 29, null))
+            "/api/v1/me/about",
+            new UpdateAboutRequest(Birthday: new Birthday(2, 29, null))
         );
         response.EnsureSuccessStatusCode();
 
@@ -238,13 +289,13 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task PutMe_ReplacesDietaryOptions_AndCollapsesDuplicates()
+    public async Task PutAbout_ReplacesDietaryOptions_AndCollapsesDuplicates()
     {
         var client = api.CreateClientWithUser("discord|profile-diet-replace");
 
         var first = await client.PutAsJsonAsync(
-            "/api/v1/me/",
-            new UpdateUserRequest(null, null, DietaryOptionIds: [1, 1, 8, 12])
+            "/api/v1/me/about",
+            new UpdateAboutRequest(DietaryOptionIds: [1, 1, 8, 12])
         );
         first.EnsureSuccessStatusCode();
         Assert.Equal(
@@ -255,8 +306,8 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         );
 
         var second = await client.PutAsJsonAsync(
-            "/api/v1/me/",
-            new UpdateUserRequest(null, null, DietaryOptionIds: [8])
+            "/api/v1/me/about",
+            new UpdateAboutRequest(DietaryOptionIds: [8])
         );
         second.EnsureSuccessStatusCode();
 
@@ -267,13 +318,13 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task PutMe_Returns400_ForUnknownDietaryOption()
+    public async Task PutAbout_Returns400_ForUnknownDietaryOption()
     {
         var client = api.CreateClientWithUser("discord|profile-diet-unknown");
 
         var response = await client.PutAsJsonAsync(
-            "/api/v1/me/",
-            new UpdateUserRequest(null, null, DietaryOptionIds: [1, 9999])
+            "/api/v1/me/about",
+            new UpdateAboutRequest(DietaryOptionIds: [1, 9999])
         );
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

@@ -2,7 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { DietaryOption, UpdateUserRequest, User, UserProfile } from '../models/user';
+import {
+  DietaryOption,
+  UpdateAboutRequest,
+  UpdateUserRequest,
+  User,
+  UserProfile,
+} from '../models/user';
 import { ENVIRONMENT } from '../../../environments/environment.model';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +26,10 @@ export class UserApi {
 
   updateMe(request: UpdateUserRequest): Observable<User> {
     return this.http.put<User>(this.getUrl('/api/v1/me'), request);
+  }
+
+  updateAbout(request: UpdateAboutRequest): Observable<User> {
+    return this.http.put<User>(this.getUrl('/api/v1/me/about'), request);
   }
 
   getProfile(userId: number): Observable<UserProfile> {

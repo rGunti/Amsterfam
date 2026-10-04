@@ -2,6 +2,7 @@ namespace Amsterfam.Core.Entities;
 
 public class User
 {
+    public const int MaxDisplayNameLength = 100;
     public const int MaxPronounsLength = 40;
     public const int MaxLocationLength = 100;
     public const int MaxDietaryNotesLength = 500;

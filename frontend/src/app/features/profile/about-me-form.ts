@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -21,7 +21,7 @@ import {
   MAX_DIETARY_NOTES_LENGTH,
   MAX_LOCATION_LENGTH,
   MAX_PRONOUNS_LENGTH,
-  UpdateUserRequest,
+  UpdateAboutRequest,
   User,
 } from '../../core/models/user';
 import { APP_LOCALE } from '../../shared/app-locale';
@@ -43,6 +43,13 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => ({
   ),
 }));
 
+const MAX_YEAR = new Date().getFullYear();
+
+/** The year to check days against, ignoring one that's half-typed or out of range. */
+function usableYear(year: number | null | undefined): number | null {
+  return year != null && Number.isInteger(year) && year >= 1900 && year <= MAX_YEAR ? year : null;
+}
+
 /** Day and month go together, and the day has to exist in that month (and year, if given). */
 function birthdayValidator(group: AbstractControl): ValidationErrors | null {
   const { month, day, year } = group.value as {
@@ -56,13 +63,8 @@ function birthdayValidator(group: AbstractControl): ValidationErrors | null {
   if (month === null || day === null) {
     return { birthdayIncomplete: true };
   }
-  return day > daysInMonth(month, year) ? { birthdayInvalid: true } : null;
+  return day > daysInMonth(month, usableYear(year)) ? { birthdayInvalid: true } : null;
 }
-
-export type AboutMeChanges = Pick<
-  UpdateUserRequest,
-  'pronouns' | 'location' | 'bio' | 'birthday' | 'dietaryOptionIds' | 'dietaryNotes'
->;
 
 @Component({
   selector: 'app-about-me-form',
@@ -83,12 +85,12 @@ export class AboutMeForm implements OnInit {
 
   readonly user = input.required<User>();
   readonly saving = input(false);
-  readonly save = output<AboutMeChanges>();
+  readonly save = output<UpdateAboutRequest>();
   readonly cancelled = output<void>();
 
   readonly pronounSuggestions = PRONOUN_SUGGESTIONS;
   readonly months = MONTHS;
-  readonly maxYear = new Date().getFullYear();
+  readonly maxYear = MAX_YEAR;
   readonly limits = {
     pronouns: MAX_PRONOUNS_LENGTH,
     location: MAX_LOCATION_LENGTH,
@@ -112,6 +114,8 @@ export class AboutMeForm implements OnInit {
         month: this.fb.control<number | null>(null),
         day: this.fb.control<number | null>(null),
         year: this.fb.control<number | null>(null, [
+          // Whole four-digit years only; a decimal would otherwise reach the API and fail there.
+          Validators.pattern(/^\d{4}$/),
           Validators.min(1900),
           Validators.max(this.maxYear),
         ]),
@@ -126,9 +130,21 @@ export class AboutMeForm implements OnInit {
 
   readonly days = computed(() => {
     const { month, year } = this.birthdayValue();
-    const count = month ? daysInMonth(month, year ?? null) : 31;
+    const count = month ? daysInMonth(month, usableYear(year)) : 31;
     return Array.from({ length: count }, (_, i) => i + 1);
   });
+
+  constructor() {
+    // A day that no longer exists after changing month or year (31 → February) would sit in
+    // the select invisibly; clear it so the empty field asks for a new pick instead.
+    this.form.controls.birthday.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(({ month, day, year }) => {
+        if (month && day && day > daysInMonth(month, usableYear(year))) {
+          this.form.controls.birthday.controls.day.setValue(null);
+        }
+      });
+  }
 
   ngOnInit(): void {
     const user = this.user();
