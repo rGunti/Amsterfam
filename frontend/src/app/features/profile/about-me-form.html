@@ -1,0 +1,121 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="about-form">
+  <div class="field-group">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Pronouns</mat-label>
+      <input matInput formControlName="pronouns" [maxlength]="limits.pronouns" />
+      @if (form.controls.pronouns.hasError('maxlength')) {
+        <mat-error>At most {{ limits.pronouns }} characters</mat-error>
+      }
+    </mat-form-field>
+    <mat-chip-set class="suggestions" aria-label="Pronoun suggestions">
+      @for (suggestion of pronounSuggestions; track suggestion) {
+        <mat-chip
+          role="button"
+          tabindex="0"
+          [highlighted]="form.controls.pronouns.value === suggestion"
+          (click)="usePronouns(suggestion)"
+          (keydown.enter)="usePronouns(suggestion)"
+          (keydown.space)="$event.preventDefault(); usePronouns(suggestion)"
+          >{{ suggestion }}</mat-chip
+        >
+      }
+    </mat-chip-set>
+  </div>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Location</mat-label>
+    <input
+      matInput
+      formControlName="location"
+      placeholder="Where you're based"
+      [maxlength]="limits.location"
+    />
+  </mat-form-field>
+
+  <fieldset class="field-group" formGroupName="birthday">
+    <legend>Birthday</legend>
+    <div class="birthday-row">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="day">
+        <mat-label>Day</mat-label>
+        <mat-select formControlName="day">
+          @for (d of days(); track d) {
+            <mat-option [value]="d">{{ d }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="month">
+        <mat-label>Month</mat-label>
+        <mat-select formControlName="month">
+          @for (m of months; track m.value) {
+            <mat-option [value]="m.value">{{ m.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="year">
+        <mat-label>Year</mat-label>
+        <input
+          matInput
+          type="number"
+          formControlName="year"
+          placeholder="Optional"
+          min="1900"
+          [max]="maxYear"
+        />
+      </mat-form-field>
+    </div>
+    @if (form.controls.birthday.hasError('birthdayIncomplete')) {
+      <mat-error>Pick both a day and a month.</mat-error>
+    } @else if (form.controls.birthday.hasError('birthdayInvalid')) {
+      <mat-error>That month doesn't have that many days.</mat-error>
+    } @else if (form.controls.birthday.controls.year.invalid) {
+      <mat-error>Year must be between 1900 and {{ maxYear }}.</mat-error>
+    }
+    @if (form.controls.birthday.value.month !== null || form.controls.birthday.value.day !== null) {
+      <button mat-button type="button" class="clear" (click)="clearBirthday()">
+        Clear birthday
+      </button>
+    }
+  </fieldset>
+
+  <fieldset class="field-group">
+    <legend>Dietary needs &amp; allergies</legend>
+    @if (dietaryOptionsFailed()) {
+      <p class="hint">Couldn't load the options. You can still use the notes below.</p>
+    } @else {
+      <div class="dietary-options">
+        @for (option of dietaryOptions(); track option.id) {
+          <mat-checkbox
+            [checked]="selectedDietaryIds().has(option.id)"
+            (change)="toggleDietary(option.id, $event.checked)"
+            >{{ option.label }}</mat-checkbox
+          >
+        }
+      </div>
+    }
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Anything else?</mat-label>
+      <textarea
+        matInput
+        formControlName="dietaryNotes"
+        rows="2"
+        [maxlength]="limits.dietaryNotes"
+      ></textarea>
+      <mat-hint align="end"
+        >{{ form.controls.dietaryNotes.value?.length ?? 0 }} / {{ limits.dietaryNotes }}</mat-hint
+      >
+    </mat-form-field>
+  </fieldset>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>About me</mat-label>
+    <textarea matInput formControlName="bio" rows="4" [maxlength]="limits.bio"></textarea>
+    <mat-hint align="end">{{ form.controls.bio.value?.length ?? 0 }} / {{ limits.bio }}</mat-hint>
+  </mat-form-field>
+
+  <div class="actions">
+    <button mat-button type="button" (click)="cancelled.emit()" [disabled]="saving()">
+      Cancel
+    </button>
+    <button mat-flat-button type="submit" [disabled]="form.invalid || saving()">Save</button>
+  </div>
+</form>

@@ -33,7 +33,14 @@
                 <span class="check"><mat-icon>check</mat-icon></span>
               }
             </button>
-            <span matListItemTitle>{{ attendee.displayName }}</span>
+            <span matListItemTitle>
+              <a
+                class="profile-link"
+                [routerLink]="['/users', attendee.userId]"
+                [attr.aria-label]="'View ' + attendee.displayName + '\'s profile'"
+                >{{ attendee.displayName }}</a
+              >
+            </span>
             @if (attendee.requestedOrganiser || attendee.joinLinkLabel) {
               <span
                 matListItemLine

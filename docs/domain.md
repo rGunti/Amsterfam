@@ -38,7 +38,16 @@ Out of scope (for now): carpool coordination.
 ## Entities
 
 ### User
-- `Id`, `ExternalId` (Authentik subject), `DisplayName`, `Email`, `AvatarUrl`, `CreatedAt`
+- `Id`, `ExternalId` (Authentik subject), `Handle` (synced from the login provider), `DisplayName` (optional nickname, max 100, falls back to `Handle`), `Email`, `AvatarUrl`, `CreatedAt`
+- Optional "about me" profile fields, all free text unless noted: `Pronouns` (max 40), `Location` (max 100), `Bio` (max 1000), `DietaryNotes` (max 500, for anything the dietary options don't cover)
+- Birthday as `BirthdayDay` + `BirthdayMonth` (set together) and an optional `BirthYear`, so nobody has to share their age. 29 February is allowed without a year.
+- `DietaryOptions`: many-to-many to `DietaryOption` (join table `UserDietaryOptions`)
+- The profile fields are visible to the user themselves, to anyone who is a confirmed member (Attendee/Organiser) of at least one event with them, and to the Organisers of an event they're pending on. They're saved through their own endpoint, separate from name and avatar. `Email` is never shown to others. Profile changes are not tied to an event and aren't logged to any timeline.
+
+### DietaryOption
+Pre-made dietary needs and allergies users can tick on their profile (vegetarian, vegan, halal, gluten-free, nut allergy, …).
+- `Id` (fixed, never reused), `Key` (stable slug, unique), `Label`, `SortOrder`
+- Seeded by the EF Core migrations from `DietaryOption.Seed`; adding an option means adding it there and creating a migration.
 
 ### PaymentMethod
 Per user, list of preferred ways for others to pay them back (splitting costs). No sensitive banking data (IBAN, card numbers) is stored — links and a free-text description only.

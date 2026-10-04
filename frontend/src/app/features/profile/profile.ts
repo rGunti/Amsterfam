@@ -23,8 +23,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { Observable } from 'rxjs';
 
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
+import { UserProfileDetails } from '../../shared/user-profile-details/user-profile-details';
+import { AboutMeForm } from './about-me-form';
 import { PaymentMethodDialog, PaymentMethodDialogData } from './payment-method-dialog';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -32,7 +35,7 @@ import { UserApi } from '../../core/api/user.api';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { PaymentMethodApi } from '../../core/api/payment-method.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
-import { User } from '../../core/models/user';
+import { MAX_DISPLAY_NAME_LENGTH, UpdateAboutRequest, User } from '../../core/models/user';
 import { PaymentMethod } from '../../core/models/payment-method';
 
 @Component({
@@ -45,6 +48,8 @@ import { PaymentMethod } from '../../core/models/payment-method';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    UserProfileDetails,
+    AboutMeForm,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
@@ -62,6 +67,7 @@ export class Profile implements OnInit {
   readonly user = this.currentUserService.user;
   readonly saving = signal(false);
   readonly editingName = signal(false);
+  readonly editingAbout = signal(false);
   readonly form: FormGroup<{ displayName: FormControl<string> }>;
   readonly paymentMethods = signal<PaymentMethod[]>([]);
   readonly paymentMethodsLoading = signal(true);
@@ -71,7 +77,7 @@ export class Profile implements OnInit {
 
   constructor() {
     this.form = inject(FormBuilder).nonNullable.group({
-      displayName: ['', [Validators.maxLength(100)]],
+      displayName: ['', [Validators.maxLength(MAX_DISPLAY_NAME_LENGTH)]],
     });
 
     let resizeObserver: ResizeObserver | undefined;
@@ -220,24 +226,33 @@ export class Profile implements OnInit {
       return;
     }
 
-    this.saving.set(true);
     const trimmedDisplayName = this.form.getRawValue().displayName.trim();
-    this.userApi
-      .updateMe({
+    this.update(
+      this.userApi.updateMe({
         displayName: trimmedDisplayName.length > 0 ? trimmedDisplayName : null,
         avatarUrl: currentUser.avatarUrl,
-      })
-      .subscribe({
-        next: (updated) => {
-          this.currentUserService.setUser(updated);
-          this.saving.set(false);
-          this.editingName.set(false);
-          this.snackBar.open('Profile updated', 'Dismiss', { duration: 3000 });
-        },
-        error: () => {
-          this.saving.set(false);
-          this.snackBar.open('Could not update profile', 'Dismiss', { duration: 3000 });
-        },
-      });
+      }),
+      () => this.editingName.set(false),
+    );
+  }
+
+  saveAbout(request: UpdateAboutRequest): void {
+    this.update(this.userApi.updateAbout(request), () => this.editingAbout.set(false));
+  }
+
+  private update(request: Observable<User>, done: () => void): void {
+    this.saving.set(true);
+    request.subscribe({
+      next: (updated) => {
+        this.currentUserService.setUser(updated);
+        this.saving.set(false);
+        done();
+        this.snackBar.open('Profile updated', 'Dismiss', { duration: 3000 });
+      },
+      error: () => {
+        this.saving.set(false);
+        this.snackBar.open('Could not update profile', 'Dismiss', { duration: 3000 });
+      },
+    });
   }
 }

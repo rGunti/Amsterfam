@@ -117,3 +117,14 @@ mat-list-item.selected {
     line-height: 16px;
   }
 }
+
+.profile-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--mat-sys-outline);
+  text-underline-offset: 3px;
+
+  &:hover {
+    text-decoration-color: currentColor;
+  }
+}

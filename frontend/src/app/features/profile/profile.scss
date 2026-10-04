@@ -134,3 +134,9 @@
   display: flex;
   gap: 4px;
 }
+
+.card-header-with-action {
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+}
