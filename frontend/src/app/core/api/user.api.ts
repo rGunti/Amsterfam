@@ -32,8 +32,10 @@ export class UserApi {
     return this.http.put<User>(this.getUrl('/api/v1/me/about'), request);
   }
 
-  getProfile(userId: number): Observable<UserProfile> {
-    return this.http.get<UserProfile>(this.getUrl(`/api/v1/users/${userId}/profile`));
+  getProfile(profileHandle: string): Observable<UserProfile> {
+    return this.http.get<UserProfile>(
+      this.getUrl(`/api/v1/users/${encodeURIComponent(profileHandle)}/profile`),
+    );
   }
 
   getDietaryOptions(): Observable<DietaryOption[]> {

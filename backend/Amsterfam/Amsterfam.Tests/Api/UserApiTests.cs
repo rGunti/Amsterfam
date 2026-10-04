@@ -53,6 +53,75 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task GetMe_StoresAuthSource_AndReturnsQualifiedHandle()
+    {
+        var client = api.CreateClientWithUser("discord|auth-source-new", "discord");
+
+        var user = await client.GetFromJsonAsync<UserResponse>("/api/v1/me/");
+
+        Assert.Equal("discord", user!.AuthSource);
+        Assert.Equal("Test User discord|auth-source-new@discord", user.ProfileHandle);
+    }
+
+    [Fact]
+    public async Task GetMe_WithoutAuthSourceClaim_KeepsTheStoredOne()
+    {
+        const string externalId = "discord|auth-source-kept";
+        await api.CreateClientWithUser(externalId, "discord").GetAsync("/api/v1/me/");
+
+        var user = await api.CreateClientWithUser(externalId)
+            .GetFromJsonAsync<UserResponse>("/api/v1/me/");
+
+        Assert.Equal("discord", user!.AuthSource);
+    }
+
+    [Fact]
+    public async Task GetMe_ResyncsAuthSource_WhenTheClaimChanges()
+    {
+        const string externalId = "discord|auth-source-changed";
+        await api.CreateClientWithUser(externalId, "internal").GetAsync("/api/v1/me/");
+
+        var user = await api.CreateClientWithUser(externalId, "discord")
+            .GetFromJsonAsync<UserResponse>("/api/v1/me/");
+
+        Assert.Equal("discord", user!.AuthSource);
+    }
+
+    [Fact]
+    public async Task GetMe_KeepsOldHandle_WhenTheNewOneIsTakenByAnotherUser()
+    {
+        // The test scheme's handle is "Test User {externalId}"; someone else already holds it.
+        const string externalId = "discord|handle-collision";
+        await using (var db = await api.CreateDbContextAsync())
+        {
+            db.Users.AddRange(
+                new User
+                {
+                    ExternalId = externalId,
+                    Handle = "Old Handle",
+                    AuthSource = "discord",
+                    Email = $"{externalId}@test.example",
+                },
+                new User
+                {
+                    ExternalId = "discord|handle-collision-other",
+                    Handle = $"Test User {externalId}",
+                    AuthSource = "discord",
+                    Email = "other@test.example",
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        var response = await api.CreateClientWithUser(externalId, "discord")
+            .GetAsync("/api/v1/me/");
+
+        response.EnsureSuccessStatusCode();
+        var user = await response.Content.ReadFromJsonAsync<UserResponse>();
+        Assert.Equal("Old Handle", user!.Handle);
+    }
+
+    [Fact]
     public async Task GetMe_ReturnsSameUser_OnSubsequentRequests()
     {
         var client = api.CreateClientWithUser("discord|same-user");

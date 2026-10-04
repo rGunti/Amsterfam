@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Amsterfam.Api.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,18 +16,23 @@ public class TestAuthHandler(
     public const string SchemeName = "Test";
     public const string UserIdHeader = "X-Test-User-ExternalId";
 
+    /// <summary>Optional; when set it's passed through as the auth_source claim.</summary>
+    public const string AuthSourceHeader = "X-Test-User-AuthSource";
+
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (!Request.Headers.TryGetValue(UserIdHeader, out var userId))
             return Task.FromResult(AuthenticateResult.Fail("Missing test user header."));
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim("sub", userId.ToString()),
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Name, $"Test User {userId}"),
             new Claim(ClaimTypes.Email, $"{userId}@test.example"),
         };
+        if (Request.Headers.TryGetValue(AuthSourceHeader, out var authSource))
+            claims.Add(new Claim(CurrentUserService.AuthSourceClaim, authSource.ToString()));
 
         var identity = new ClaimsIdentity(claims, SchemeName);
         var principal = new ClaimsPrincipal(identity);

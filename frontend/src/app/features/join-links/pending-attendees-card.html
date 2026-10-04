@@ -36,7 +36,7 @@
             <span matListItemTitle>
               <a
                 class="profile-link"
-                [routerLink]="['/users', attendee.userId]"
+                [routerLink]="['/users', attendee.profileHandle]"
                 [attr.aria-label]="'View ' + attendee.displayName + '\'s profile'"
                 >{{ attendee.displayName }}</a
               >

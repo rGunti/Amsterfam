@@ -50,10 +50,12 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         });
     }
 
-    public HttpClient CreateClientWithUser(string externalId)
+    public HttpClient CreateClientWithUser(string externalId, string? authSource = null)
     {
         var client = CreateClient();
         client.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, externalId);
+        if (authSource is not null)
+            client.DefaultRequestHeaders.Add(TestAuthHandler.AuthSourceHeader, authSource);
         return client;
     }
 

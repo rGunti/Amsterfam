@@ -7,10 +7,18 @@ public class User
     public const int MaxLocationLength = 100;
     public const int MaxDietaryNotesLength = 500;
     public const int MaxBioLength = 1000;
+    public const int MaxAuthSourceLength = 50;
 
     public int Id { get; set; }
     public required string ExternalId { get; set; }
     public required string Handle { get; set; }
+
+    /// <summary>
+    /// Slug of the Authentik source the account comes from (e.g. "discord"), or "internal" for
+    /// a plain Authentik account. Handle is unique per source. Null until the first sign-in
+    /// that carries the claim.
+    /// </summary>
+    public string? AuthSource { get; set; }
     public string? DisplayName { get; set; }
     public required string Email { get; set; }
     public string? AvatarUrl { get; set; }

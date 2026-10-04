@@ -23,6 +23,10 @@ export interface ProfileDetails {
 export interface User extends ProfileDetails {
   id: number;
   handle: string;
+  /** Sign-in source slug, e.g. "discord"; null until known. Handles are unique per source. */
+  authSource: string | null;
+  /** "handle@source", the key in profile links (/users/:handle). */
+  profileHandle: string;
   displayName: string | null;
   email: string;
   avatarUrl: string | null;
@@ -32,6 +36,8 @@ export interface User extends ProfileDetails {
 export interface UserProfile extends ProfileDetails {
   id: number;
   handle: string;
+  authSource: string | null;
+  profileHandle: string;
   displayName: string | null;
   avatarUrl: string | null;
 }

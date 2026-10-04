@@ -2,6 +2,7 @@ namespace Amsterfam.Api.Dtos;
 
 public record AttendeeResponse(
     int UserId,
+    string ProfileHandle,
     string DisplayName,
     string? AvatarUrl,
     string Role,
