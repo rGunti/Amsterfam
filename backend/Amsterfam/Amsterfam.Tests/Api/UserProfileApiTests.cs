@@ -222,4 +222,35 @@ public class UserProfileApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         Assert.Equal(targetId, profile!.Id);
     }
+
+    [Fact]
+    public async Task GetProfile_FindsUser_WhoseHandleContainsASlash()
+    {
+        var viewer = api.CreateClientWithUser("discord|profile-slash-handle-v");
+        var viewerMe = await MeAsync(viewer);
+        int targetId;
+        await using (var db = await api.CreateDbContextAsync())
+        {
+            var target = new User
+            {
+                ExternalId = "internal|profile-slash-handle-t",
+                Handle = "a/b",
+                AuthSource = "internal",
+                Email = "slash@example.com",
+            };
+            db.Users.Add(target);
+            await db.SaveChangesAsync();
+            targetId = target.Id;
+        }
+        await SeedEventAsync(
+            (viewerMe.Id, AttendanceRole.Attendee),
+            (targetId, AttendanceRole.Attendee)
+        );
+
+        var profile = await viewer.GetFromJsonAsync<UserProfileResponse>(
+            ProfileUrl("a/b@internal")
+        );
+
+        Assert.Equal(targetId, profile!.Id);
+    }
 }

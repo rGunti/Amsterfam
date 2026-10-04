@@ -104,13 +104,10 @@ public class CurrentUserService(
         {
             // A parallel request for the same new user (the app fires /me and /events at
             // once on first sign-in) inserted the row first. Use theirs. Anything else is a
-            // genuine handle clash with another user, which we can't resolve here.
+            // genuine handle clash with another user (see HandleTakenException).
             db.Entry(user).State = EntityState.Detached;
             return await db.Users.FirstOrDefaultAsync(u => u.ExternalId == externalId, ct)
-                ?? throw new InvalidOperationException(
-                    $"Handle {UserHandle.Format(handle, authSource)} is already taken.",
-                    ex
-                );
+                ?? throw new HandleTakenException(handle, authSource, ex);
         }
 
         return user;

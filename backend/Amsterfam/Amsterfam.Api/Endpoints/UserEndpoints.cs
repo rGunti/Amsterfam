@@ -111,6 +111,11 @@ public static class UserEndpoints
     {
         var viewer = await currentUser.GetOrCreateAsync();
 
+        // Routing decodes every escape in a route value except %2F, which would otherwise
+        // be a path separator. Handles may contain "/", so undo just that one; decoding
+        // everything again would mangle a handle that literally contains "%41".
+        handle = handle.Replace("%2F", "/", StringComparison.OrdinalIgnoreCase);
+
         var userId = await FindByProfileHandle(db, handle);
         if (userId is null)
             return TypedResults.NotFound();

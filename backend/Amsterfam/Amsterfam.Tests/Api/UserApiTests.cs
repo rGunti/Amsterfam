@@ -1,9 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using Amsterfam.Api.Dtos;
+using Amsterfam.Api.Services;
 using Amsterfam.Core.Entities;
 using Amsterfam.Tests.Infrastructure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Amsterfam.Tests.Api;
 
@@ -119,6 +123,49 @@ public class UserApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         response.EnsureSuccessStatusCode();
         var user = await response.Content.ReadFromJsonAsync<UserResponse>();
         Assert.Equal("Old Handle", user!.Handle);
+    }
+
+    [Fact]
+    public async Task NewUser_WhoseHandleBelongsToSomeoneElse_ThrowsHandleTaken()
+    {
+        // Accepted risk (#78): nothing resolves this yet, so it surfaces as an error (a 500
+        // over HTTP). Called directly so the test can see which exception it is.
+        const string externalId = "discord|handle-taken-new";
+        await using (var seed = await api.CreateDbContextAsync())
+        {
+            seed.Users.Add(
+                new User
+                {
+                    ExternalId = "discord|handle-taken-holder",
+                    Handle = "taken",
+                    AuthSource = "discord",
+                    Email = "holder@test.example",
+                }
+            );
+            await seed.SaveChangesAsync();
+        }
+
+        var principal = new ClaimsPrincipal(
+            new ClaimsIdentity(
+                [
+                    new Claim("sub", externalId),
+                    new Claim("preferred_username", "taken"),
+                    new Claim(CurrentUserService.AuthSourceClaim, "discord"),
+                ],
+                "Test"
+            )
+        );
+        var accessor = new HttpContextAccessor
+        {
+            HttpContext = new DefaultHttpContext { User = principal },
+        };
+        await using var db = await api.CreateDbContextAsync();
+        var service = new CurrentUserService(accessor, db, NullLogger<CurrentUserService>.Instance);
+
+        var ex = await Assert.ThrowsAsync<HandleTakenException>(() => service.GetOrCreateAsync());
+        Assert.Equal("taken@discord", ex.ProfileHandle);
+        await using var check = await api.CreateDbContextAsync();
+        Assert.False(await check.Users.AnyAsync(u => u.ExternalId == externalId));
     }
 
     [Fact]

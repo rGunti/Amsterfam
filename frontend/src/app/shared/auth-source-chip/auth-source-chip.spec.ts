@@ -21,11 +21,24 @@ describe('AuthSourceChip', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('shows the source label', () => {
-    expect(render('discord').textContent?.trim()).toBe('Discord');
+  it('shows the Discord mark, labelled for screen readers', () => {
+    const el = render('discord');
+    expect(el.querySelector('svg.discord')).not.toBeNull();
+    expect(el.querySelector('mat-icon')).toBeNull();
+    expect(el.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Discord');
+  });
+
+  it('shows a Material icon for internal accounts', () => {
+    const el = render('internal');
+    expect(el.querySelector('mat-icon')?.textContent?.trim()).toBe('badge');
+    expect(el.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Internal');
+  });
+
+  it('falls back to a generic icon for other sources', () => {
+    expect(render('google').querySelector('mat-icon')?.textContent?.trim()).toBe('login');
   });
 
   it('renders nothing while the source is unknown', () => {
-    expect(render(null).querySelector('.chip')).toBeNull();
+    expect(render(null).querySelector('[role="img"]')).toBeNull();
   });
 });
