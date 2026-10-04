@@ -1,0 +1,66 @@
+.about-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+
+  legend {
+    padding: 0;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.suggestions mat-chip {
+  cursor: pointer;
+}
+
+.birthday-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .day {
+    flex: 0 0 96px;
+  }
+
+  .month {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+
+  // Wraps onto its own line on narrow phones rather than squeezing the select labels.
+  .year {
+    flex: 1 0 96px;
+  }
+}
+
+.clear {
+  align-self: flex-start;
+}
+
+.dietary-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.hint {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

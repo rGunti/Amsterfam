@@ -78,6 +78,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'users/:id',
+    loadComponent: () => import('./features/users/user-profile').then((m) => m.UserProfile),
+    canActivate: [authGuard],
+  },
+  {
     path: 'auth/callback',
     loadComponent: () => import('./features/auth/auth-callback').then((m) => m.AuthCallback),
   },

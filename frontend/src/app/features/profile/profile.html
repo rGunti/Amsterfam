@@ -59,6 +59,38 @@
   </mat-card>
 
   <mat-card class="profile-card">
+    <mat-card-header class="card-header-with-action">
+      <mat-card-title>About me</mat-card-title>
+      @if (!editingAbout()) {
+        <button
+          mat-icon-button
+          type="button"
+          aria-label="Edit about me"
+          matTooltip="Edit about me"
+          (click)="editingAbout.set(true)"
+        >
+          <mat-icon>edit</mat-icon>
+        </button>
+      }
+    </mat-card-header>
+    <mat-card-content>
+      @if (editingAbout()) {
+        <app-about-me-form
+          [user]="currentUser"
+          [saving]="saving()"
+          (save)="saveAbout($event)"
+          (cancelled)="editingAbout.set(false)"
+        />
+      } @else {
+        <app-user-profile-details
+          [profile]="currentUser"
+          emptyText="Tell the group a bit about yourself: pronouns, birthday, dietary needs and more. Only people on a trip with you can see this."
+        />
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="profile-card">
     <mat-card-header>
       <mat-card-title>Payment methods</mat-card-title>
     </mat-card-header>

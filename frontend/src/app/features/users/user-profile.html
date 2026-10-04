@@ -1,0 +1,43 @@
+@if (loading()) {
+  <p class="status">Loading…</p>
+} @else if (profile(); as p) {
+  <mat-card class="profile-card">
+    <div class="profile-header">
+      <div class="avatar-frame">
+        @if (p.avatarUrl) {
+          <img [src]="p.avatarUrl" alt="" class="avatar" />
+        } @else {
+          <mat-icon class="avatar-placeholder">account_circle</mat-icon>
+        }
+      </div>
+      <div class="profile-header-text">
+        <mat-card-title>{{ p.displayName ?? p.handle }}</mat-card-title>
+        <p class="handle">&#64;{{ p.handle }}</p>
+      </div>
+    </div>
+  </mat-card>
+
+  <mat-card class="profile-card">
+    <mat-card-header>
+      <mat-card-title>About</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <app-user-profile-details
+        [profile]="p"
+        [emptyText]="(p.displayName ?? p.handle) + ' hasn\'t shared anything yet.'"
+      />
+    </mat-card-content>
+  </mat-card>
+} @else if (unavailable()) {
+  <mat-card class="profile-card">
+    <mat-card-content class="unavailable">
+      <mat-icon>person_off</mat-icon>
+      <p>
+        This profile isn't available. You can only see the profiles of people on a trip with you.
+      </p>
+      <button mat-button type="button" (click)="back()">
+        <mat-icon>arrow_back</mat-icon> Go back
+      </button>
+    </mat-card-content>
+  </mat-card>
+}

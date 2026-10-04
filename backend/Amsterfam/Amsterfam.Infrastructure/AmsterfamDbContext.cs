@@ -29,6 +29,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<ExpenseShare> ExpenseShares => Set<ExpenseShare>();
     public DbSet<ExpensePayment> ExpensePayments => Set<ExpensePayment>();
+    public DbSet<DietaryOption> DietaryOptions => Set<DietaryOption>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +37,28 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
         {
             e.HasIndex(u => u.ExternalId).IsUnique();
             e.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(u => u.Pronouns).HasMaxLength(User.MaxPronounsLength);
+            e.Property(u => u.Location).HasMaxLength(User.MaxLocationLength);
+            e.Property(u => u.Bio).HasMaxLength(User.MaxBioLength);
+            e.Property(u => u.DietaryNotes).HasMaxLength(User.MaxDietaryNotesLength);
+            e.HasMany(u => u.DietaryOptions)
+                .WithMany(o => o.Users)
+                .UsingEntity(j => j.ToTable("UserDietaryOptions"));
+        });
+
+        modelBuilder.Entity<DietaryOption>(e =>
+        {
+            e.Property(o => o.Id).ValueGeneratedNever();
+            e.HasIndex(o => o.Key).IsUnique();
+            e.HasData(
+                DietaryOption.Seed.Select(o => new
+                {
+                    o.Id,
+                    o.Key,
+                    o.Label,
+                    o.SortOrder,
+                })
+            );
         });
 
         modelBuilder.Entity<Event>(e =>

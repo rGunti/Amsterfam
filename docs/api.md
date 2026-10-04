@@ -20,7 +20,17 @@ REST with RPC-style endpoints (`POST` + verb in path) where actions don't map cl
 ```
 GET  /api/v1/me
 PUT  /api/v1/me
+GET  /api/v1/users/{userId}/profile
+GET  /api/v1/dietary-options
 ```
+
+`PUT /me` replaces the whole profile, so send every field:
+`{ displayName, avatarUrl, pronouns, location, bio, birthday: { month, day, year | null } | null, dietaryOptionIds: number[], dietaryNotes }`.
+Text is trimmed and blank becomes `null`. Too-long text, an impossible birthday (e.g. 31 April, or 29 February in a given non-leap year), or an unknown dietary option id returns `400 { error }`.
+
+`GET /users/{userId}/profile` returns the same "about me" fields plus `id`, `handle`, `displayName` and `avatarUrl`, without `email`. You can only see your own profile and those of people who are confirmed members (Attendee/Organiser) of an event with you; anyone else gets `404`, the same as an unknown id.
+
+`GET /dietary-options` lists the seeded options as `{ id, key, label }`, in display order.
 
 ### Payment Methods
 ```
