@@ -1,0 +1,78 @@
+:host {
+  display: block;
+}
+
+.post {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+
+  &.post-new {
+    border-color: var(--mat-sys-primary);
+  }
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.avatar {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-weight: 500;
+}
+
+.post-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.author {
+  font-weight: 500;
+}
+
+.time {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.new-label {
+  color: var(--mat-sys-primary);
+  font-weight: 500;
+}
+
+.post-menu {
+  flex: none;
+  margin: -8px -8px -8px 0;
+}
+
+.post-title {
+  margin: 0 0 8px;
+  font: var(--mat-sys-title-large);
+
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

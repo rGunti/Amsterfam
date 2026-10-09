@@ -36,6 +36,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IEventBalanceCheck, ExpenseBalanceCheck>();
 builder.Services.AddScoped<EventAutoTransitioner>();
 builder.Services.AddScoped<EventLog>();
+builder.Services.AddScoped<NewsPublisher>();
 
 builder
     .Services.AddOptions<AutoTransitionOptions>()
@@ -130,6 +131,7 @@ app.MapDatePollEndpoints();
 app.MapPaymentMethodEndpoints();
 app.MapTimelineEndpoints();
 app.MapExpenseEndpoints();
+app.MapNewsEndpoints();
 
 app.Run();
 

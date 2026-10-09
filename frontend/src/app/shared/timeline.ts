@@ -206,6 +206,19 @@ function describeParts(
       return { icon: 'link_off', parts: t`${actor} revoked the join link “${data['label']}”` };
     case 'JoinLinkRegenerated':
       return { icon: 'autorenew', parts: t`${actor} regenerated the join link “${data['label']}”` };
+    case 'NewsPosted':
+    case 'NewsEdited':
+    case 'NewsDeleted': {
+      const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : null;
+      const quoted = title ? `: “${title}”` : '';
+      const verb =
+        entry.type === 'NewsPosted'
+          ? 'posted news'
+          : entry.type === 'NewsEdited'
+            ? 'edited a news post'
+            : 'deleted a news post';
+      return { icon: 'campaign', parts: t`${actor} ${verb}${quoted}` };
+    }
     case 'ExpenseAdded':
       return {
         icon: 'receipt_long',

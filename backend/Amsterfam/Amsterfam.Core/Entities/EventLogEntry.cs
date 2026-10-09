@@ -73,6 +73,9 @@ public enum EventLogType
     ExpenseDeleted,
     PaymentRecorded,
     PaymentDeleted,
+    NewsPosted,
+    NewsEdited,
+    NewsDeleted,
 }
 
 public enum EventLogVisibility

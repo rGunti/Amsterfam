@@ -6,6 +6,7 @@ import {
   ExternalLinkDialog,
   ExternalLinkDialogData,
 } from '../external-link-dialog/external-link-dialog';
+import { isPlainLeftClick } from '../external-link';
 import { linkify } from '../linkify';
 
 /**
@@ -56,7 +57,7 @@ export class LinkifiedText {
   protected readonly segments = computed(() => linkify(this.text()));
 
   protected onClick(event: MouseEvent, href: string): void {
-    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+    if (!isPlainLeftClick(event)) {
       return;
     }
     event.preventDefault();

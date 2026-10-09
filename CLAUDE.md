@@ -98,4 +98,5 @@ dotnet ef database update
 - The **comfort & consent preference questions** (e.g. hugs, photos, support at nights out) are a deliberate, thoughtful feature. Treat them with care.
 - **Cost tracking** is per bed-night occupied, derived from BedAssignments.
 - **Expenses** (ADR-013) are separate, Splitwise-style shared spending: one currency per event, shares stored as resolved cents, balances computed on read.
+- **News** (ADR-014): organisers post Markdown, confirmed members read. Posts go live only through `NewsPublisher.Publish`; timeline entries never contain the body.
 - Primary login is **Discord OAuth** via Authentik. Do not suggest replacing Authentik with a simpler auth approach unless explicitly asked.

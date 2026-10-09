@@ -25,6 +25,7 @@ import {
   canManageJoinLinks,
   canUseDatePoll,
   canViewExpenses,
+  canViewNews,
   canViewTimeline,
   statusClass,
   statusIcon,
@@ -78,6 +79,7 @@ export class App {
   protected readonly statusClass = statusClass;
   protected readonly canUseDatePoll = canUseDatePoll;
   protected readonly canManageJoinLinks = canManageJoinLinks;
+  protected readonly canViewNews = canViewNews;
   protected readonly canViewTimeline = canViewTimeline;
   protected readonly canViewExpenses = canViewExpenses;
 

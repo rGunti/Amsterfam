@@ -98,6 +98,20 @@ describe('describeEntry', () => {
     expect(describeEntry(e, 2).text).toBe('Alice recorded that you paid Alice £15.00');
   });
 
+  it('describes news posts by title, falling back when there is none', () => {
+    const posted = entry({ type: 'NewsPosted', data: { postId: 3, title: 'Packing list' } });
+    expect(describeEntry(posted, 99).text).toBe('Alice posted news: “Packing list”');
+    expect(describeEntry(posted, 99).icon).toBe('campaign');
+
+    const untitled = entry({ type: 'NewsPosted', data: { postId: 3, title: null } });
+    expect(describeEntry(untitled, 1).text).toBe('You posted news');
+
+    const edited = entry({ type: 'NewsEdited', data: { postId: 3, title: 'Packing' } });
+    expect(describeEntry(edited, 99).text).toBe('Alice edited a news post: “Packing”');
+    const deleted = entry({ type: 'NewsDeleted', data: { postId: 3, title: 'Packing' } });
+    expect(describeEntry(deleted, 99).text).toBe('Alice deleted a news post: “Packing”');
+  });
+
   it('notes restricted visibility', () => {
     expect(visibilityNote('Everyone')).toBeNull();
     expect(visibilityNote('Organisers')).toBe('Only organisers see this');

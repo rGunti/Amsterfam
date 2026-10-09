@@ -22,7 +22,10 @@ export type TimelineEntryType =
   | 'ExpenseUpdated'
   | 'ExpenseDeleted'
   | 'PaymentRecorded'
-  | 'PaymentDeleted';
+  | 'PaymentDeleted'
+  | 'NewsPosted'
+  | 'NewsEdited'
+  | 'NewsDeleted';
 
 /** Who can see an entry: everyone in the event, organisers, or only the owner. */
 export type TimelineVisibility = 'Everyone' | 'Organisers' | 'Owner';
@@ -44,4 +47,15 @@ export interface TimelineEntry {
   subject: TimelineUser | null;
   /** Type-specific details, e.g. `{ from, to }` for status changes. */
   data: Record<string, unknown> | null;
+  /** For `NewsPosted`: the post as it is now; null once it's deleted. */
+  news?: NewsPreview | null;
+}
+
+export interface NewsPreview {
+  postId: number;
+  title: string | null;
+  /** Plain text, already cut short. */
+  excerpt: string;
+  truncated: boolean;
+  imageFileId: string | null;
 }
