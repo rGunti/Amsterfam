@@ -109,6 +109,23 @@ GET /api/v1/events/{id}/timeline?before={entryId}&limit={n}   (confirmed members
 - Entries are filtered by the caller's standing: attendees get `Everyone`, organisers also `Organisers`, the owner also `Owner`.
 - `limit` defaults to 50 (max 100). Page by passing the last entry's `id` as `before`.
 - 404 for non-members, 403 for pending members; cancelled events follow the usual organiser-only rule.
+- `NewsPosted` entries also carry `news: { postId, title, excerpt, truncated, imageFileId }`, read from the post as it is now; null once the post is deleted.
+
+### News
+Confirmed members read (non-members 404, pending 403); organisers write (409 on read-only events).
+See ADR-014.
+```
+GET    /api/v1/events/{id}/news?before={publishedAt}&beforeId={postId}&limit={n}   (newest first)
+GET    /api/v1/events/{id}/news/{postId}
+POST   /api/v1/events/{id}/news             (organiser; body: title?, body)
+PUT    /api/v1/events/{id}/news/{postId}    (organiser; body: title?, body)
+DELETE /api/v1/events/{id}/news/{postId}    (organiser)
+POST   /api/v1/events/{id}/news/seen        (marks everything published so far as read)
+```
+- The feed returns `{ posts, seenAt }`; a post is `{ id, title, body, author, createdAt, publishedAt, editedAt, canEdit }`.
+- `body` is raw Markdown (max 4000 characters); `title` is optional (max 120, blank = none). 400 with `{ "error": "..." }` otherwise.
+- `limit` defaults to 20 (max 50). Page by passing the last post's `publishedAt` and `id`.
+- `GET /api/v1/events/{id}` returns `unreadNewsCount` for confirmed members: posts by others published after the caller's last `seen`.
 
 ### Availability
 ```

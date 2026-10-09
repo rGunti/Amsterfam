@@ -1,0 +1,80 @@
+.compose {
+  max-width: 1040px;
+  margin: 24px auto;
+}
+
+.compose-header h1 {
+  margin: 0 0 16px;
+  font: var(--mat-sys-headline-small);
+}
+
+.note {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.draft-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.title-field,
+.body-field {
+  width: 100%;
+}
+
+.body-field textarea {
+  min-height: 280px;
+  font-family: inherit;
+}
+
+.pane-label {
+  margin: 0 0 8px;
+  font: var(--mat-sys-title-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.pane-preview {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+// Wide screens: writing and preview side by side, no toggle.
+@media (min-width: 960px) {
+  .mode-toggle {
+    display: none;
+  }
+
+  .panes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+}
+
+// Narrow screens: one pane at a time.
+@media (max-width: 959.98px) {
+  .mode-toggle {
+    margin-bottom: 16px;
+  }
+
+  .panes[data-mode='write'] .pane-preview,
+  .panes[data-mode='preview'] .pane-write {
+    display: none;
+  }
+
+  .pane-label {
+    display: none;
+  }
+}

@@ -1,0 +1,73 @@
+.app-markdown {
+  display: block;
+  overflow-wrap: anywhere;
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  p,
+  ul,
+  ol,
+  blockquote,
+  pre {
+    margin: 0 0 0.75em;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 1em 0 0.5em;
+    font: var(--mat-sys-title-medium);
+  }
+
+  h3 {
+    font: var(--mat-sys-title-large);
+  }
+
+  ul,
+  ol {
+    padding-left: 1.5em;
+  }
+
+  blockquote {
+    padding-left: 0.75em;
+    border-left: 3px solid var(--mat-sys-outline-variant);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  code {
+    padding: 0 0.25em;
+    border-radius: 4px;
+    background: var(--mat-sys-surface-container-high);
+    font-size: 0.9em;
+  }
+
+  pre {
+    padding: 0.75em;
+    overflow-x: auto;
+    border-radius: 8px;
+    background: var(--mat-sys-surface-container-high);
+
+    code {
+      padding: 0;
+      background: none;
+    }
+  }
+
+  a {
+    color: var(--mat-sys-primary);
+    text-decoration: underline;
+  }
+
+  .md-link-icon {
+    margin-left: 2px;
+    font-size: inherit;
+    vertical-align: -2px;
+  }
+}

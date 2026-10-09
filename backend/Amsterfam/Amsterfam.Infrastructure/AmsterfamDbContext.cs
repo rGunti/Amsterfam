@@ -30,6 +30,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<ExpenseShare> ExpenseShares => Set<ExpenseShare>();
     public DbSet<ExpensePayment> ExpensePayments => Set<ExpensePayment>();
     public DbSet<DietaryOption> DietaryOptions => Set<DietaryOption>();
+    public DbSet<NewsPost> NewsPosts => Set<NewsPost>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,6 +144,25 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
                 .WithMany()
                 .HasForeignKey(l => l.SubjectUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<NewsPost>(e =>
+        {
+            e.HasIndex(p => new { p.EventId, p.PublishedAt });
+            e.Property(p => p.Title).HasMaxLength(NewsPost.MaxTitleLength);
+            e.Property(p => p.Body).HasMaxLength(NewsPost.MaxBodyLength);
+            e.HasOne(p => p.Event)
+                .WithMany()
+                .HasForeignKey(p => p.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Author)
+                .WithMany()
+                .HasForeignKey(p => p.AuthorId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<EventFile>()
+                .WithMany()
+                .HasForeignKey(p => p.ImageFileId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<AvailabilityEntry>(e =>

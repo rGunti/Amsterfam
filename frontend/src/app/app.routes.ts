@@ -5,7 +5,9 @@ import { eventGuard } from './core/event/event.guard';
 import { cancelledEventGuard } from './core/event/cancelled-event.guard';
 import { joinLinksGuard } from './features/join-links/join-links.guard';
 import { datePollGuard } from './features/date-poll/date-poll.guard';
+import { newsComposeGuard, newsGuard } from './features/news/news.guard';
 import { timelineGuard } from './features/timeline/timeline.guard';
+import { unsavedChangesGuard } from './shared/unsaved-changes.guard';
 import { expensesGuard } from './features/expenses/expenses.guard';
 import type { StatusPageData } from './shared/status-page/status-page';
 
@@ -45,6 +47,30 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () => import('./features/events/events-detail').then((m) => m.EventsDetail),
+      },
+      {
+        path: 'news',
+        loadComponent: () => import('./features/news/news-page').then((m) => m.NewsPage),
+        canActivate: [newsGuard],
+      },
+      {
+        path: 'news/new',
+        loadComponent: () =>
+          import('./features/news/news-compose-page').then((m) => m.NewsComposePage),
+        canActivate: [newsComposeGuard],
+        canDeactivate: [unsavedChangesGuard],
+      },
+      {
+        path: 'news/:postId/edit',
+        loadComponent: () =>
+          import('./features/news/news-compose-page').then((m) => m.NewsComposePage),
+        canActivate: [newsComposeGuard],
+        canDeactivate: [unsavedChangesGuard],
+      },
+      {
+        path: 'news/:postId',
+        loadComponent: () => import('./features/news/news-post-page').then((m) => m.NewsPostPage),
+        canActivate: [newsGuard],
       },
       {
         path: 'find-a-date',

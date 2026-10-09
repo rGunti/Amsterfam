@@ -69,10 +69,61 @@ public static class TimelineEndpoints
             .Include(l => l.SubjectUser)
             .ToListAsync();
 
-        return TypedResults.Ok(rows.Select(ToResponse).ToList());
+        var news = await LoadNewsPreviews(db, eventId, rows);
+        return TypedResults.Ok(
+            rows.Select(l => ToResponse(l, news.GetValueOrDefault(PostIdOf(l) ?? 0))).ToList()
+        );
     }
 
-    private static TimelineEntryResponse ToResponse(EventLogEntry l) =>
+    /// <summary>
+    /// Previews for the posts that this page's <c>NewsPosted</c> entries are about, read from
+    /// the posts themselves so edits show and deleted posts drop out. The log only has the id.
+    /// </summary>
+    private static async Task<Dictionary<int, NewsPreview>> LoadNewsPreviews(
+        AmsterfamDbContext db,
+        Guid eventId,
+        List<EventLogEntry> rows
+    )
+    {
+        var ids = rows.Select(PostIdOf).OfType<int>().Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        var posts = await db
+            .NewsPosts.Where(p =>
+                p.EventId == eventId && ids.Contains(p.Id) && p.PublishedAt != null
+            )
+            .Select(p => new
+            {
+                p.Id,
+                p.Title,
+                p.Body,
+                p.ImageFileId,
+            })
+            .ToListAsync();
+
+        return posts.ToDictionary(
+            p => p.Id,
+            p =>
+            {
+                var (excerpt, truncated) = NewsText.Excerpt(p.Body);
+                return new NewsPreview(p.Id, p.Title, excerpt, truncated, p.ImageFileId);
+            }
+        );
+    }
+
+    private static int? PostIdOf(EventLogEntry l)
+    {
+        if (l.Type != EventLogType.NewsPosted || l.Data is null)
+            return null;
+        using var data = JsonDocument.Parse(l.Data);
+        return
+            data.RootElement.TryGetProperty("postId", out var id) && id.TryGetInt32(out var value)
+            ? value
+            : null;
+    }
+
+    private static TimelineEntryResponse ToResponse(EventLogEntry l, NewsPreview? news) =>
         new(
             l.Id,
             l.Type.ToString(),
@@ -80,7 +131,8 @@ public static class TimelineEndpoints
             l.OccurredAt,
             ToUser(l.Actor),
             ToUser(l.SubjectUser),
-            l.Data is null ? null : JsonDocument.Parse(l.Data).RootElement.Clone()
+            l.Data is null ? null : JsonDocument.Parse(l.Data).RootElement.Clone(),
+            news
         );
 
     private static TimelineUser? ToUser(User? u) =>

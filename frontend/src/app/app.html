@@ -105,6 +105,27 @@
           <mat-icon matListItemIcon>dashboard</mat-icon>
           <span matListItemTitle>Overview</span>
         </a>
+        @if (canViewNews(currentEvent)) {
+          <a
+            mat-list-item
+            [routerLink]="['/events', currentEvent.id, 'news']"
+            routerLinkActive
+            #newsActive="routerLinkActive"
+            [activated]="newsActive.isActive"
+            (click)="onNavLinkClick()"
+          >
+            <mat-icon matListItemIcon>campaign</mat-icon>
+            <span matListItemTitle>News</span>
+            @if (currentEvent.unreadNewsCount) {
+              <span
+                matListItemMeta
+                class="nav-badge"
+                [attr.aria-label]="currentEvent.unreadNewsCount + ' unread'"
+                >{{ currentEvent.unreadNewsCount }}</span
+              >
+            }
+          </a>
+        }
         @if (canUseDatePoll(currentEvent)) {
           <a
             mat-list-item

@@ -1,0 +1,45 @@
+<div class="news">
+  <header class="news-header">
+    <h1>News</h1>
+    @if (canPost()) {
+      <a mat-flat-button [routerLink]="['/events', event()!.id, 'news', 'new']">
+        <mat-icon>add</mat-icon>
+        New post
+      </a>
+    }
+  </header>
+
+  <ol class="posts">
+    @for (post of posts(); track post.id) {
+      <li>
+        <app-news-post-card
+          [eventId]="event()!.id"
+          [post]="post"
+          [isNew]="isNew(post)"
+          (deleted)="onDeleted($event)"
+        />
+      </li>
+    }
+  </ol>
+
+  @if (loading()) {
+    <p class="note">Loading…</p>
+  } @else if (error()) {
+    <p class="note">Could not load the news.</p>
+  } @else if (posts().length === 0) {
+    <p class="note">
+      No news yet.
+      @if (canPost()) {
+        Post the first update for everyone.
+      } @else {
+        Organisers will post updates here.
+      }
+    </p>
+  }
+
+  @if (hasMore() && !loading()) {
+    <div class="more">
+      <button mat-stroked-button (click)="loadMore()">Show older</button>
+    </div>
+  }
+</div>

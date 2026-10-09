@@ -17,6 +17,9 @@ public class EventAttendance
     /// <summary>The join link this attendance was requested through, if any.</summary>
     public int? JoinLinkId { get; set; }
 
+    /// <summary>When the member last opened the news feed; later posts count as unread.</summary>
+    public DateTimeOffset? NewsSeenAt { get; set; }
+
     public Event Event { get; set; } = null!;
     public User User { get; set; } = null!;
     public EventJoinLink? JoinLink { get; set; }

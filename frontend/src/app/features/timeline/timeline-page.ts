@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 
 import { TimelineApi } from '../../core/api/timeline.api';
 import { CurrentUserService } from '../../core/api/current-user.service';
@@ -22,7 +23,7 @@ interface TimelineLineView extends TimelineLine {
 
 @Component({
   selector: 'app-timeline-page',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule],
+  imports: [MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule, RouterLink],
   templateUrl: './timeline-page.html',
   styleUrl: './timeline-page.scss',
 })

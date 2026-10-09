@@ -58,10 +58,16 @@ public static class EventEndpoints
 
         var user = await currentUser.GetOrCreateAsync();
         // Events are only reachable via join link; non-members can't peek by GUID.
-        if (ev.Attendances.All(a => a.UserId != user.Id))
+        var attendance = ev.Attendances.FirstOrDefault(a => a.UserId == user.Id);
+        if (attendance is null)
             return TypedResults.NotFound();
 
-        return TypedResults.Ok(BuildResponse(ev, user.Id, time.Today()));
+        // Only the single-event response carries the news badge count; the nav polls it.
+        int? unreadNews = EventGuards.IsConfirmed(attendance.Role)
+            ? await NewsEndpoints.CountUnreadAsync(db, id, user.Id, attendance.NewsSeenAt)
+            : null;
+
+        return TypedResults.Ok(BuildResponse(ev, user.Id, time.Today(), unreadNews));
     }
 
     private static async Task<IResult> CreateEvent(
@@ -314,7 +320,12 @@ public static class EventEndpoints
     /// attendances (with users) loaded. Non-members, and non-organisers of a cancelled
     /// event, get a stripped-down preview.
     /// </summary>
-    private static EventResponse BuildResponse(Event ev, int userId, DateOnly today)
+    private static EventResponse BuildResponse(
+        Event ev,
+        int userId,
+        DateOnly today,
+        int? unreadNews = null
+    )
     {
         var role = ev.Attendances.FirstOrDefault(a => a.UserId == userId)?.Role;
         var organisers = OrganisersFrom(ev);
@@ -348,7 +359,8 @@ public static class EventEndpoints
             ev.AutoTransitionsPaused,
             ev.BannerFileId,
             // Only organisers can act on pending requests, so only they get the count.
-            isOrganiser ? ev.Attendances.Count(a => a.Role == AttendanceRole.Pending) : null
+            isOrganiser ? ev.Attendances.Count(a => a.Role == AttendanceRole.Pending) : null,
+            unreadNews
         );
     }
 

@@ -1,0 +1,54 @@
+<article class="post" [class.post-new]="isNew()" [attr.aria-busy]="deleting()">
+  <header class="post-header">
+    @if (post().author.avatarUrl; as url) {
+      <img class="avatar" [src]="url" alt="" />
+    } @else {
+      <span class="avatar avatar-initial" aria-hidden="true">{{ initial() }}</span>
+    }
+    <div class="post-meta">
+      <span class="author">{{ post().author.displayName }}</span>
+      <span class="time">
+        <time [attr.datetime]="when().iso" [matTooltip]="when().full">{{ when().text }}</time>
+        @if (editedFull(); as edited) {
+          · <span [matTooltip]="'Edited ' + edited">edited</span>
+        }
+        @if (isNew()) {
+          · <span class="new-label">New</span>
+        }
+      </span>
+    </div>
+    @if (post().canEdit) {
+      <button
+        mat-icon-button
+        class="post-menu"
+        [matMenuTriggerFor]="menu"
+        aria-label="Post actions"
+        [disabled]="deleting()"
+      >
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #menu="matMenu">
+        <a mat-menu-item [routerLink]="['/events', eventId(), 'news', post().id, 'edit']">
+          <mat-icon>edit</mat-icon>
+          <span>Edit</span>
+        </a>
+        <button mat-menu-item (click)="confirmDelete()">
+          <mat-icon>delete</mat-icon>
+          <span>Delete</span>
+        </button>
+      </mat-menu>
+    }
+  </header>
+
+  @if (post().title; as title) {
+    <h2 class="post-title">
+      @if (linkTitle()) {
+        <a [routerLink]="['/events', eventId(), 'news', post().id]">{{ title }}</a>
+      } @else {
+        {{ title }}
+      }
+    </h2>
+  }
+
+  <app-markdown class="post-body" [text]="post().body" />
+</article>

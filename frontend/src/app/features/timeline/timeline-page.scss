@@ -71,9 +71,12 @@
   }
 }
 
-.entry-body {
+.entry-content {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.entry-body {
   margin: 2px 0 0;
   line-height: 20px;
   overflow-wrap: anywhere;
@@ -141,4 +144,46 @@
   display: flex;
   justify-content: center;
   margin-top: 8px;
+}
+
+// A posted news item shows the post itself under the sentence.
+.news-preview {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  color: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--mat-sys-surface-container);
+  }
+}
+
+.news-preview-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.news-preview-title {
+  font-weight: 600;
+}
+
+.news-preview-excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.news-preview-more {
+  color: var(--mat-sys-primary);
+  font-weight: 500;
 }

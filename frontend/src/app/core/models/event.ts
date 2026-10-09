@@ -42,6 +42,8 @@ export interface EventResponse {
   bannerFileId: string | null;
   /** Requests waiting for approval; only sent to organisers. */
   pendingAttendeeCount: number | null;
+  /** News posts by others since the member last opened the feed; null unless confirmed. */
+  unreadNewsCount?: number | null;
 }
 
 export interface UpdatePollRangeRequest {

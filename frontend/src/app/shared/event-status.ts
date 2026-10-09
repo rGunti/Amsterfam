@@ -94,6 +94,16 @@ export function canViewTimeline(ev: EventResponse): boolean {
   return ev.currentUserRole === 'Attendee' || ev.currentUserRole === 'Organiser';
 }
 
+/** Confirmed members read the news; pending requests don't. */
+export function canViewNews(ev: EventResponse): boolean {
+  return ev.currentUserRole === 'Attendee' || ev.currentUserRole === 'Organiser';
+}
+
+/** Organisers post news until the event is archived or cancelled. */
+export function canPostNews(ev: EventResponse): boolean {
+  return ev.currentUserRole === 'Organiser' && !isReadOnly(ev.status);
+}
+
 /** Confirmed members share expenses; pending requests don't take part yet. */
 export function canViewExpenses(ev: EventResponse): boolean {
   return ev.currentUserRole === 'Attendee' || ev.currentUserRole === 'Organiser';

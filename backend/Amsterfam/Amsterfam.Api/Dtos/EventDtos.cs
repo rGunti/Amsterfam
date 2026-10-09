@@ -21,7 +21,8 @@ public record EventResponse(
     IReadOnlyList<string> AllowedTransitions,
     bool AutoTransitionsPaused,
     Guid? BannerFileId = null,
-    int? PendingAttendeeCount = null
+    int? PendingAttendeeCount = null,
+    int? UnreadNewsCount = null
 );
 
 public record OrganiserSummary(int UserId, string DisplayName, string? AvatarUrl);

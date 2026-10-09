@@ -30,6 +30,7 @@ This app replaces a Google Sheets spreadsheet covering availability, accommodati
 5. **Activity suggestions & voting** — submit suggestions, vote 1–5, ranked results
 6. **Itinerary** — day-by-day schedule with arrivals/departures and planned activities
 7. **Shopping list** — collaborative list for shared supplies
+8. **News** — organisers post Markdown announcements to confirmed members, with an unread badge (see `NewsPost` below, ADR-014)
 
 Out of scope (for now): carpool coordination.
 
@@ -153,6 +154,12 @@ One recorded change to an event, shown newest-first on the event's timeline (iss
 - Visibility per type (expense and repayment changes are Everyone): join requests/declines/withdrawals, cost overrides and join-link changes are Organisers; organiser-link changes are Owner (the *current* owner, checked at read time); everything else is Everyone.
 - Date poll saves only record *that* someone responded, never their answers, and repeated saves by the same person within 15 minutes share one entry.
 
+### NewsPost
+An announcement by an organiser, read by confirmed members (ADR-014). Deleted with the event.
+- `Id`, `EventId`, `AuthorId`, `Title?` (max 120), `Body` (raw Markdown, max 4000)
+- `CreatedAt`, `PublishAt`, `PublishedAt?` (visible once set), `EditedAt?`
+- Reserved for later issues: `PinnedAt?` (#139), `RequiresAck` (#139), `ImageFileId?` (#140), `Notify` (#142), `CommentsEnabled` (#147)
+
 ### EventAttendance
 Join between User and Event.
 - `Id`, `EventId` (Guid, matches `Event.Id`), `UserId`, `Role` (Organiser | Attendee | Pending)
@@ -161,6 +168,7 @@ Join between User and Event.
 - `RequestedOrganiser` (bool) — joined via an organiser link; only the owner can confirm, which grants Organiser
 - `AmountPaid` (decimal)
 - `CostOverride` (decimal?) — null = use calculated value; set by organiser for edge cases (complimentary stays, special arrangements)
+- `NewsSeenAt` (DateTimeOffset?) — when the member last opened the news feed; later posts by others count as unread
 
 Derived (not stored):
 - `TotalAmountDue` = `CostOverride ?? (BedAssignment-nights for this user × nightly rate — rate not modelled yet)`
