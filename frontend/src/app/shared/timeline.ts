@@ -208,16 +208,20 @@ function describeParts(
       return { icon: 'autorenew', parts: t`${actor} regenerated the join link “${data['label']}”` };
     case 'NewsPosted':
     case 'NewsEdited':
-    case 'NewsDeleted': {
+    case 'NewsDeleted':
+    case 'NewsPinned':
+    case 'NewsUnpinned': {
       const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : null;
       const quoted = title ? `: “${title}”` : '';
-      const verb =
-        entry.type === 'NewsPosted'
-          ? 'posted news'
-          : entry.type === 'NewsEdited'
-            ? 'edited a news post'
-            : 'deleted a news post';
-      return { icon: 'campaign', parts: t`${actor} ${verb}${quoted}` };
+      const verb = {
+        NewsPosted: 'posted news',
+        NewsEdited: 'edited a news post',
+        NewsDeleted: 'deleted a news post',
+        NewsPinned: 'pinned a news post',
+        NewsUnpinned: 'unpinned a news post',
+      }[entry.type];
+      const pinning = entry.type === 'NewsPinned' || entry.type === 'NewsUnpinned';
+      return { icon: pinning ? 'push_pin' : 'campaign', parts: t`${actor} ${verb}${quoted}` };
     }
     case 'ExpenseAdded':
       return {

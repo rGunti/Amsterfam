@@ -1,12 +1,17 @@
-<article class="post" [class.post-new]="isNew()" [attr.aria-busy]="deleting()">
+<article
+  class="post"
+  [class.post-new]="isNew()"
+  [class.post-compact]="compact()"
+  [attr.aria-busy]="deleting() || busy()"
+>
   <header class="post-header">
-    @if (post().author.avatarUrl; as url) {
+    @if (current().author.avatarUrl; as url) {
       <img class="avatar" [src]="url" alt="" />
     } @else {
       <span class="avatar avatar-initial" aria-hidden="true">{{ initial() }}</span>
     }
     <div class="post-meta">
-      <span class="author">{{ post().author.displayName }}</span>
+      <span class="author">{{ current().author.displayName }}</span>
       <span class="time">
         <time [attr.datetime]="when().iso" [matTooltip]="when().full">{{ when().text }}</time>
         @if (editedFull(); as edited) {
@@ -17,21 +22,28 @@
         }
       </span>
     </div>
-    @if (post().canEdit) {
+    @if (current().pinnedAt) {
+      <mat-icon class="pinned" matTooltip="Pinned" aria-label="Pinned">push_pin</mat-icon>
+    }
+    @if (current().canEdit) {
       <button
         mat-icon-button
         class="post-menu"
         [matMenuTriggerFor]="menu"
         aria-label="Post actions"
-        [disabled]="deleting()"
+        [disabled]="deleting() || busy()"
       >
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #menu="matMenu">
-        <a mat-menu-item [routerLink]="['/events', eventId(), 'news', post().id, 'edit']">
+        <a mat-menu-item [routerLink]="['/events', eventId(), 'news', current().id, 'edit']">
           <mat-icon>edit</mat-icon>
           <span>Edit</span>
         </a>
+        <button mat-menu-item (click)="togglePin()">
+          <mat-icon>push_pin</mat-icon>
+          <span>{{ current().pinnedAt ? 'Unpin' : 'Pin to top' }}</span>
+        </button>
         <button mat-menu-item (click)="confirmDelete()">
           <mat-icon>delete</mat-icon>
           <span>Delete</span>
@@ -40,15 +52,59 @@
     }
   </header>
 
-  @if (post().title; as title) {
+  @if (current().title; as title) {
     <h2 class="post-title">
       @if (linkTitle()) {
-        <a [routerLink]="['/events', eventId(), 'news', post().id]">{{ title }}</a>
+        <a [routerLink]="['/events', eventId(), 'news', current().id]">{{ title }}</a>
       } @else {
         {{ title }}
       }
     </h2>
   }
 
-  <app-markdown class="post-body" [text]="post().body" />
+  <app-markdown class="post-body" [text]="current().body" />
+  @if (compact()) {
+    <a class="read-more" [routerLink]="['/events', eventId(), 'news', current().id]">Read more</a>
+  }
+
+  @if (current().requiresAck) {
+    <div class="ack">
+      @if (!current().canAcknowledge) {
+        <!-- The author has nothing to acknowledge, but organisers still see the count. -->
+      } @else if (current().acknowledgedByMe) {
+        <span class="ack-done"><mat-icon>check_circle</mat-icon> You've acknowledged this</span>
+      } @else {
+        <button mat-flat-button (click)="acknowledge()" [disabled]="busy()">
+          <mat-icon>check</mat-icon>
+          Got it
+        </button>
+      }
+      @if (current().ackCount !== null && current().ackTotal !== null) {
+        <button mat-button class="ack-count" (click)="openAcks()">
+          {{ current().ackCount }} of {{ current().ackTotal }} acknowledged
+        </button>
+      }
+    </div>
+  }
+
+  @if (!compact()) {
+    <div class="reactions" role="group" aria-label="Reactions">
+      @for (r of counts(); track r.emoji) {
+        <button
+          type="button"
+          class="reaction"
+          [class.reaction-mine]="r.mine"
+          [class.reaction-empty]="r.count === 0"
+          [attr.aria-pressed]="r.mine"
+          [attr.aria-label]="r.emoji + ' ' + r.count"
+          (click)="toggleReaction(r.emoji)"
+        >
+          <span class="reaction-emoji">{{ r.emoji }}</span>
+          @if (r.count > 0) {
+            <span class="reaction-count">{{ r.count }}</span>
+          }
+        </button>
+      }
+    </div>
+  }
 </article>

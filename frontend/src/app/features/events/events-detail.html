@@ -273,6 +273,10 @@
   </mat-card>
 
   @if (isConfirmed) {
+    <app-news-summary-card [eventId]="ev.id" />
+  }
+
+  @if (isConfirmed) {
     <mat-card class="event-card">
       <mat-card-header>
         <mat-card-title>Who's coming?</mat-card-title>

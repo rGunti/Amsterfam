@@ -25,7 +25,9 @@ export type TimelineEntryType =
   | 'PaymentDeleted'
   | 'NewsPosted'
   | 'NewsEdited'
-  | 'NewsDeleted';
+  | 'NewsDeleted'
+  | 'NewsPinned'
+  | 'NewsUnpinned';
 
 /** Who can see an entry: everyone in the event, organisers, or only the owner. */
 export type TimelineVisibility = 'Everyone' | 'Organisers' | 'Owner';

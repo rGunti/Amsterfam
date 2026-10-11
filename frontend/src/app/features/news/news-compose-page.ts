@@ -3,6 +3,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -13,7 +14,12 @@ import { Observable, debounceTime, map } from 'rxjs';
 
 import { NewsApi } from '../../core/api/news.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
-import { NEWS_BODY_MAX, NEWS_TITLE_MAX, NewsPost } from '../../core/models/news';
+import {
+  NEWS_BODY_MAX,
+  NEWS_TITLE_MAX,
+  NewsPost,
+  UpsertNewsPostRequest,
+} from '../../core/models/news';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { Markdown } from '../../shared/markdown/markdown';
 import { HasUnsavedChanges } from '../../shared/unsaved-changes.guard';
@@ -21,6 +27,8 @@ import { HasUnsavedChanges } from '../../shared/unsaved-changes.guard';
 interface Draft {
   title: string;
   body: string;
+  requiresAck?: boolean;
+  pin?: boolean;
 }
 
 const draftKey = (eventId: string) => `amsterfam.news-draft.${eventId}`;
@@ -58,6 +66,7 @@ function writeDraft(eventId: string, draft: Draft | null): void {
     ReactiveFormsModule,
     MatButtonModule,
     MatButtonToggleModule,
+    MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -94,7 +103,16 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(NEWS_BODY_MAX)],
     }),
+    requiresAck: new FormControl(false, { nonNullable: true }),
+    /** New posts only; existing posts are pinned from their menu. */
+    pin: new FormControl(false, { nonNullable: true }),
+    /** Edits only: ask everyone to acknowledge again. */
+    resetAcks: new FormControl(false, { nonNullable: true }),
   });
+
+  /** Whether the post being edited already asked for acknowledgement when it was loaded. */
+  readonly hadAck = signal(false);
+  readonly requiresAck = computed(() => this.value().requiresAck ?? false);
 
   private readonly value = toSignal(this.form.valueChanges, { initialValue: this.form.value });
   readonly bodyText = computed(() => this.value().body ?? '');
@@ -113,7 +131,12 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
     if (this.postId === null) {
       this.form.valueChanges.pipe(debounceTime(500), takeUntilDestroyed()).subscribe((value) => {
         if (!this.saved) {
-          writeDraft(this.eventId, { title: value.title ?? '', body: value.body ?? '' });
+          writeDraft(this.eventId, {
+            title: value.title ?? '',
+            body: value.body ?? '',
+            requiresAck: value.requiresAck ?? false,
+            pin: value.pin ?? false,
+          });
         }
       });
     }
@@ -123,7 +146,12 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
     if (this.postId === null) {
       const draft = readDraft(this.eventId);
       if (draft) {
-        this.form.setValue({ title: draft.title ?? '', body: draft.body ?? '' });
+        this.form.patchValue({
+          title: draft.title ?? '',
+          body: draft.body ?? '',
+          requiresAck: draft.requiresAck ?? false,
+          pin: draft.pin ?? false,
+        });
         this.form.markAsDirty();
         this.restoredDraft.set(true);
       }
@@ -133,7 +161,12 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
     this.loading.set(true);
     this.api.get(this.eventId, this.postId).subscribe({
       next: (post) => {
-        this.form.setValue({ title: post.title ?? '', body: post.body });
+        this.form.patchValue({
+          title: post.title ?? '',
+          body: post.body,
+          requiresAck: post.requiresAck,
+        });
+        this.hadAck.set(post.requiresAck);
         this.form.markAsPristine();
         this.loading.set(false);
       },
@@ -187,7 +220,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
 
   discardDraft(): void {
     writeDraft(this.eventId, null);
-    this.form.reset({ title: '', body: '' });
+    this.form.reset();
     this.restoredDraft.set(false);
   }
 
@@ -196,8 +229,16 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
       this.form.markAllAsTouched();
       return;
     }
-    const { title, body } = this.form.getRawValue();
-    const request = { title: title.trim() || null, body };
+    const { title, body, requiresAck, pin, resetAcks } = this.form.getRawValue();
+    const request: UpsertNewsPostRequest =
+      this.postId === null
+        ? { title: title.trim() || null, body, requiresAck, pin }
+        : {
+            title: title.trim() || null,
+            body,
+            requiresAck,
+            resetAcks: requiresAck && this.hadAck() && resetAcks,
+          };
     this.saving.set(true);
 
     const save$ =

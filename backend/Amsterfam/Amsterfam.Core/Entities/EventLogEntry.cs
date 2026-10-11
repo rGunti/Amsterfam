@@ -76,6 +76,8 @@ public enum EventLogType
     NewsPosted,
     NewsEdited,
     NewsDeleted,
+    NewsPinned,
+    NewsUnpinned,
 }
 
 public enum EventLogVisibility

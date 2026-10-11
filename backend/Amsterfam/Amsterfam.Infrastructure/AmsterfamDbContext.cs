@@ -31,6 +31,8 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<ExpensePayment> ExpensePayments => Set<ExpensePayment>();
     public DbSet<DietaryOption> DietaryOptions => Set<DietaryOption>();
     public DbSet<NewsPost> NewsPosts => Set<NewsPost>();
+    public DbSet<NewsAcknowledgement> NewsAcknowledgements => Set<NewsAcknowledgement>();
+    public DbSet<NewsReaction> NewsReactions => Set<NewsReaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -163,6 +165,38 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
                 .WithMany()
                 .HasForeignKey(p => p.ImageFileId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<NewsAcknowledgement>(e =>
+        {
+            e.HasKey(a => new { a.PostId, a.UserId });
+            e.HasOne(a => a.Post)
+                .WithMany()
+                .HasForeignKey(a => a.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.User)
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NewsReaction>(e =>
+        {
+            e.HasKey(r => new
+            {
+                r.PostId,
+                r.UserId,
+                r.Emoji,
+            });
+            e.Property(r => r.Emoji).HasMaxLength(NewsReaction.MaxEmojiLength);
+            e.HasOne(r => r.Post)
+                .WithMany()
+                .HasForeignKey(r => r.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<AvailabilityEntry>(e =>
