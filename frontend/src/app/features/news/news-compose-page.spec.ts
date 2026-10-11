@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { firstValueFrom, isObservable, of } from 'rxjs';
 import { vi } from 'vitest';
 
@@ -49,6 +49,8 @@ describe('NewsComposePage', () => {
         },
       ],
     });
+    // Saving navigates to the post, which has no route here.
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const fixture = TestBed.createComponent(NewsComposePage);
     fixture.detectChanges();
     return fixture;
