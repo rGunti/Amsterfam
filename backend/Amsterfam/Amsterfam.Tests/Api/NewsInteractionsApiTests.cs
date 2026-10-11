@@ -97,6 +97,23 @@ public class NewsInteractionsApiTests(ApiFixture api) : IClassFixture<ApiFixture
     }
 
     [Fact]
+    public async Task Author_CannotAcknowledgeOwnPost()
+    {
+        var t = await CreateTrip("13");
+        var post = await Post(t, requiresAck: true);
+
+        Assert.False(post.CanAcknowledge);
+        Assert.True((await Get(t.Guest, t, post.Id)).CanAcknowledge);
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            (await t.Owner.PostAsync($"{t.News}/{post.Id}/ack", null)).StatusCode
+        );
+
+        var summary = (await t.Owner.GetFromJsonAsync<NewsSummaryResponse>($"{t.News}/summary"))!;
+        Assert.Empty(summary.NeedsAck);
+    }
+
+    [Fact]
     public async Task Acknowledge_PostWithoutAck_Returns400()
     {
         var t = await CreateTrip("2");
@@ -156,7 +173,7 @@ public class NewsInteractionsApiTests(ApiFixture api) : IClassFixture<ApiFixture
     }
 
     [Fact]
-    public async Task Acks_MissingListExcludesPendingMembers_AndIsOrganiserOnly()
+    public async Task Acks_MissingListExcludesPendingMembersAndAuthor_AndIsOrganiserOnly()
     {
         var t = await CreateTrip("5");
         var pending = api.CreateClientWithUser("discord|newsx-pending-5");
@@ -166,13 +183,14 @@ public class NewsInteractionsApiTests(ApiFixture api) : IClassFixture<ApiFixture
 
         var acks = (await t.Owner.GetFromJsonAsync<NewsAcksResponse>($"{t.News}/{post.Id}/acks"))!;
         Assert.Empty(acks.Acknowledged);
-        Assert.Equivalent(new[] { t.OwnerId, t.GuestId }, acks.Missing.Select(u => u.Id));
+        // The owner wrote the post and the pending member isn't confirmed.
+        Assert.Equal(t.GuestId, Assert.Single(acks.Missing).Id);
         Assert.DoesNotContain(acks.Missing, u => u.Id == pendingId);
 
         (await t.Guest.PostAsync($"{t.News}/{post.Id}/ack", null)).EnsureSuccessStatusCode();
         acks = (await t.Owner.GetFromJsonAsync<NewsAcksResponse>($"{t.News}/{post.Id}/acks"))!;
         Assert.Equal(t.GuestId, Assert.Single(acks.Acknowledged).User.Id);
-        Assert.Equal(t.OwnerId, Assert.Single(acks.Missing).Id);
+        Assert.Empty(acks.Missing);
 
         Assert.Equal(
             HttpStatusCode.Forbidden,
@@ -189,7 +207,7 @@ public class NewsInteractionsApiTests(ApiFixture api) : IClassFixture<ApiFixture
 
         var asOrganiser = await Get(t.Owner, t, post.Id);
         Assert.Equal(1, asOrganiser.AckCount);
-        Assert.Equal(2, asOrganiser.AckTotal);
+        Assert.Equal(1, asOrganiser.AckTotal); // the author doesn't count
 
         var asGuest = await Get(t.Guest, t, post.Id);
         Assert.Null(asGuest.AckCount);

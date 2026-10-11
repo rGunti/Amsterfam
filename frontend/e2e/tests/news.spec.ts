@@ -158,7 +158,7 @@ test('an attendee acknowledges a pinned post from the event overview', async ({
   expect(acks.ok()).toBeTruthy();
   const body = await acks.json();
   expect(body.acknowledged).toHaveLength(1);
-  expect(body.missing).toHaveLength(1); // the organiser
+  expect(body.missing).toHaveLength(0); // the organiser wrote it, so isn't asked
 
   // Reactions work on the feed page.
   await page.getByRole('link', { name: 'All news' }).click();

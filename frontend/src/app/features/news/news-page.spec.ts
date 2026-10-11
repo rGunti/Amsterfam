@@ -25,6 +25,7 @@ const post = (id: number, publishedAt: string, author = alice): NewsPost => ({
   canEdit: false,
   pinnedAt: null,
   requiresAck: false,
+  canAcknowledge: false,
   acknowledgedByMe: false,
   reactions: [],
   myReactions: [],

@@ -19,6 +19,7 @@ const base: NewsPost = {
   canEdit: false,
   pinnedAt: null,
   requiresAck: false,
+  canAcknowledge: false,
   acknowledgedByMe: false,
   reactions: [],
   myReactions: [],
@@ -76,7 +77,7 @@ describe('NewsPostCard', () => {
   });
 
   it('hides "Got it" once acknowledged', () => {
-    const fixture = render({ requiresAck: true });
+    const fixture = render({ requiresAck: true, canAcknowledge: true });
     const el = fixture.nativeElement as HTMLElement;
     const button = [...el.querySelectorAll('button')].find((b) =>
       b.textContent?.includes('Got it'),
@@ -87,6 +88,14 @@ describe('NewsPostCard', () => {
     expect(api['acknowledge']).toHaveBeenCalledWith('ev-1', 7);
     expect(el.textContent).not.toContain('Got it');
     expect(el.textContent).toContain("You've acknowledged this");
+  });
+
+  it("doesn't ask the author to acknowledge their own post", () => {
+    const el = render({ requiresAck: true, canAcknowledge: false, ackCount: 0, ackTotal: 5 })
+      .nativeElement as HTMLElement;
+    expect(el.textContent).not.toContain('Got it');
+    expect(el.textContent).not.toContain("You've acknowledged");
+    expect(el.textContent).toContain('0 of 5 acknowledged');
   });
 
   it('shows the acknowledgement count to organisers only', () => {

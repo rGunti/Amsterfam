@@ -339,6 +339,7 @@ public static class NewsEndpoints
         var needsAck = await published
             .Where(p =>
                 p.RequiresAck
+                && p.AuthorId != caller.UserId
                 && !db.NewsAcknowledgements.Any(a => a.PostId == p.Id && a.UserId == caller.UserId)
             )
             .OrderByDescending(p => p.PublishedAt)
@@ -448,6 +449,10 @@ public static class NewsEndpoints
             return TypedResults.BadRequest(
                 new { error = "This post doesn't ask for an acknowledgement." }
             );
+        if (post.AuthorId == caller.UserId)
+            return TypedResults.BadRequest(
+                new { error = "You wrote this post, so there's nothing to acknowledge." }
+            );
 
         var exists = await db.NewsAcknowledgements.AnyAsync(a =>
             a.PostId == postId && a.UserId == caller.UserId
@@ -469,7 +474,7 @@ public static class NewsEndpoints
 
     /// <summary>
     /// Who has acknowledged a post, and which current confirmed members haven't. Pending
-    /// members are never "missing".
+    /// members and the post's author are never "missing".
     /// </summary>
     private static async Task<IResult> GetAcks(
         Guid eventId,
@@ -492,6 +497,7 @@ public static class NewsEndpoints
             .EventAttendances.Where(a =>
                 a.EventId == eventId
                 && (a.Role == AttendanceRole.Attendee || a.Role == AttendanceRole.Organiser)
+                && a.UserId != post.AuthorId
             )
             .Select(a => a.User)
             .ToListAsync();
@@ -628,7 +634,8 @@ public static class NewsEndpoints
 
     /// <summary>
     /// Builds responses for a set of posts with a fixed number of queries. Ack counts only
-    /// include current confirmed members, matching <c>ackTotal</c>, and are organiser-only.
+    /// include current confirmed members other than the author, matching <c>ackTotal</c>,
+    /// and are organiser-only.
     /// </summary>
     private static async Task<List<NewsPostResponse>> ToResponsesAsync(
         AmsterfamDbContext db,
@@ -649,22 +656,17 @@ public static class NewsEndpoints
             .ToListAsync();
         var acks = await db
             .NewsAcknowledgements.Where(a => ids.Contains(a.PostId))
-            .Select(a => new
-            {
-                a.PostId,
-                a.UserId,
-                Confirmed = db.EventAttendances.Any(m =>
-                    m.EventId == eventId
-                    && m.UserId == a.UserId
-                    && (m.Role == AttendanceRole.Attendee || m.Role == AttendanceRole.Organiser)
-                ),
-            })
+            .Select(a => new { a.PostId, a.UserId })
             .ToListAsync();
-        int? ackTotal = caller.IsOrganiser
-            ? await db.EventAttendances.CountAsync(m =>
-                m.EventId == eventId
-                && (m.Role == AttendanceRole.Attendee || m.Role == AttendanceRole.Organiser)
-            )
+        // Organisers see counts over current confirmed members, leaving out the author.
+        var memberIds = caller.IsOrganiser
+            ? await db
+                .EventAttendances.Where(m =>
+                    m.EventId == eventId
+                    && (m.Role == AttendanceRole.Attendee || m.Role == AttendanceRole.Organiser)
+                )
+                .Select(m => m.UserId)
+                .ToHashSetAsync()
             : null;
 
         return posts
@@ -683,6 +685,7 @@ public static class NewsEndpoints
                     caller.IsOrganiser && caller.IsWritable,
                     p.PinnedAt,
                     p.RequiresAck,
+                    p.RequiresAck && p.AuthorId != caller.UserId,
                     postAcks.Any(a => a.UserId == caller.UserId),
                     NewsReaction
                         .Allowed.Select(e => new NewsReactionCount(
@@ -695,8 +698,14 @@ public static class NewsEndpoints
                         .Where(r => r.UserId == caller.UserId)
                         .Select(r => r.Emoji)
                         .ToList(),
-                    caller.IsOrganiser && p.RequiresAck ? postAcks.Count(a => a.Confirmed) : null,
-                    p.RequiresAck ? ackTotal : null
+                    memberIds is not null && p.RequiresAck
+                        ? postAcks.Count(a =>
+                            a.UserId != p.AuthorId && memberIds.Contains(a.UserId)
+                        )
+                        : null,
+                    memberIds is not null && p.RequiresAck
+                        ? memberIds.Count(id => id != p.AuthorId)
+                        : null
                 );
             })
             .ToList();

@@ -1,6 +1,7 @@
 namespace Amsterfam.Api.Dtos;
 
 /// <summary>
+/// <see cref="CanAcknowledge"/> is false for the post's author, who has nothing to confirm.
 /// <see cref="AckCount"/> and <see cref="AckTotal"/> are only filled in for organisers.
 /// </summary>
 public record NewsPostResponse(
@@ -14,6 +15,7 @@ public record NewsPostResponse(
     bool CanEdit,
     DateTimeOffset? PinnedAt,
     bool RequiresAck,
+    bool CanAcknowledge,
     bool AcknowledgedByMe,
     IReadOnlyList<NewsReactionCount> Reactions,
     IReadOnlyList<string> MyReactions,

@@ -69,7 +69,9 @@
 
   @if (current().requiresAck) {
     <div class="ack">
-      @if (current().acknowledgedByMe) {
+      @if (!current().canAcknowledge) {
+        <!-- The author has nothing to acknowledge, but organisers still see the count. -->
+      } @else if (current().acknowledgedByMe) {
         <span class="ack-done"><mat-icon>check_circle</mat-icon> You've acknowledged this</span>
       } @else {
         <button mat-flat-button (click)="acknowledge()" [disabled]="busy()">

@@ -14,6 +14,8 @@ export interface NewsPost {
   pinnedAt: string | null;
   /** The post asks every member for a "Got it". */
   requiresAck: boolean;
+  /** False for the post's author, who has nothing to acknowledge. */
+  canAcknowledge: boolean;
   acknowledgedByMe: boolean;
   /** Only emoji with at least one reaction, in {@link NEWS_REACTIONS} order. */
   reactions: NewsReactionCount[];
