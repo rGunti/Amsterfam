@@ -15,6 +15,17 @@ public class NewsPublisher(EventLog log)
         log.Record(post.EventId, EventLogType.NewsPosted, actorId, data: LogData(post));
     }
 
-    /// <summary>What the timeline keeps about a post: never the body.</summary>
-    public static object LogData(NewsPost post) => new { postId = post.Id, title = post.Title };
+    /// <summary>
+    /// What the timeline keeps about a post: never the body. <paramref name="changed"/> names
+    /// what an edit touched, when that isn't the text (e.g. "image").
+    /// </summary>
+    public static object LogData(NewsPost post, string[]? changed = null) =>
+        changed is null
+            ? new { postId = post.Id, title = post.Title }
+            : new
+            {
+                postId = post.Id,
+                title = post.Title,
+                changed,
+            };
 }

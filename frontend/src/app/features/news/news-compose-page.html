@@ -51,12 +51,35 @@
       </div>
       <section class="pane pane-preview" aria-label="Preview">
         <h2 class="pane-label">Preview</h2>
+        <ng-container *ngTemplateOutlet="image" />
         @if (bodyText().trim()) {
           <app-markdown [text]="bodyText()" />
         } @else {
           <p class="note">Nothing to preview yet.</p>
         }
       </section>
+    </div>
+
+    <div class="image-field">
+      <ng-container *ngTemplateOutlet="image" />
+      <div class="image-actions">
+        <input #imageInput type="file" accept="image/*" hidden (change)="onImageSelected($event)" />
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="imageInput.click()"
+          [disabled]="imageBusy()"
+        >
+          <mat-icon>image</mat-icon>
+          {{ hasImage() ? 'Change image' : 'Add image' }}
+        </button>
+        @if (hasImage()) {
+          <button mat-button type="button" (click)="removeImage()" [disabled]="imageBusy()">
+            Remove image
+          </button>
+        }
+      </div>
+      <p class="image-hint">Shown in the app only, not in notifications.</p>
     </div>
 
     <div class="options">
@@ -78,3 +101,16 @@
     </div>
   }
 </form>
+
+<ng-template #image>
+  @if (newImageUrl(); as url) {
+    <img class="post-image" [src]="url" alt="Image for this post" />
+  } @else if (keptImageId(); as imageId) {
+    <app-auth-image
+      class="post-image"
+      [src]="existingImageUrl()"
+      [version]="imageId"
+      alt="Image for this post"
+    />
+  }
+</ng-template>

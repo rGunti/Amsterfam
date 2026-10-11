@@ -163,6 +163,17 @@
   }
 }
 
+// Decorative: the whole block is the link to the post.
+.news-preview-image {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-high);
+  object-fit: cover;
+}
+
 .news-preview-text {
   display: flex;
   flex-direction: column;

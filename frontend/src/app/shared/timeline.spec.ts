@@ -108,6 +108,11 @@ describe('describeEntry', () => {
 
     const edited = entry({ type: 'NewsEdited', data: { postId: 3, title: 'Packing' } });
     expect(describeEntry(edited, 99).text).toBe('Alice edited a news post: “Packing”');
+    const image = entry({
+      type: 'NewsEdited',
+      data: { postId: 3, title: 'Packing', changed: ['image'] },
+    });
+    expect(describeEntry(image, 99).text).toBe('Alice changed the image of a news post: “Packing”');
     const deleted = entry({ type: 'NewsDeleted', data: { postId: 3, title: 'Packing' } });
     expect(describeEntry(deleted, 99).text).toBe('Alice deleted a news post: “Packing”');
   });

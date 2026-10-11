@@ -44,7 +44,7 @@ import { BannerTitle } from '../../shared/event-banner/banner-title';
 import { LinkifiedText } from '../../shared/linkified-text/linkified-text';
 import { NewsSummaryCard } from '../news/news-summary-card';
 import { EventBanner } from '../../shared/event-banner/event-banner';
-import { prepareBanner } from '../../shared/banner-image';
+import { prepareImage } from '../../shared/image-upload';
 import { EventStatusGraph } from '../../shared/event-status-graph/event-status-graph';
 import { OrganiserAvatarStack } from '../../shared/organiser-avatar-stack/organiser-avatar-stack';
 import {
@@ -488,7 +488,7 @@ export class EventsDetail implements OnInit {
       return;
     }
     this.bannerBusy.set(true);
-    prepareBanner(file)
+    prepareImage(file)
       .then((image) => {
         this.eventApi.uploadBanner(ev.id, image, file.name).subscribe({
           next: ({ bannerFileId }) => {

@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,7 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-import { Observable, debounceTime, map } from 'rxjs';
+import { Observable, catchError, debounceTime, map, of, switchMap } from 'rxjs';
 
 import { NewsApi } from '../../core/api/news.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
@@ -20,7 +21,9 @@ import {
   NewsPost,
   UpsertNewsPostRequest,
 } from '../../core/models/news';
+import { AuthImage } from '../../shared/auth-image/auth-image';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
+import { prepareImage } from '../../shared/image-upload';
 import { Markdown } from '../../shared/markdown/markdown';
 import { HasUnsavedChanges } from '../../shared/unsaved-changes.guard';
 
@@ -30,6 +33,12 @@ interface Draft {
   requiresAck?: boolean;
   pin?: boolean;
 }
+
+/** What saving does to the post's image. */
+type ImageChange =
+  | { kind: 'keep' }
+  | { kind: 'set'; image: Blob; fileName: string; previewUrl: string }
+  | { kind: 'remove' };
 
 const draftKey = (eventId: string) => `amsterfam.news-draft.${eventId}`;
 
@@ -58,11 +67,13 @@ function writeDraft(eventId: string, draft: Draft | null): void {
 /**
  * Writes a new news post (`news/new`) or edits one (`news/:postId/edit`). A page rather than
  * a dialog, so there's room to write and a stray click can't throw a draft away. A new post's
- * draft is also kept in the browser until it's published or discarded.
+ * draft is also kept in the browser until it's published or discarded (without the image,
+ * which only lives until the page is left).
  */
 @Component({
   selector: 'app-news-compose-page',
   imports: [
+    NgTemplateOutlet,
     ReactiveFormsModule,
     MatButtonModule,
     MatButtonToggleModule,
@@ -71,6 +82,7 @@ function writeDraft(eventId: string, draft: Draft | null): void {
     MatIconModule,
     MatInputModule,
     RouterLink,
+    AuthImage,
     Markdown,
   ],
   templateUrl: './news-compose-page.html',
@@ -125,9 +137,29 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
   readonly saving = signal(false);
   readonly restoredDraft = signal(false);
 
+  /** The image the post had when loaded for editing. */
+  readonly existingImageId = signal<string | null>(null);
+  readonly imageChange = signal<ImageChange>({ kind: 'keep' });
+  readonly imageBusy = signal(false);
+  /** A freshly picked image (not uploaded yet) as an object URL. */
+  readonly newImageUrl = computed(() => {
+    const change = this.imageChange();
+    return change.kind === 'set' ? change.previewUrl : null;
+  });
+  /** The stored image, while it's being kept. */
+  readonly keptImageId = computed(() =>
+    this.imageChange().kind === 'keep' ? this.existingImageId() : null,
+  );
+  readonly hasImage = computed(() => !!this.newImageUrl() || !!this.keptImageId());
+  readonly existingImageUrl = computed(() =>
+    this.postId === null ? '' : this.api.imageUrl(this.eventId, this.postId),
+  );
+
   private saved = false;
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.revokePreview());
+
     if (this.postId === null) {
       this.form.valueChanges.pipe(debounceTime(500), takeUntilDestroyed()).subscribe((value) => {
         if (!this.saved) {
@@ -167,6 +199,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
           requiresAck: post.requiresAck,
         });
         this.hadAck.set(post.requiresAck);
+        this.existingImageId.set(post.imageFileId ?? null);
         this.form.markAsPristine();
         this.loading.set(false);
       },
@@ -178,7 +211,86 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
   }
 
   hasUnsavedChanges(): boolean {
-    return !this.saved && this.form.dirty;
+    return !this.saved && (this.form.dirty || this.imageChange().kind !== 'keep');
+  }
+
+  onImageSelected(input: Event): void {
+    const el = input.target as HTMLInputElement;
+    const file = el.files?.[0];
+    // Clear so picking the same file again after a failure still fires (change).
+    el.value = '';
+    if (!file) {
+      return;
+    }
+    this.imageBusy.set(true);
+    prepareImage(file)
+      .then((image) => {
+        this.imageBusy.set(false);
+        this.setImageChange({
+          kind: 'set',
+          image,
+          fileName: file.name,
+          previewUrl: URL.createObjectURL(image),
+        });
+      })
+      .catch(() => {
+        this.imageBusy.set(false);
+        this.snackBar.open('That file could not be read as an image.', 'Dismiss', {
+          duration: 5000,
+        });
+      });
+  }
+
+  removeImage(): void {
+    this.setImageChange(this.existingImageId() ? { kind: 'remove' } : { kind: 'keep' });
+  }
+
+  private setImageChange(change: ImageChange): void {
+    this.revokePreview();
+    this.imageChange.set(change);
+  }
+
+  private revokePreview(): void {
+    const url = this.newImageUrl();
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  /**
+   * Applies the image change to the saved post. A new post's first image isn't an edit.
+   * Failing here doesn't undo the post, so the error only becomes a warning.
+   */
+  private saveImage(post: NewsPost): Observable<NewsPost> {
+    const change = this.imageChange();
+    let request: Observable<unknown> | null = null;
+    if (change.kind === 'set') {
+      request = this.api.uploadImage(
+        this.eventId,
+        post.id,
+        change.image,
+        change.fileName,
+        this.postId === null,
+      );
+    } else if (change.kind === 'remove') {
+      request = this.api.deleteImage(this.eventId, post.id);
+    }
+    if (!request) {
+      return of(post);
+    }
+    return request.pipe(
+      map(() => post),
+      catchError(() => {
+        this.snackBar.open(
+          change.kind === 'set'
+            ? "The post is saved, but the image couldn't be uploaded."
+            : "The post is saved, but the image couldn't be removed.",
+          'Dismiss',
+          { duration: 8000 },
+        );
+        return of(post);
+      }),
+    );
   }
 
   canLeave(): boolean | Observable<boolean> {
@@ -221,6 +333,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
   discardDraft(): void {
     writeDraft(this.eventId, null);
     this.form.reset();
+    this.setImageChange({ kind: 'keep' });
     this.restoredDraft.set(false);
   }
 
@@ -245,7 +358,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
       this.postId === null
         ? this.api.create(this.eventId, request)
         : this.api.update(this.eventId, this.postId, request);
-    save$.subscribe({
+    save$.pipe(switchMap((post) => this.saveImage(post))).subscribe({
       next: (post: NewsPost) => {
         this.saved = true;
         if (this.postId === null) {

@@ -39,6 +39,9 @@ public static class NewsEndpoints
         group
             .MapDelete("/{postId:int}/reactions/{emoji}", RemoveReaction)
             .NotLoggedToTimeline("reaction");
+        group.MapGet("/{postId:int}/image", GetImage);
+        group.MapPut("/{postId:int}/image", PutImage).LogsToTimeline();
+        group.MapDelete("/{postId:int}/image", DeleteImage).LogsToTimeline();
 
         return app;
     }
@@ -282,6 +285,7 @@ public static class NewsEndpoints
         if (post is null)
             return TypedResults.NotFound();
 
+        var imageId = post.ImageFileId;
         db.NewsPosts.Remove(post);
         log.Record(
             eventId,
@@ -290,6 +294,9 @@ public static class NewsEndpoints
             data: NewsPublisher.LogData(post)
         );
         await db.SaveChangesAsync();
+        // ImageFileId only nulls itself when the file goes, so the file has to go explicitly.
+        if (imageId is { } id)
+            await db.EventFiles.Where(f => f.Id == id).ExecuteDeleteAsync();
 
         return TypedResults.NoContent();
     }
@@ -582,6 +589,135 @@ public static class NewsEndpoints
         return TypedResults.NoContent();
     }
 
+    /// <summary>
+    /// The post's image. Unpublished posts (scheduled ones, #141) are organiser-only, like
+    /// the posts themselves.
+    /// </summary>
+    private static async Task<IResult> GetImage(
+        Guid eventId,
+        int postId,
+        HttpRequest request,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.Read);
+        if (caller is null)
+            return error!;
+
+        var post = await db
+            .NewsPosts.Where(p =>
+                p.Id == postId
+                && p.EventId == eventId
+                && (p.PublishedAt != null || caller.IsOrganiser)
+            )
+            .Select(p => new { p.ImageFileId })
+            .FirstOrDefaultAsync();
+        if (post is null)
+            return TypedResults.NotFound();
+
+        return await ImageUpload.ServeAsync(db, post.ImageFileId, request);
+    }
+
+    /// <summary>
+    /// Attaches or replaces the post's image. <paramref name="initial"/> is for the compose
+    /// page adding the image straight after creating the post: it isn't an edit, so it doesn't
+    /// mark the post edited or add a timeline entry. It's ignored once the post has an image.
+    /// </summary>
+    private static async Task<IResult> PutImage(
+        Guid eventId,
+        int postId,
+        string? fileName,
+        bool? initial,
+        HttpRequest request,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db,
+        TimeProvider time,
+        EventLog log
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.Write);
+        if (caller is null)
+            return error!;
+
+        var post = await db.NewsPosts.FirstOrDefaultAsync(p =>
+            p.Id == postId && p.EventId == eventId
+        );
+        if (post is null)
+            return TypedResults.NotFound();
+
+        var (image, invalid) = await ImageUpload.ReadAsync(request, "The image");
+        if (image is null)
+            return invalid!;
+
+        var previousId = post.ImageFileId;
+        var now = time.GetUtcNow();
+        var file = new EventFile
+        {
+            EventId = eventId,
+            FileName = ImageUpload.CleanFileName(fileName, "image"),
+            ContentType = image.ContentType,
+            Size = image.Data.Length,
+            Data = image.Data,
+            UploadedById = caller.UserId,
+            CreatedAt = now,
+        };
+        db.EventFiles.Add(file);
+        post.ImageFileId = file.Id;
+        if (initial != true || previousId is not null)
+            MarkImageEdited(post, caller.UserId, now, log);
+        await db.SaveChangesAsync();
+
+        if (previousId is { } old)
+            await db.EventFiles.Where(f => f.Id == old).ExecuteDeleteAsync();
+
+        return TypedResults.Ok(new { imageFileId = file.Id });
+    }
+
+    private static async Task<IResult> DeleteImage(
+        Guid eventId,
+        int postId,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db,
+        TimeProvider time,
+        EventLog log
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.Write);
+        if (caller is null)
+            return error!;
+
+        var post = await db.NewsPosts.FirstOrDefaultAsync(p =>
+            p.Id == postId && p.EventId == eventId
+        );
+        if (post is null)
+            return TypedResults.NotFound();
+        if (post.ImageFileId is not { } imageId)
+            return TypedResults.NoContent();
+
+        post.ImageFileId = null;
+        MarkImageEdited(post, caller.UserId, time.GetUtcNow(), log);
+        await db.SaveChangesAsync();
+        await db.EventFiles.Where(f => f.Id == imageId).ExecuteDeleteAsync();
+        return TypedResults.NoContent();
+    }
+
+    private static void MarkImageEdited(
+        NewsPost post,
+        int actorId,
+        DateTimeOffset now,
+        EventLog log
+    )
+    {
+        post.EditedAt = now;
+        log.Record(
+            post.EventId,
+            EventLogType.NewsEdited,
+            actorId,
+            data: NewsPublisher.LogData(post, changed: ["image"])
+        );
+    }
+
     private static Task<NewsPost?> FindPublishedAsync(
         AmsterfamDbContext db,
         Guid eventId,
@@ -705,7 +841,8 @@ public static class NewsEndpoints
                         : null,
                     memberIds is not null && p.RequiresAck
                         ? memberIds.Count(id => id != p.AuthorId)
-                        : null
+                        : null,
+                    p.ImageFileId
                 );
             })
             .ToList();

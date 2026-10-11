@@ -213,9 +213,10 @@ function describeParts(
     case 'NewsUnpinned': {
       const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : null;
       const quoted = title ? `: “${title}”` : '';
+      const imageOnly = ((data['changed'] as string[] | undefined) ?? []).includes('image');
       const verb = {
         NewsPosted: 'posted news',
-        NewsEdited: 'edited a news post',
+        NewsEdited: imageOnly ? 'changed the image of a news post' : 'edited a news post',
         NewsDeleted: 'deleted a news post',
         NewsPinned: 'pinned a news post',
         NewsUnpinned: 'unpinned a news post',

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Amsterfam.Api.Dtos;
 using Amsterfam.Api.Endpoints;
+using Amsterfam.Api.Services;
 using Amsterfam.Core.Entities;
 using Amsterfam.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -103,7 +104,7 @@ public class EventBannerApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var owner = api.CreateClientWithUser("discord|banner-owner-4");
         var ev = await CreateEvent(owner, "Banner 4");
 
-        var big = new byte[EventBannerEndpoints.MaxBannerBytes + 1];
+        var big = new byte[ImageUpload.MaxBytes + 1];
         Png.CopyTo(big, 0);
         var response = await Upload(owner, ev.Id, big);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);

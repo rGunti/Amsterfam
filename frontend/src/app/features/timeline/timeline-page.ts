@@ -5,10 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 
+import { NewsApi } from '../../core/api/news.api';
 import { TimelineApi } from '../../core/api/timeline.api';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { TimelineEntry } from '../../core/models/timeline';
+import { AuthImage } from '../../shared/auth-image/auth-image';
 import { TimelineLine, describeEntry, visibilityNote } from '../../shared/timeline';
 import { fullTimestamp, timelineGroup } from '../../shared/timestamp';
 
@@ -23,12 +25,13 @@ interface TimelineLineView extends TimelineLine {
 
 @Component({
   selector: 'app-timeline-page',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule, RouterLink],
+  imports: [MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule, RouterLink, AuthImage],
   templateUrl: './timeline-page.html',
   styleUrl: './timeline-page.scss',
 })
 export class TimelinePage implements OnInit {
   private readonly api = inject(TimelineApi);
+  private readonly newsApi = inject(NewsApi);
   private readonly currentUser = inject(CurrentUserService);
   private readonly currentEventService = inject(CurrentEventService);
 
@@ -37,6 +40,10 @@ export class TimelinePage implements OnInit {
   readonly loading = signal(true);
   readonly error = signal(false);
   readonly hasMore = signal(false);
+
+  newsImageUrl(postId: number): string {
+    return this.newsApi.imageUrl(this.event()!.id, postId);
+  }
 
   /** Entries under headings (Today, Yesterday, …, then per month), newest first. */
   readonly groups = computed(() => {

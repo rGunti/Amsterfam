@@ -62,6 +62,15 @@
     </h2>
   }
 
+  @if (current().imageFileId; as imageId) {
+    <app-auth-image
+      class="post-image"
+      [src]="imageUrl()"
+      [version]="imageId"
+      [alt]="current().title ?? 'Image for this post'"
+    />
+  }
+
   <app-markdown class="post-body" [text]="current().body" />
   @if (compact()) {
     <a class="read-more" [routerLink]="['/events', eventId(), 'news', current().id]">Read more</a>

@@ -121,10 +121,14 @@ POST   /api/v1/events/{id}/news             (organiser; body: title?, body)
 PUT    /api/v1/events/{id}/news/{postId}    (organiser; body: title?, body)
 DELETE /api/v1/events/{id}/news/{postId}    (organiser)
 POST   /api/v1/events/{id}/news/seen        (marks everything published so far as read)
+GET    /api/v1/events/{id}/news/{postId}/image   (unpublished posts: organisers only)
+PUT    /api/v1/events/{id}/news/{postId}/image?fileName={name}&initial={bool}   (organiser; raw image body)
+DELETE /api/v1/events/{id}/news/{postId}/image   (organiser)
 ```
 - The feed returns `{ posts, seenAt }`; a post is `{ id, title, body, author, createdAt, publishedAt, editedAt, canEdit }`.
 - `body` is raw Markdown (max 4000 characters); `title` is optional (max 120, blank = none). 400 with `{ "error": "..." }` otherwise.
 - `limit` defaults to 20 (max 50). Page by passing the last post's `publishedAt` and `id`.
+- Posts carry `imageFileId` (null without an image). Image upload, sniffing, the 5 MB limit and ETag caching work like the banner. Replacing or removing an image, or deleting the post, deletes the old file. Image changes log `NewsEdited` with `changed: ["image"]` and set `editedAt`, except `initial=true` on a post without an image (the compose page adding it right after creating the post).
 - `GET /api/v1/events/{id}` returns `unreadNewsCount` for confirmed members: posts by others published after the caller's last `seen`.
 
 ### Availability

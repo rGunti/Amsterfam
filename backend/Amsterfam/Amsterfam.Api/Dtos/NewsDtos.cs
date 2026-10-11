@@ -20,7 +20,8 @@ public record NewsPostResponse(
     IReadOnlyList<NewsReactionCount> Reactions,
     IReadOnlyList<string> MyReactions,
     int? AckCount,
-    int? AckTotal
+    int? AckTotal,
+    Guid? ImageFileId
 );
 
 public record NewsReactionCount(string Emoji, int Count);

@@ -91,6 +91,33 @@ export class NewsApi {
     return this.http.delete<void>(this.reactionUrl(eventId, postId, emoji));
   }
 
+  /** Absolute URL of the post's image; fetch it with auth (see AuthImage). */
+  imageUrl(eventId: string, postId: number): string {
+    return this.url(eventId, `/${postId}/image`);
+  }
+
+  /**
+   * Attaches or replaces the image. `initial` is for adding it straight after creating the
+   * post, so it doesn't count as an edit.
+   */
+  uploadImage(
+    eventId: string,
+    postId: number,
+    image: Blob,
+    fileName: string,
+    initial = false,
+  ): Observable<{ imageFileId: string }> {
+    const query = `?fileName=${encodeURIComponent(fileName)}${initial ? '&initial=true' : ''}`;
+    return this.http.put<{ imageFileId: string }>(
+      this.url(eventId, `/${postId}/image${query}`),
+      image,
+    );
+  }
+
+  deleteImage(eventId: string, postId: number): Observable<void> {
+    return this.http.delete<void>(this.url(eventId, `/${postId}/image`));
+  }
+
   private reactionUrl(eventId: string, postId: number, emoji: string): string {
     return this.url(eventId, `/${postId}/reactions/${encodeURIComponent(emoji)}`);
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fitWithin } from './banner-image';
+import { fitWithin } from './image-upload';
 
 describe('fitWithin', () => {
   it('leaves small images alone', () => {
