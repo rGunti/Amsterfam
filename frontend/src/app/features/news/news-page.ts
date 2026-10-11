@@ -12,6 +12,15 @@ import { NewsPostCard } from './news-post-card';
 
 const PAGE_SIZE = 20;
 
+/** Pinned first (most recently pinned on top), then newest first, as the server sends them. */
+function feedOrder(a: NewsPost, b: NewsPost): number {
+  if ((a.pinnedAt === null) !== (b.pinnedAt === null)) {
+    return a.pinnedAt === null ? 1 : -1;
+  }
+  const key = (p: NewsPost) => p.pinnedAt ?? p.publishedAt ?? p.createdAt;
+  return key(b).localeCompare(key(a)) || b.id - a.id;
+}
+
 /** The event's news feed, newest first. Opening it marks everything as read. */
 @Component({
   selector: 'app-news-page',
@@ -42,7 +51,12 @@ export class NewsPage implements OnInit {
   }
 
   loadMore(): void {
-    this.load(this.posts().at(-1));
+    // Pinned posts lead the first page and aren't part of the paging cursor.
+    this.load(
+      this.posts()
+        .filter((p) => p.pinnedAt === null)
+        .at(-1),
+    );
   }
 
   /** Someone else's post, published since the viewer last opened the feed. */
@@ -57,6 +71,11 @@ export class NewsPage implements OnInit {
 
   onDeleted(post: NewsPost): void {
     this.posts.update((posts) => posts.filter((p) => p.id !== post.id));
+  }
+
+  /** Keeps pinned posts first after one is pinned or unpinned here. */
+  onChanged(post: NewsPost): void {
+    this.posts.update((posts) => posts.map((p) => (p.id === post.id ? post : p)).sort(feedOrder));
   }
 
   private load(before?: NewsPost): void {
@@ -75,7 +94,7 @@ export class NewsPage implements OnInit {
         } else {
           this.posts.update((current) => [...current, ...feed.posts]);
         }
-        this.hasMore.set(feed.posts.length === PAGE_SIZE);
+        this.hasMore.set(feed.posts.filter((p) => p.pinnedAt === null).length === PAGE_SIZE);
         this.loading.set(false);
       },
       error: () => {

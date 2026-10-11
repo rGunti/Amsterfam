@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -9,12 +9,18 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 
 import { NewsApi } from '../../core/api/news.api';
-import { NewsPost } from '../../core/models/news';
+import { NEWS_REACTIONS, NewsPost } from '../../core/models/news';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { Markdown } from '../../shared/markdown/markdown';
 import { fullTimestamp, timelineGroup } from '../../shared/timestamp';
+import { NewsAcksDialog, NewsAcksDialogData } from './news-acks-dialog';
 
-/** One news post: author, time, title and the Markdown body, plus edit/delete for organisers. */
+const reactionOrder = (emoji: string) => (NEWS_REACTIONS as readonly string[]).indexOf(emoji);
+
+/**
+ * One news post: author, time, title and the Markdown body, with reactions and a "Got it"
+ * button, plus edit/pin/delete for organisers.
+ */
 @Component({
   selector: 'app-news-post-card',
   imports: [
@@ -40,29 +46,47 @@ export class NewsPostCard {
   readonly isNew = input(false);
   /** Links the title to the post's own page (in the feed, not on that page itself). */
   readonly linkTitle = input(true);
+  /** A short version for the event overview: clamped body, no reactions. */
+  readonly compact = input(false);
 
   readonly deleted = output<NewsPost>();
+  /** The post changed here (pin, reaction, acknowledgement). */
+  readonly changed = output<NewsPost>();
 
+  protected readonly reactionChoices = NEWS_REACTIONS;
   protected readonly deleting = signal(false);
+  protected readonly busy = signal(false);
+  /** The post as shown, updated locally after the viewer's own changes. */
+  protected readonly current = linkedSignal(() => this.post());
+
+  protected readonly counts = computed(() => {
+    const counts = new Map(this.current().reactions.map((r) => [r.emoji, r.count]));
+    const mine = new Set(this.current().myReactions);
+    return NEWS_REACTIONS.map((emoji) => ({
+      emoji,
+      count: counts.get(emoji) ?? 0,
+      mine: mine.has(emoji),
+    }));
+  });
 
   protected readonly when = computed(() => {
-    const iso = this.post().publishedAt ?? this.post().createdAt;
+    const iso = this.current().publishedAt ?? this.current().createdAt;
     const { label, stamp } = timelineGroup(iso);
     const day = label === 'Today' || label === 'Yesterday' ? `${label}, ` : '';
     return { iso, text: `${day}${stamp}`, full: fullTimestamp(iso) };
   });
 
   protected readonly editedFull = computed(() => {
-    const edited = this.post().editedAt;
+    const edited = this.current().editedAt;
     return edited ? fullTimestamp(edited) : null;
   });
 
   protected readonly initial = computed(
-    () => [...this.post().author.displayName.trim()][0]?.toUpperCase() ?? '?',
+    () => [...this.current().author.displayName.trim()][0]?.toUpperCase() ?? '?',
   );
 
   protected confirmDelete(): void {
-    const post = this.post();
+    const post = this.current();
     this.dialog
       .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, {
         data: {
@@ -87,5 +111,87 @@ export class NewsPostCard {
           },
         });
       });
+  }
+
+  protected toggleReaction(emoji: string): void {
+    const before = this.current();
+    const mine = before.myReactions.includes(emoji);
+    const delta = mine ? -1 : 1;
+    const count = (before.reactions.find((r) => r.emoji === emoji)?.count ?? 0) + delta;
+    const others = before.reactions.filter((r) => r.emoji !== emoji);
+    const reactions = count > 0 ? [...others, { emoji, count }] : others;
+    this.update({
+      ...before,
+      reactions: reactions.sort((a, b) => reactionOrder(a.emoji) - reactionOrder(b.emoji)),
+      myReactions: mine
+        ? before.myReactions.filter((e) => e !== emoji)
+        : [...before.myReactions, emoji],
+    });
+
+    const request = mine
+      ? this.api.unreact(this.eventId(), before.id, emoji)
+      : this.api.react(this.eventId(), before.id, emoji);
+    request.subscribe({
+      error: () => {
+        this.update(before);
+        this.snackBar.open('Could not save your reaction.', 'Dismiss', { duration: 5000 });
+      },
+    });
+  }
+
+  protected acknowledge(): void {
+    const post = this.current();
+    this.busy.set(true);
+    this.api.acknowledge(this.eventId(), post.id).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.update({
+          ...post,
+          acknowledgedByMe: true,
+          ackCount: post.ackCount === null ? null : post.ackCount + 1,
+        });
+      },
+      error: () => {
+        this.busy.set(false);
+        this.snackBar.open('Could not save that. Try again?', 'Dismiss', { duration: 5000 });
+      },
+    });
+  }
+
+  protected togglePin(): void {
+    const post = this.current();
+    const pinned = post.pinnedAt !== null;
+    this.busy.set(true);
+    const request = pinned
+      ? this.api.unpin(this.eventId(), post.id)
+      : this.api.pin(this.eventId(), post.id);
+    request.subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.update({ ...post, pinnedAt: pinned ? null : new Date().toISOString() });
+      },
+      error: () => {
+        this.busy.set(false);
+        this.snackBar.open(
+          pinned ? 'Could not unpin the post.' : 'Could not pin the post.',
+          'Dismiss',
+          {
+            duration: 5000,
+          },
+        );
+      },
+    });
+  }
+
+  protected openAcks(): void {
+    const post = this.current();
+    this.dialog.open<NewsAcksDialog, NewsAcksDialogData>(NewsAcksDialog, {
+      data: { eventId: this.eventId(), postId: post.id, title: post.title },
+    });
+  }
+
+  private update(post: NewsPost): void {
+    this.current.set(post);
+    this.changed.emit(post);
   }
 }

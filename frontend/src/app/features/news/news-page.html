@@ -17,6 +17,7 @@
           [post]="post"
           [isNew]="isNew(post)"
           (deleted)="onDeleted($event)"
+          (changed)="onChanged($event)"
         />
       </li>
     }

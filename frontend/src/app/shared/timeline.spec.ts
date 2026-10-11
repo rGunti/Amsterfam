@@ -112,6 +112,15 @@ describe('describeEntry', () => {
     expect(describeEntry(deleted, 99).text).toBe('Alice deleted a news post: “Packing”');
   });
 
+  it('describes pinning and unpinning news posts', () => {
+    const pinned = entry({ type: 'NewsPinned', data: { postId: 3, title: 'Deposit' } });
+    expect(describeEntry(pinned, 99).text).toBe('Alice pinned a news post: “Deposit”');
+    expect(describeEntry(pinned, 99).icon).toBe('push_pin');
+
+    const unpinned = entry({ type: 'NewsUnpinned', data: { postId: 3, title: null } });
+    expect(describeEntry(unpinned, 99).text).toBe('Alice unpinned a news post');
+  });
+
   it('notes restricted visibility', () => {
     expect(visibilityNote('Everyone')).toBeNull();
     expect(visibilityNote('Organisers')).toBe('Only organisers see this');

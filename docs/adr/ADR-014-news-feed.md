@@ -34,11 +34,27 @@ notifications (#142 onwards).
 
 ## Timeline
 
-- `NewsPosted`, `NewsEdited` and `NewsDeleted` entries store `{ postId, title }`, never the
-  body.
+- `NewsPosted`, `NewsEdited`, `NewsDeleted`, `NewsPinned` and `NewsUnpinned` entries store
+  `{ postId, title }`, never the body. Pinning an already pinned post logs nothing.
+- Acknowledgements and reactions are personal and never logged.
 - The timeline response adds a `news` preview (title, plain-text excerpt, image id) to each
   `NewsPosted` entry, read from the **current** post. Edits show up there, and a deleted
   post falls back to the plain sentence. The log itself stays body-free.
+
+## Pins, acknowledgements and reactions (#139)
+
+- **Pins:** organisers pin and unpin from a post's menu, or when creating it. The first feed
+  page starts with every pinned post (most recently pinned first). The keyset paging only
+  walks unpinned posts, so the cursor logic stays as it was.
+- **Acknowledgements:** a post with `RequiresAck` gets a "Got it" button. Acknowledging is
+  idempotent and can't be undone. Organisers see `ackCount`/`ackTotal` and a list of who
+  hasn't acknowledged; both count current confirmed members only, so Pending members are
+  never "missing". Editing keeps acknowledgements unless the organiser asks everyone to
+  acknowledge again.
+- **Reactions:** a fixed server-side list (👍 ❤️ 😂 🎉 😮 🙏), compared exactly; anything else
+  is a 400. This avoids grapheme validation and abuse.
+- **Overview:** `GET .../news/summary` feeds the "Latest news" card on the event page:
+  pinned posts, posts still waiting for the viewer's acknowledgement, and the newest post.
 
 ## Up-front columns
 

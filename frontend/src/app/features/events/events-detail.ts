@@ -42,6 +42,7 @@ import { JoinLinkShareSheet } from './join-link-share-sheet';
 import { isCompactScreen } from '../../shared/compact-screen';
 import { BannerTitle } from '../../shared/event-banner/banner-title';
 import { LinkifiedText } from '../../shared/linkified-text/linkified-text';
+import { NewsSummaryCard } from '../news/news-summary-card';
 import { EventBanner } from '../../shared/event-banner/event-banner';
 import { prepareBanner } from '../../shared/banner-image';
 import { EventStatusGraph } from '../../shared/event-status-graph/event-status-graph';
@@ -87,6 +88,7 @@ interface EventForm {
     OrganiserAvatarStack,
     EventBanner,
     LinkifiedText,
+    NewsSummaryCard,
     BannerTitle,
     NgTemplateOutlet,
     EventStatusGraph,

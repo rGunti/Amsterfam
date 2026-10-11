@@ -23,6 +23,13 @@ const post = (id: number, publishedAt: string, author = alice): NewsPost => ({
   publishedAt,
   editedAt: null,
   canEdit: false,
+  pinnedAt: null,
+  requiresAck: false,
+  acknowledgedByMe: false,
+  reactions: [],
+  myReactions: [],
+  ackCount: null,
+  ackTotal: null,
 });
 
 describe('NewsPage', () => {

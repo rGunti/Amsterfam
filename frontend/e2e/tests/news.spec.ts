@@ -125,3 +125,43 @@ test('an organiser writes, edits and deletes a post without losing a draft', asy
   await expect(page).toHaveURL(new RegExp(`/events/${eventId}/news$`));
   await expect(page.getByText('No news yet.')).toBeVisible();
 });
+
+test('an attendee acknowledges a pinned post from the event overview', async ({
+  page,
+  request,
+}) => {
+  const organiser = `e2e-news-ack-organiser-${Date.now()}`;
+  const eventId = await createOpenEvent(request, organiser);
+  await joinViaLink(request, eventId, organiser, BROWSER_USER);
+  await confirm(request, eventId, organiser, BROWSER_USER);
+
+  const created = await request.post(`${API}/api/v1/events/${eventId}/news`, {
+    headers: asUser(organiser),
+    data: { title: 'Deposit due', body: 'Pay **€50** by Friday.', requiresAck: true, pin: true },
+  });
+  expect(created.ok()).toBeTruthy();
+  const postId = (await created.json()).id as number;
+
+  await page.goto(`/events/${eventId}`);
+  const card = page.locator('app-news-summary-card');
+  await expect(card.getByText('Latest news')).toBeVisible();
+  await expect(card.getByRole('link', { name: 'Deposit due' })).toBeVisible();
+  await expect(card.getByLabel('Pinned')).toBeVisible();
+
+  await card.getByRole('button', { name: 'Got it' }).click();
+  await expect(card.getByText("You've acknowledged this")).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Got it' })).toHaveCount(0);
+
+  const acks = await request.get(`${API}/api/v1/events/${eventId}/news/${postId}/acks`, {
+    headers: asUser(organiser),
+  });
+  expect(acks.ok()).toBeTruthy();
+  const body = await acks.json();
+  expect(body.acknowledged).toHaveLength(1);
+  expect(body.missing).toHaveLength(1); // the organiser
+
+  // Reactions work on the feed page.
+  await page.getByRole('link', { name: 'All news' }).click();
+  await page.getByRole('button', { name: /^🎉/ }).click();
+  await expect(page.getByRole('button', { name: '🎉 1' })).toHaveAttribute('aria-pressed', 'true');
+});
