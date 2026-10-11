@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
@@ -25,6 +27,7 @@ const base: NewsPost = {
   myReactions: [],
   ackCount: null,
   ackTotal: null,
+  imageFileId: null,
 };
 
 describe('NewsPostCard', () => {
@@ -36,11 +39,14 @@ describe('NewsPostCard', () => {
       react: vi.fn(() => of(undefined)),
       unreact: vi.fn(() => of(undefined)),
       acknowledge: vi.fn(() => of(undefined)),
+      imageUrl: vi.fn((eventId: string, postId: number) => `http://api/${eventId}/${postId}/image`),
     };
     dialogOpen = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: NewsApi, useValue: api },
         { provide: MatDialog, useValue: { open: dialogOpen } },
       ],
@@ -122,5 +128,24 @@ describe('NewsPostCard', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.reactions')).toBeNull();
     expect(el.textContent).toContain('Read more');
+  });
+
+  it('fetches and shows the image when the post has one', () => {
+    URL.createObjectURL ??= () => 'blob:image';
+    URL.revokeObjectURL ??= () => undefined;
+    const fixture = render({ imageFileId: 'img-1' });
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('http://api/ev-1/7/image').flush(new Blob(['png']));
+    fixture.detectChanges();
+
+    const img = (fixture.nativeElement as HTMLElement).querySelector('.post-image img');
+    expect(img?.getAttribute('src')).toMatch(/^blob:/);
+    expect(img?.getAttribute('alt')).toBe('Deposit due');
+  });
+
+  it('shows no image when the post has none', () => {
+    const fixture = render();
+    TestBed.inject(HttpTestingController).verify();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-auth-image')).toBeNull();
   });
 });

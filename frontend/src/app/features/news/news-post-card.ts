@@ -10,6 +10,7 @@ import { RouterLink } from '@angular/router';
 
 import { NewsApi } from '../../core/api/news.api';
 import { NEWS_REACTIONS, NewsPost } from '../../core/models/news';
+import { AuthImage } from '../../shared/auth-image/auth-image';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { Markdown } from '../../shared/markdown/markdown';
 import { fullTimestamp, timelineGroup } from '../../shared/timestamp';
@@ -30,6 +31,7 @@ const reactionOrder = (emoji: string) => (NEWS_REACTIONS as readonly string[]).i
     MatMenuModule,
     MatTooltipModule,
     RouterLink,
+    AuthImage,
     Markdown,
   ],
   templateUrl: './news-post-card.html',
@@ -80,6 +82,10 @@ export class NewsPostCard {
     const edited = this.current().editedAt;
     return edited ? fullTimestamp(edited) : null;
   });
+
+  protected readonly imageUrl = computed(() =>
+    this.api.imageUrl(this.eventId(), this.current().id),
+  );
 
   protected readonly initial = computed(
     () => [...this.current().author.displayName.trim()][0]?.toUpperCase() ?? '?',

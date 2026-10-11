@@ -1,8 +1,10 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { firstValueFrom, isObservable, of } from 'rxjs';
+import { firstValueFrom, isObservable, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
 import { NewsApi } from '../../core/api/news.api';
@@ -16,12 +18,17 @@ describe('NewsComposePage', () => {
   let editedRequiresAck: boolean;
   let create: ReturnType<typeof vi.fn>;
   let update: ReturnType<typeof vi.fn>;
+  let uploadImage: ReturnType<typeof vi.fn>;
+  let deleteImage: ReturnType<typeof vi.fn>;
+  let editedImageId: string | null;
 
   function render(params: Record<string, string> = {}) {
     dialogAnswer = false;
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap(params) } },
@@ -37,9 +44,13 @@ describe('NewsComposePage', () => {
                 author: {},
                 canEdit: true,
                 requiresAck: editedRequiresAck,
+                imageFileId: editedImageId,
               }),
             create,
             update,
+            uploadImage,
+            deleteImage,
+            imageUrl: () => 'http://api/image',
           },
         },
         { provide: CurrentEventService, useValue: { eventId: signal('ev-1') } },
@@ -64,6 +75,9 @@ describe('NewsComposePage', () => {
   // Node's own (flag-gated) localStorage shadows jsdom's here, so use a plain in-memory one.
   beforeEach(() => {
     editedRequiresAck = false;
+    editedImageId = null;
+    uploadImage = vi.fn(() => of({ imageFileId: 'img-2' }));
+    deleteImage = vi.fn(() => of(undefined));
     create = vi.fn(() => of({ id: 9 }));
     update = vi.fn(() => of({ id: 5 }));
     const store = new Map<string, string>();
@@ -157,6 +171,73 @@ describe('NewsComposePage', () => {
       body: 'Old body',
       requiresAck: true,
       resetAcks: true,
+    });
+  });
+
+  const picked = () => ({
+    kind: 'set' as const,
+    image: new Blob(['jpeg']),
+    fileName: 'beach.png',
+    previewUrl: 'blob:preview',
+  });
+
+  describe('images', () => {
+    beforeEach(() => {
+      // jsdom has no object URLs.
+      URL.createObjectURL ??= () => 'blob:preview';
+      URL.revokeObjectURL ??= () => undefined;
+    });
+
+    it('uploads a picked image after creating the post, as its first image', () => {
+      const page = render().componentInstance;
+      page.form.patchValue({ body: 'Look at this' });
+      page.imageChange.set(picked());
+      expect(page.hasUnsavedChanges()).toBe(true);
+
+      page.save();
+      expect(create).toHaveBeenCalled();
+      expect(uploadImage).toHaveBeenCalledWith('ev-1', 9, expect.any(Blob), 'beach.png', true);
+      expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/events', 'ev-1', 'news', 9]);
+    });
+
+    it('replaces the image of an edited post as an edit', () => {
+      editedImageId = 'img-1';
+      const page = render({ postId: '5' }).componentInstance;
+      expect(page.hasImage()).toBe(true);
+      page.imageChange.set(picked());
+
+      page.save();
+      expect(uploadImage).toHaveBeenCalledWith('ev-1', 5, expect.any(Blob), 'beach.png', false);
+    });
+
+    it('removes the image of an edited post', () => {
+      editedImageId = 'img-1';
+      const page = render({ postId: '5' }).componentInstance;
+      page.removeImage();
+      expect(page.hasImage()).toBe(false);
+      expect(page.hasUnsavedChanges()).toBe(true);
+
+      page.save();
+      expect(deleteImage).toHaveBeenCalledWith('ev-1', 5);
+      expect(uploadImage).not.toHaveBeenCalled();
+    });
+
+    it('leaves the image alone when it was not touched', () => {
+      editedImageId = 'img-1';
+      const page = render({ postId: '5' }).componentInstance;
+      page.save();
+      expect(uploadImage).not.toHaveBeenCalled();
+      expect(deleteImage).not.toHaveBeenCalled();
+    });
+
+    it('still opens the saved post when the image upload fails', () => {
+      uploadImage = vi.fn(() => throwError(() => new Error('nope')));
+      const page = render().componentInstance;
+      page.form.patchValue({ body: 'Look at this' });
+      page.imageChange.set(picked());
+
+      page.save();
+      expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/events', 'ev-1', 'news', 9]);
     });
   });
 });

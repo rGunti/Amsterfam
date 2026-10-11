@@ -31,6 +31,7 @@ const post = (id: number, publishedAt: string, author = alice): NewsPost => ({
   myReactions: [],
   ackCount: null,
   ackTotal: null,
+  imageFileId: null,
 });
 
 describe('NewsPage', () => {

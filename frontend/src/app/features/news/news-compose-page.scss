@@ -85,3 +85,46 @@
   align-items: flex-start;
   margin: 8px 0;
 }
+
+.post-image {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  margin: 0 0 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container);
+  object-fit: contain;
+}
+
+.image-field {
+  margin: 16px 0 8px;
+
+  // Wide screens show the image in the preview pane; narrow ones show it here, next to its
+  // buttons, whichever pane is open.
+  .post-image {
+    max-width: 320px;
+
+    @media (min-width: 960px) {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 959.98px) {
+  .pane-preview .post-image {
+    display: none;
+  }
+}
+
+.image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.image-hint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}

@@ -23,6 +23,8 @@ export interface NewsPost {
   /** Organisers only, and only on posts that ask for acknowledgement. */
   ackCount: number | null;
   ackTotal: number | null;
+  /** Set when the post has an image; changes when the image does. Fetch it with auth. */
+  imageFileId: string | null;
 }
 
 export interface NewsReactionCount {

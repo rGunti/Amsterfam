@@ -56,6 +56,18 @@ notifications (#142 onwards).
 - **Overview:** `GET .../news/summary` feeds the "Latest news" card on the event page:
   pinned posts, posts still waiting for the viewer's acknowledgement, and the newest post.
 
+## Images (#140)
+
+- One image per post, stored as an `EventFile` like the banner and served only through the
+  authenticated API. Outside channels (#142 onwards) stay text-only and link back (ADR-011).
+- The browser scales images down to 1600 px JPEG before uploading; the server checks the
+  bytes (JPEG/PNG/WebP, max 5 MB) and serves the sniffed type. `ImageUpload` holds the
+  shared upload and serving code.
+- `ImageFileId` is a set-null FK, so replacing an image or deleting a post deletes the file
+  explicitly.
+- Image changes are edits (`NewsEdited` with `changed: ["image"]`). A new post's first image
+  is uploaded with `initial=true` straight after creating it, so it doesn't look edited.
+
 ## Up-front columns
 
 `NewsPost` already has `PublishAt`, `PinnedAt`, `RequiresAck`, `Notify`, `CommentsEnabled`

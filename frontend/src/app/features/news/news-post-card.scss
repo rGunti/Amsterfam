@@ -85,6 +85,21 @@
   height: 20px;
 }
 
+.post-image {
+  margin: 0 0 12px;
+  max-height: 480px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+  object-fit: contain;
+}
+
+// A fixed strip on the overview, cropped rather than letterboxed.
+.post-compact .post-image {
+  height: 160px;
+  object-fit: cover;
+}
+
 .post-compact .post-body {
   display: -webkit-box;
   -webkit-line-clamp: 3;

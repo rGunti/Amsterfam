@@ -165,3 +165,48 @@ test('an attendee acknowledges a pinned post from the event overview', async ({
   await page.getByRole('button', { name: /^🎉/ }).click();
   await expect(page.getByRole('button', { name: '🎉 1' })).toHaveAttribute('aria-pressed', 'true');
 });
+
+// 1x1 PNG.
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+test('an organiser posts with an image, sees it in the timeline, then removes it', async ({
+  page,
+  request,
+}) => {
+  const eventId = await createOpenEvent(request, BROWSER_USER);
+
+  await page.goto(`/events/${eventId}/news/new`);
+  await page.getByLabel('Title (optional)').fill('Beach day');
+  await page.getByLabel('Post').fill('Bring sunscreen.');
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'beach.png',
+    mimeType: 'image/png',
+    buffer: PNG,
+  });
+  await expect(page.getByRole('button', { name: 'Change image' })).toBeVisible();
+  await page.getByRole('button', { name: 'Publish' }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/events/${eventId}/news/\\d+$`));
+  await expect(page.locator('.post-image img')).toHaveAttribute('src', /^blob:/);
+  // The first image isn't an edit.
+  await expect(page.getByText('edited', { exact: true })).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Timeline' }).click();
+  const preview = page.locator('.news-preview');
+  await expect(preview.locator('.news-preview-image img')).toHaveAttribute('src', /^blob:/);
+  await preview.locator('.news-preview-image').click();
+  await expect(page).toHaveURL(new RegExp(`/events/${eventId}/news/\\d+$`));
+
+  await page.getByRole('button', { name: 'Post actions' }).click();
+  await page.getByRole('menuitem', { name: 'Edit' }).click();
+  await page.getByRole('button', { name: 'Remove image' }).click();
+  await expect(page.getByRole('button', { name: 'Add image' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/events/${eventId}/news/\\d+$`));
+  await expect(page.getByRole('heading', { name: 'Beach day' })).toBeVisible();
+  await expect(page.locator('.post-image')).toHaveCount(0);
+});

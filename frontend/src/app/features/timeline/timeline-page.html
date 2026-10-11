@@ -55,11 +55,17 @@
                     </span>
                   </p>
                   @if (line.entry.news; as news) {
-                    <!-- #140 adds the image preview (news.imageFileId) to this block. -->
                     <a
                       class="news-preview"
                       [routerLink]="['/events', event()!.id, 'news', news.postId]"
                     >
+                      @if (news.imageFileId; as imageId) {
+                        <app-auth-image
+                          class="news-preview-image"
+                          [src]="newsImageUrl(news.postId)"
+                          [version]="imageId"
+                        />
+                      }
                       <span class="news-preview-text">
                         @if (news.title; as title) {
                           <strong class="news-preview-title">{{ title }}</strong>

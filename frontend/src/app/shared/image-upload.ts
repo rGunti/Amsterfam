@@ -1,5 +1,5 @@
-/** Longest edge of an uploaded banner; anything bigger is scaled down in the browser. */
-export const MAX_BANNER_EDGE = 1600;
+/** Longest edge of an uploaded image (banner, news); anything bigger is scaled down in the browser. */
+export const MAX_IMAGE_EDGE = 1600;
 const QUALITY = 0.85;
 
 /** Scales (width, height) down to fit within `max` on both edges, keeping the aspect ratio. */
@@ -10,13 +10,13 @@ export function fitWithin(width: number, height: number, max: number): [number, 
 
 /**
  * Decodes an image the user picked and re-encodes it as a JPEG no larger than
- * {@link MAX_BANNER_EDGE}, which keeps uploads small and strips metadata such as GPS tags.
+ * {@link MAX_IMAGE_EDGE}, which keeps uploads small and strips metadata such as GPS tags.
  * Rejects if the file can't be decoded as an image.
  */
-export async function prepareBanner(file: File): Promise<Blob> {
+export async function prepareImage(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   try {
-    const [width, height] = fitWithin(bitmap.width, bitmap.height, MAX_BANNER_EDGE);
+    const [width, height] = fitWithin(bitmap.width, bitmap.height, MAX_IMAGE_EDGE);
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
