@@ -15,6 +15,7 @@ import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/co
 import { Markdown } from '../../shared/markdown/markdown';
 import { fullTimestamp, timelineGroup } from '../../shared/timestamp';
 import { NewsAcksDialog, NewsAcksDialogData } from './news-acks-dialog';
+import { NewsComments } from './news-comments';
 
 const reactionOrder = (emoji: string) => (NEWS_REACTIONS as readonly string[]).indexOf(emoji);
 
@@ -33,6 +34,7 @@ const reactionOrder = (emoji: string) => (NEWS_REACTIONS as readonly string[]).i
     RouterLink,
     AuthImage,
     Markdown,
+    NewsComments,
   ],
   templateUrl: './news-post-card.html',
   styleUrl: './news-post-card.scss',
@@ -48,11 +50,13 @@ export class NewsPostCard {
   readonly isNew = input(false);
   /** Links the title to the post's own page (in the feed, not on that page itself). */
   readonly linkTitle = input(true);
-  /** A short version for the event overview: clamped body, no reactions. */
+  /** A short version for the event overview: clamped body, no reactions or comments. */
   readonly compact = input(false);
+  /** Show the comments open, e.g. on the post's own page. */
+  readonly commentsExpanded = input(false);
 
   readonly deleted = output<NewsPost>();
-  /** The post changed here (pin, reaction, acknowledgement). */
+  /** The post changed here (pin, reaction, acknowledgement, comments). */
   readonly changed = output<NewsPost>();
 
   protected readonly reactionChoices = NEWS_REACTIONS;
@@ -194,6 +198,10 @@ export class NewsPostCard {
     this.dialog.open<NewsAcksDialog, NewsAcksDialogData>(NewsAcksDialog, {
       data: { eventId: this.eventId(), postId: post.id, title: post.title },
     });
+  }
+
+  protected onCommentCount(commentCount: number): void {
+    this.update({ ...this.current(), commentCount, newCommentCount: 0 });
   }
 
   private update(post: NewsPost): void {

@@ -33,6 +33,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<NewsPost> NewsPosts => Set<NewsPost>();
     public DbSet<NewsAcknowledgement> NewsAcknowledgements => Set<NewsAcknowledgement>();
     public DbSet<NewsReaction> NewsReactions => Set<NewsReaction>();
+    public DbSet<NewsComment> NewsComments => Set<NewsComment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -197,6 +198,21 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
                 .WithMany()
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NewsComment>(e =>
+        {
+            e.HasIndex(c => new { c.PostId, c.CreatedAt });
+            e.Property(c => c.Body).HasMaxLength(NewsComment.MaxBodyLength);
+            e.HasOne(c => c.Post)
+                .WithMany()
+                .HasForeignKey(c => c.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Members who leave keep their comments, like expenses.
+            e.HasOne(c => c.Author)
+                .WithMany()
+                .HasForeignKey(c => c.AuthorId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<AvailabilityEntry>(e =>

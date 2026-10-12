@@ -869,6 +869,40 @@ namespace Amsterfam.Infrastructure.Migrations
                     b.ToTable("NewsAcknowledgements");
                 });
 
+            modelBuilder.Entity("Amsterfam.Core.Entities.NewsComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AuthorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("PostId", "CreatedAt");
+
+                    b.ToTable("NewsComments");
+                });
+
             modelBuilder.Entity("Amsterfam.Core.Entities.NewsPost", b =>
                 {
                     b.Property<int>("Id")
@@ -1516,6 +1550,25 @@ namespace Amsterfam.Infrastructure.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Amsterfam.Core.Entities.NewsComment", b =>
+                {
+                    b.HasOne("Amsterfam.Core.Entities.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Amsterfam.Core.Entities.NewsPost", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Post");
                 });
 
             modelBuilder.Entity("Amsterfam.Core.Entities.NewsPost", b =>

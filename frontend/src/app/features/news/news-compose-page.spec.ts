@@ -44,6 +44,7 @@ describe('NewsComposePage', () => {
                 author: {},
                 canEdit: true,
                 requiresAck: editedRequiresAck,
+                commentsEnabled: false,
                 imageFileId: editedImageId,
               }),
             create,
@@ -145,7 +146,24 @@ describe('NewsComposePage', () => {
       body: 'Pay the deposit',
       requiresAck: true,
       pin: true,
+      commentsEnabled: true,
     });
+  });
+
+  it('lets the organiser turn comments off, and keeps that when editing', () => {
+    const page = render().componentInstance;
+    expect(page.form.getRawValue().commentsEnabled).toBe(true);
+    page.form.patchValue({ body: 'Info only', commentsEnabled: false });
+    page.save();
+    expect(create).toHaveBeenCalledWith(
+      'ev-1',
+      expect.objectContaining({ commentsEnabled: false }),
+    );
+
+    TestBed.resetTestingModule();
+    const fixture = render({ postId: '5' });
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Allow comments');
+    expect(fixture.componentInstance.form.getRawValue().commentsEnabled).toBe(false);
   });
 
   it('only offers to ask again when editing a post that already asked', () => {
@@ -170,6 +188,7 @@ describe('NewsComposePage', () => {
       title: 'Old',
       body: 'Old body',
       requiresAck: true,
+      commentsEnabled: false,
       resetAcks: true,
     });
   });

@@ -23,6 +23,7 @@ import { NewsPostCard } from './news-post-card';
           [eventId]="eventId()"
           [post]="post"
           [linkTitle]="false"
+          [commentsExpanded]="true"
           (deleted)="onDeleted()"
         />
       } @else if (missing()) {

@@ -6,7 +6,10 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 
+import { signal } from '@angular/core';
+
 import { NewsApi } from '../../core/api/news.api';
+import { CurrentEventService } from '../../core/event/current-event.service';
 import { NewsPost } from '../../core/models/news';
 import { NewsPostCard } from './news-post-card';
 
@@ -28,6 +31,9 @@ const base: NewsPost = {
   ackCount: null,
   ackTotal: null,
   imageFileId: null,
+  commentsEnabled: true,
+  commentCount: 0,
+  newCommentCount: 0,
 };
 
 describe('NewsPostCard', () => {
@@ -48,6 +54,7 @@ describe('NewsPostCard', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: NewsApi, useValue: api },
+        { provide: CurrentEventService, useValue: { event: signal(null) } },
         { provide: MatDialog, useValue: { open: dialogOpen } },
       ],
     });

@@ -224,6 +224,11 @@ function describeParts(
       const pinning = entry.type === 'NewsPinned' || entry.type === 'NewsUnpinned';
       return { icon: pinning ? 'push_pin' : 'campaign', parts: t`${actor} ${verb}${quoted}` };
     }
+    case 'NewsCommentRemoved': {
+      const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : null;
+      const on = title ? ` on “${title}”` : ' on a news post';
+      return { icon: 'speaker_notes_off', parts: t`${actor} removed a comment by ${subject}${on}` };
+    }
     case 'ExpenseAdded':
       return {
         icon: 'receipt_long',

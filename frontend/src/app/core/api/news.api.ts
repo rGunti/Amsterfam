@@ -2,7 +2,14 @@ import { HttpClient, HttpParams, HttpUrlEncodingCodec } from '@angular/common/ht
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { NewsAcks, NewsFeed, NewsPost, NewsSummary, UpsertNewsPostRequest } from '../models/news';
+import {
+  NewsAcks,
+  NewsComment,
+  NewsFeed,
+  NewsPost,
+  NewsSummary,
+  UpsertNewsPostRequest,
+} from '../models/news';
 import { ENVIRONMENT } from '../../../environments/environment.model';
 
 /**
@@ -116,6 +123,34 @@ export class NewsApi {
 
   deleteImage(eventId: string, postId: number): Observable<void> {
     return this.http.delete<void>(this.url(eventId, `/${postId}/image`));
+  }
+
+  /** Oldest first. Pass the last comment already shown to fetch only newer ones. */
+  comments(eventId: string, postId: number, after?: NewsComment): Observable<NewsComment[]> {
+    let params = new HttpParams({ encoder: new StrictCodec() });
+    if (after) {
+      params = params.set('after', after.createdAt).set('afterId', after.id);
+    }
+    return this.http.get<NewsComment[]>(this.url(eventId, `/${postId}/comments`), { params });
+  }
+
+  addComment(eventId: string, postId: number, body: string): Observable<NewsComment> {
+    return this.http.post<NewsComment>(this.url(eventId, `/${postId}/comments`), { body });
+  }
+
+  editComment(
+    eventId: string,
+    postId: number,
+    commentId: number,
+    body: string,
+  ): Observable<NewsComment> {
+    return this.http.put<NewsComment>(this.url(eventId, `/${postId}/comments/${commentId}`), {
+      body,
+    });
+  }
+
+  deleteComment(eventId: string, postId: number, commentId: number): Observable<void> {
+    return this.http.delete<void>(this.url(eventId, `/${postId}/comments/${commentId}`));
   }
 
   private reactionUrl(eventId: string, postId: number, emoji: string): string {

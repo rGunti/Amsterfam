@@ -115,5 +115,12 @@
         </button>
       }
     </div>
+
+    <app-news-comments
+      [eventId]="eventId()"
+      [post]="current()"
+      [startExpanded]="commentsExpanded()"
+      (countChanged)="onCommentCount($event)"
+    />
   }
 </article>

@@ -32,3 +32,22 @@ public class NewsReaction
 
     public static bool IsAllowed(string emoji) => Allowed.Contains(emoji, StringComparer.Ordinal);
 }
+
+/// <summary>
+/// A member's plain-text comment on a post (#147). Kept when the author leaves the event;
+/// deleted with the post.
+/// </summary>
+public class NewsComment
+{
+    public const int MaxBodyLength = 2000;
+
+    public int Id { get; set; }
+    public int PostId { get; set; }
+    public int AuthorId { get; set; }
+    public required string Body { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? EditedAt { get; set; }
+
+    public NewsPost Post { get; set; } = null!;
+    public User Author { get; set; } = null!;
+}

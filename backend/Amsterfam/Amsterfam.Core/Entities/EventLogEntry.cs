@@ -35,7 +35,8 @@ public class EventLogEntry
             or EventLogType.CostOverrideChanged
             or EventLogType.JoinLinkCreated
             or EventLogType.JoinLinkRevoked
-            or EventLogType.JoinLinkRegenerated => EventLogVisibility.Organisers,
+            or EventLogType.JoinLinkRegenerated
+            or EventLogType.NewsCommentRemoved => EventLogVisibility.Organisers,
             _ => EventLogVisibility.Everyone,
         };
 
@@ -78,6 +79,7 @@ public enum EventLogType
     NewsDeleted,
     NewsPinned,
     NewsUnpinned,
+    NewsCommentRemoved,
 }
 
 public enum EventLogVisibility
