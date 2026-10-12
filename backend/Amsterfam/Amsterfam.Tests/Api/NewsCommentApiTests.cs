@@ -396,4 +396,120 @@ public class NewsCommentApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(3, inFeed.CommentCount);
         Assert.Equal(2, inFeed.NewCommentCount);
     }
+
+    private static string Reaction(Trip t, int postId, int commentId, string emoji) =>
+        $"{t.Comments(postId)}/{commentId}/reactions/{Uri.EscapeDataString(emoji)}";
+
+    [Fact]
+    public async Task CommentReactions_AreCountedPerEmoji_AndIdempotent()
+    {
+        var t = await CreateTrip("11");
+        var post = await Post(t);
+        var comment = await AddComment(t.Guest, t, post.Id);
+        Assert.Empty(comment.Reactions);
+
+        foreach (var client in new[] { t.Owner, t.Other, t.Other })
+            Assert.Equal(
+                HttpStatusCode.NoContent,
+                (await client.PutAsync(Reaction(t, post.Id, comment.Id, "👍"), null)).StatusCode
+            );
+        (
+            await t.Other.PutAsync(Reaction(t, post.Id, comment.Id, "❤️"), null)
+        ).EnsureSuccessStatusCode();
+
+        var asOther = Assert.Single(await Comments(t.Other, t, post.Id));
+        Assert.Equal(
+            [new NewsReactionCount("👍", 2), new NewsReactionCount("❤️", 1)],
+            asOther.Reactions
+        );
+        Assert.Equal(["👍", "❤️"], asOther.MyReactions);
+        Assert.Empty(Assert.Single(await Comments(t.Guest, t, post.Id)).MyReactions);
+
+        (
+            await t.Other.DeleteAsync(Reaction(t, post.Id, comment.Id, "👍"))
+        ).EnsureSuccessStatusCode();
+        // Removing a reaction you don't have is a no-op.
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await t.Guest.DeleteAsync(Reaction(t, post.Id, comment.Id, "👍"))).StatusCode
+        );
+        var after = Assert.Single(await Comments(t.Owner, t, post.Id));
+        Assert.Equal(
+            [new NewsReactionCount("👍", 1), new NewsReactionCount("❤️", 1)],
+            after.Reactions
+        );
+        Assert.Equal(["👍"], after.MyReactions);
+
+        // Reactions aren't timeline material.
+        Assert.DoesNotContain(
+            await Timeline(t.Owner, t.EventId),
+            e => e.Type.Contains("Reaction", StringComparison.Ordinal)
+        );
+    }
+
+    [Fact]
+    public async Task CommentReactions_AreRefusedOutsideTheRules()
+    {
+        var t = await CreateTrip("12");
+        var post = await Post(t);
+        var comment = await AddComment(t.Guest, t, post.Id);
+        var other = await Post(t);
+        var pending = api.CreateClientWithUser("discord|newsc-pending-12");
+        (await pending.JoinAsync(api, t.EventId)).EnsureSuccessStatusCode();
+        var stranger = api.CreateClientWithUser("discord|newsc-stranger-12");
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            (await t.Other.PutAsync(Reaction(t, post.Id, comment.Id, "💩"), null)).StatusCode
+        );
+        // The comment must belong to the post in the URL.
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await t.Other.PutAsync(Reaction(t, other.Id, comment.Id, "👍"), null)).StatusCode
+        );
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            (await pending.PutAsync(Reaction(t, post.Id, comment.Id, "👍"), null)).StatusCode
+        );
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await stranger.PutAsync(Reaction(t, post.Id, comment.Id, "👍"), null)).StatusCode
+        );
+
+        // Still allowed with comments turned off: a reaction adds no text.
+        (
+            await t.Owner.PutAsJsonAsync(
+                $"{t.News}/{post.Id}",
+                new UpsertNewsPostRequest("Deposit due", "Pay by Friday.", CommentsEnabled: false)
+            )
+        ).EnsureSuccessStatusCode();
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await t.Other.PutAsync(Reaction(t, post.Id, comment.Id, "👍"), null)).StatusCode
+        );
+
+        (await t.Owner.TransitionAsync(t.EventId, "Archived")).EnsureSuccessStatusCode();
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            (await t.Other.PutAsync(Reaction(t, post.Id, comment.Id, "❤️"), null)).StatusCode
+        );
+    }
+
+    [Fact]
+    public async Task DeletingAComment_DeletesItsReactions()
+    {
+        var t = await CreateTrip("13");
+        var post = await Post(t);
+        var comment = await AddComment(t.Guest, t, post.Id);
+        (
+            await t.Other.PutAsync(Reaction(t, post.Id, comment.Id, "👍"), null)
+        ).EnsureSuccessStatusCode();
+
+        (
+            await t.Guest.DeleteAsync($"{t.Comments(post.Id)}/{comment.Id}")
+        ).EnsureSuccessStatusCode();
+
+        await using var db = await api.CreateDbContextAsync();
+        Assert.False(await db.NewsCommentReactions.AnyAsync(r => r.CommentId == comment.Id));
+    }
 }

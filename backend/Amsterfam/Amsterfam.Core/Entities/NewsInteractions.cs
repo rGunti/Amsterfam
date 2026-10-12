@@ -51,3 +51,18 @@ public class NewsComment
     public NewsPost Post { get; set; } = null!;
     public User Author { get; set; } = null!;
 }
+
+/// <summary>
+/// A member's emoji reaction to a comment, from the same fixed list as post reactions
+/// (<see cref="NewsReaction.Allowed"/>). One row per user and emoji.
+/// </summary>
+public class NewsCommentReaction
+{
+    public int CommentId { get; set; }
+    public int UserId { get; set; }
+    public required string Emoji { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public NewsComment Comment { get; set; } = null!;
+    public User User { get; set; } = null!;
+}

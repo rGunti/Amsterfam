@@ -85,6 +85,68 @@
   overflow-wrap: anywhere;
 }
 
+.comment-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &.reaction-mine {
+    border-color: var(--mat-sys-primary);
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+}
+
+.reaction-count {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.reaction-add {
+  padding: 0 6px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// The picker lives in an overlay, outside this component's view.
+::ng-deep .comment-reaction-menu .reaction-picker {
+  display: flex;
+  padding: 0 4px;
+
+  .reaction-mine {
+    background: var(--mat-sys-primary-container);
+  }
+}
+
 .comment-menu {
   flex: none;
   margin-top: -4px;

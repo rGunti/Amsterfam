@@ -128,12 +128,14 @@ GET    /api/v1/events/{id}/news/{postId}/comments?after={createdAt}&afterId={com
 POST   /api/v1/events/{id}/news/{postId}/comments                (confirmed; body: body; post must allow comments)
 PUT    /api/v1/events/{id}/news/{postId}/comments/{commentId}    (comment author; body: body)
 DELETE /api/v1/events/{id}/news/{postId}/comments/{commentId}    (author or organiser; organiser removing another's comment logs NewsCommentRemoved)
+PUT    /api/v1/events/{id}/news/{postId}/comments/{commentId}/reactions/{emoji}   (confirmed; same emoji list as posts; works with comments off)
+DELETE /api/v1/events/{id}/news/{postId}/comments/{commentId}/reactions/{emoji}   (confirmed)
 ```
 - The feed returns `{ posts, seenAt }`; a post is `{ id, title, body, author, createdAt, publishedAt, editedAt, canEdit }`.
 - `body` is raw Markdown (max 4000 characters); `title` is optional (max 120, blank = none). 400 with `{ "error": "..." }` otherwise.
 - `limit` defaults to 20 (max 50). Page by passing the last post's `publishedAt` and `id`.
 - Posts carry `imageFileId` (null without an image). Image upload, sniffing, the 5 MB limit and ETag caching work like the banner. Replacing or removing an image, or deleting the post, deletes the old file. Image changes log `NewsEdited` with `changed: ["image"]` and set `editedAt`, except `initial=true` on a post without an image (the compose page adding it right after creating the post).
-- Comments are plain text (max 2000), default `limit` 50 (max 100). A comment is `{ id, author, body, createdAt, editedAt, canEdit, canDelete }`. Posts carry `commentsEnabled`, `commentCount` and `newCommentCount` (others' comments since the caller's last `seen`). Writing on a post with comments off is a 400; editing is author-only, deleting author or organiser (403 otherwise).
+- Comments are plain text (max 2000), default `limit` 50 (max 100). A comment is `{ id, author, body, createdAt, editedAt, canEdit, canDelete, reactions, myReactions }`. Posts carry `commentsEnabled`, `commentCount` and `newCommentCount` (others' comments since the caller's last `seen`). Writing on a post with comments off is a 400; editing is author-only, deleting author or organiser (403 otherwise).
 - `GET /api/v1/events/{id}` returns `unreadNewsCount` for confirmed members: posts by others published after the caller's last `seen`.
 
 ### Availability

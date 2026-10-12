@@ -153,6 +153,36 @@ export class NewsApi {
     return this.http.delete<void>(this.url(eventId, `/${postId}/comments/${commentId}`));
   }
 
+  reactToComment(
+    eventId: string,
+    postId: number,
+    commentId: number,
+    emoji: string,
+  ): Observable<void> {
+    return this.http.put<void>(this.commentReactionUrl(eventId, postId, commentId, emoji), null);
+  }
+
+  unreactToComment(
+    eventId: string,
+    postId: number,
+    commentId: number,
+    emoji: string,
+  ): Observable<void> {
+    return this.http.delete<void>(this.commentReactionUrl(eventId, postId, commentId, emoji));
+  }
+
+  private commentReactionUrl(
+    eventId: string,
+    postId: number,
+    commentId: number,
+    emoji: string,
+  ): string {
+    return this.url(
+      eventId,
+      `/${postId}/comments/${commentId}/reactions/${encodeURIComponent(emoji)}`,
+    );
+  }
+
   private reactionUrl(eventId: string, postId: number, emoji: string): string {
     return this.url(eventId, `/${postId}/reactions/${encodeURIComponent(emoji)}`);
   }

@@ -16,8 +16,7 @@ import { Markdown } from '../../shared/markdown/markdown';
 import { fullTimestamp, timelineGroup } from '../../shared/timestamp';
 import { NewsAcksDialog, NewsAcksDialogData } from './news-acks-dialog';
 import { NewsComments } from './news-comments';
-
-const reactionOrder = (emoji: string) => (NEWS_REACTIONS as readonly string[]).indexOf(emoji);
+import { toggleReaction } from './reactions';
 
 /**
  * One news post: author, time, title and the Markdown body, with reactions and a "Got it"
@@ -126,17 +125,7 @@ export class NewsPostCard {
   protected toggleReaction(emoji: string): void {
     const before = this.current();
     const mine = before.myReactions.includes(emoji);
-    const delta = mine ? -1 : 1;
-    const count = (before.reactions.find((r) => r.emoji === emoji)?.count ?? 0) + delta;
-    const others = before.reactions.filter((r) => r.emoji !== emoji);
-    const reactions = count > 0 ? [...others, { emoji, count }] : others;
-    this.update({
-      ...before,
-      reactions: reactions.sort((a, b) => reactionOrder(a.emoji) - reactionOrder(b.emoji)),
-      myReactions: mine
-        ? before.myReactions.filter((e) => e !== emoji)
-        : [...before.myReactions, emoji],
-    });
+    this.update(toggleReaction(before, emoji));
 
     const request = mine
       ? this.api.unreact(this.eventId(), before.id, emoji)

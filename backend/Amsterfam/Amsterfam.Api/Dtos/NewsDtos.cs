@@ -79,7 +79,9 @@ public record NewsCommentResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset? EditedAt,
     bool CanEdit,
-    bool CanDelete
+    bool CanDelete,
+    IReadOnlyList<NewsReactionCount> Reactions,
+    IReadOnlyList<string> MyReactions
 );
 
 public record UpsertNewsCommentRequest(string Body);

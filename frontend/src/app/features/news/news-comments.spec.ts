@@ -42,6 +42,8 @@ const comment = (overrides: Partial<NewsComment> = {}): NewsComment => ({
   editedAt: null,
   canEdit: false,
   canDelete: false,
+  reactions: [],
+  myReactions: [],
   ...overrides,
 });
 
@@ -61,6 +63,8 @@ describe('NewsComments', () => {
       ),
       editComment: vi.fn(),
       deleteComment: vi.fn(() => of(undefined)),
+      reactToComment: vi.fn(() => of(undefined)),
+      unreactToComment: vi.fn(() => of(undefined)),
     };
     dialogAnswer = true;
     TestBed.configureTestingModule({
@@ -179,6 +183,40 @@ describe('NewsComments', () => {
     fixture.detectChanges();
     expect(api['deleteComment']).toHaveBeenCalledWith('ev-1', 7, 1);
     expect(el(fixture).querySelectorAll('.comment').length).toBe(0);
+  });
+
+  it('toggles a reaction on a comment straight away', () => {
+    const fixture = render({}, [
+      comment({ reactions: [{ emoji: '👍', count: 2 }], myReactions: [] }),
+    ]);
+    toggle(fixture);
+    const thumbs = () =>
+      el(fixture).querySelector<HTMLButtonElement>('.comment-reactions .reaction')!;
+    expect(thumbs().textContent).toContain('2');
+
+    thumbs().click();
+    fixture.detectChanges();
+    expect(api['reactToComment']).toHaveBeenCalledWith('ev-1', 7, 1, '👍');
+    expect(thumbs().textContent).toContain('3');
+    expect(thumbs().getAttribute('aria-pressed')).toBe('true');
+
+    thumbs().click();
+    fixture.detectChanges();
+    expect(api['unreactToComment']).toHaveBeenCalledWith('ev-1', 7, 1, '👍');
+    expect(thumbs().textContent).toContain('2');
+  });
+
+  it('disables comment reactions only on a read-only event, not when comments are off', () => {
+    const archived = render({}, [comment({ reactions: [{ emoji: '🎉', count: 1 }] })], 'Archived');
+    toggle(archived);
+    const chip = el(archived).querySelector<HTMLButtonElement>('.comment-reactions .reaction')!;
+    expect(chip.disabled).toBe(true);
+    expect(el(archived).querySelector('.reaction-add')).toBeNull();
+
+    TestBed.resetTestingModule();
+    const off = render({ commentsEnabled: false }, [comment()]);
+    toggle(off);
+    expect(el(off).querySelector('.reaction-add')).not.toBeNull();
   });
 
   it('hides the box when comments are off or the event is read-only', () => {

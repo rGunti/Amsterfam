@@ -71,6 +71,51 @@
               } @else {
                 <app-linkified-text class="comment-body" [text]="comment.body" />
               }
+              @if (comment.reactions.length > 0 || canReact()) {
+                <div class="comment-reactions" role="group" aria-label="Reactions">
+                  @for (r of comment.reactions; track r.emoji) {
+                    <button
+                      type="button"
+                      class="reaction"
+                      [class.reaction-mine]="comment.myReactions.includes(r.emoji)"
+                      [attr.aria-pressed]="comment.myReactions.includes(r.emoji)"
+                      [attr.aria-label]="r.emoji + ' ' + r.count"
+                      [disabled]="!canReact()"
+                      (click)="toggleReaction(comment, r.emoji)"
+                    >
+                      <span>{{ r.emoji }}</span>
+                      <span class="reaction-count">{{ r.count }}</span>
+                    </button>
+                  }
+                  @if (canReact()) {
+                    <button
+                      type="button"
+                      class="reaction reaction-add"
+                      aria-label="Add a reaction"
+                      matTooltip="Add a reaction"
+                      [matMenuTriggerFor]="reactMenu"
+                    >
+                      <mat-icon>add_reaction</mat-icon>
+                    </button>
+                    <mat-menu #reactMenu="matMenu" class="comment-reaction-menu">
+                      <div class="reaction-picker">
+                        @for (emoji of reactionChoices; track emoji) {
+                          <button
+                            mat-icon-button
+                            type="button"
+                            [class.reaction-mine]="comment.myReactions.includes(emoji)"
+                            [attr.aria-pressed]="comment.myReactions.includes(emoji)"
+                            [attr.aria-label]="emoji"
+                            (click)="toggleReaction(comment, emoji)"
+                          >
+                            {{ emoji }}
+                          </button>
+                        }
+                      </div>
+                    </mat-menu>
+                  }
+                </div>
+              }
             </div>
             @if ((comment.canEdit && canWrite()) || comment.canDelete) {
               <button

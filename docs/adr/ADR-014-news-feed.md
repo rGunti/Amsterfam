@@ -83,6 +83,9 @@ notifications (#142 onwards).
 - **Not in the timeline, not outside the app:** comments are conversation already shown
   on the post, and logging them would flood the timeline. They're never sent to Discord,
   Telegram, push, email or RSS.
+- **Reactions on comments:** the same fixed emoji list and rules as post reactions, not
+  logged. They still work with comments turned off (a reaction adds no text), and go with
+  the comment when it's deleted.
 - **Moderation is logged:** when an organiser deletes someone else's comment, an
   organisers-only `NewsCommentRemoved` entry records `{ postId, title }` with the comment's
   author as subject, never the text. Deleting your own comment logs nothing.

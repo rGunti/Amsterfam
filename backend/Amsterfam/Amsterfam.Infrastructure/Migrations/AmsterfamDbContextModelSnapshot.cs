@@ -903,6 +903,28 @@ namespace Amsterfam.Infrastructure.Migrations
                     b.ToTable("NewsComments");
                 });
 
+            modelBuilder.Entity("Amsterfam.Core.Entities.NewsCommentReaction", b =>
+                {
+                    b.Property<int>("CommentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Emoji")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("CommentId", "UserId", "Emoji");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("NewsCommentReactions");
+                });
+
             modelBuilder.Entity("Amsterfam.Core.Entities.NewsPost", b =>
                 {
                     b.Property<int>("Id")
@@ -1569,6 +1591,25 @@ namespace Amsterfam.Infrastructure.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("Amsterfam.Core.Entities.NewsCommentReaction", b =>
+                {
+                    b.HasOne("Amsterfam.Core.Entities.NewsComment", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Amsterfam.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Amsterfam.Core.Entities.NewsPost", b =>

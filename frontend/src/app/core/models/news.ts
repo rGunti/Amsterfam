@@ -67,6 +67,9 @@ export interface NewsComment {
   canEdit: boolean;
   /** The viewer wrote it or is an organiser, and the event isn't read-only. */
   canDelete: boolean;
+  /** Only emoji with at least one reaction, in {@link NEWS_REACTIONS} order. */
+  reactions: NewsReactionCount[];
+  myReactions: string[];
 }
 
 export interface NewsAcks {

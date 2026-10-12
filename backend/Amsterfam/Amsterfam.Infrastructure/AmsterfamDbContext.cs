@@ -34,6 +34,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<NewsAcknowledgement> NewsAcknowledgements => Set<NewsAcknowledgement>();
     public DbSet<NewsReaction> NewsReactions => Set<NewsReaction>();
     public DbSet<NewsComment> NewsComments => Set<NewsComment>();
+    public DbSet<NewsCommentReaction> NewsCommentReactions => Set<NewsCommentReaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -213,6 +214,25 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
                 .WithMany()
                 .HasForeignKey(c => c.AuthorId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<NewsCommentReaction>(e =>
+        {
+            e.HasKey(r => new
+            {
+                r.CommentId,
+                r.UserId,
+                r.Emoji,
+            });
+            e.Property(r => r.Emoji).HasMaxLength(NewsReaction.MaxEmojiLength);
+            e.HasOne(r => r.Comment)
+                .WithMany()
+                .HasForeignKey(r => r.CommentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<AvailabilityEntry>(e =>

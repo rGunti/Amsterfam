@@ -40,11 +40,12 @@ import {
   CurrentEventService,
   EVENT_POLL_INTERVAL_MS,
 } from '../../core/event/current-event.service';
-import { NEWS_COMMENT_MAX, NewsComment, NewsPost } from '../../core/models/news';
+import { NEWS_COMMENT_MAX, NEWS_REACTIONS, NewsComment, NewsPost } from '../../core/models/news';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { isReadOnly } from '../../shared/event-status';
 import { LinkifiedText } from '../../shared/linkified-text/linkified-text';
 import { fullTimestamp, timelineGroup } from '../../shared/timestamp';
+import { toggleReaction } from './reactions';
 
 /** Matches the server's default page size; a full page means there may be more. */
 const PAGE_SIZE = 50;
@@ -87,6 +88,7 @@ export class NewsComments implements OnInit {
   readonly countChanged = output<number>();
 
   protected readonly maxLength = NEWS_COMMENT_MAX;
+  protected readonly reactionChoices = NEWS_REACTIONS;
   protected readonly me = inject(CurrentUserService).user;
   protected readonly myInitial = computed(() => {
     const me = this.me();
@@ -117,6 +119,12 @@ export class NewsComments implements OnInit {
   protected readonly canWrite = computed(() => {
     const ev = this.currentEventService.event();
     return this.post().commentsEnabled && (ev === null || !isReadOnly(ev.status));
+  });
+
+  /** Reacting works with comments turned off; only a read-only event stops it. */
+  protected readonly canReact = computed(() => {
+    const ev = this.currentEventService.event();
+    return ev === null || !isReadOnly(ev.status);
   });
 
   protected readonly toggleLabel = computed(() => {
@@ -193,11 +201,25 @@ export class NewsComments implements OnInit {
       next: (saved) => {
         this.busyId.set(null);
         this.editingId.set(null);
-        this.comments.update((list) => list?.map((c) => (c.id === saved.id ? saved : c)) ?? null);
+        this.replace(saved);
       },
       error: () => {
         this.busyId.set(null);
         this.snackBar.open('Could not save your comment.', 'Dismiss', { duration: 5000 });
+      },
+    });
+  }
+
+  protected toggleReaction(comment: NewsComment, emoji: string): void {
+    const mine = comment.myReactions.includes(emoji);
+    this.replace(toggleReaction(comment, emoji));
+    const request = mine
+      ? this.api.unreactToComment(this.eventId(), this.post().id, comment.id, emoji)
+      : this.api.reactToComment(this.eventId(), this.post().id, comment.id, emoji);
+    request.subscribe({
+      error: () => {
+        this.replace(comment);
+        this.snackBar.open('Could not save your reaction.', 'Dismiss', { duration: 5000 });
       },
     });
   }
@@ -279,6 +301,10 @@ export class NewsComments implements OnInit {
           this.setComments([...(this.comments() ?? []), ...added]);
         }
       });
+  }
+
+  private replace(comment: NewsComment): void {
+    this.comments.update((list) => list?.map((c) => (c.id === comment.id ? comment : c)) ?? null);
   }
 
   private setComments(comments: NewsComment[]): void {
