@@ -4,6 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 
+import { CurrentUserService } from '../../core/api/current-user.service';
 import { NewsApi } from '../../core/api/news.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { EventResponse } from '../../core/models/event';
@@ -66,6 +67,12 @@ describe('NewsComments', () => {
       providers: [
         { provide: NewsApi, useValue: api },
         {
+          provide: CurrentUserService,
+          useValue: {
+            user: signal({ id: 3, handle: 'carol', displayName: 'Carol', avatarUrl: null }),
+          },
+        },
+        {
           provide: CurrentEventService,
           useValue: { event: signal({ id: 'ev-1', status } as EventResponse) },
         },
@@ -122,6 +129,32 @@ describe('NewsComments', () => {
     expect(el(fixture).querySelectorAll('.comment').length).toBe(1);
     expect(el(fixture).textContent).toContain('1 comment');
     expect(counts).toEqual([1]);
+  });
+
+  it('sends with Ctrl+Enter or Cmd+Enter, and shows the viewer next to the box', async () => {
+    const fixture = render({ commentCount: 0, newCommentCount: 0 });
+    toggle(fixture);
+    await fixture.whenStable();
+    const form = el(fixture).querySelector('.new-comment')!;
+    expect(form.querySelector('.avatar')!.textContent).toContain('C');
+
+    const textarea = form.querySelector<HTMLTextAreaElement>('textarea')!;
+    textarea.value = 'First';
+    textarea.dispatchEvent(new Event('input'));
+    const plainEnter = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+    textarea.dispatchEvent(plainEnter);
+    expect(api['addComment']).not.toHaveBeenCalled();
+    // A plain Enter must still type a new line.
+    expect(plainEnter.defaultPrevented).toBe(false);
+
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true }));
+    expect(api['addComment']).toHaveBeenCalledWith('ev-1', 7, 'First');
+
+    fixture.detectChanges();
+    textarea.value = 'Second';
+    textarea.dispatchEvent(new Event('input'));
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true }));
+    expect(api['addComment']).toHaveBeenCalledWith('ev-1', 7, 'Second');
   });
 
   it('only offers actions the viewer may take', () => {

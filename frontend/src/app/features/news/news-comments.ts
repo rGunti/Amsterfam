@@ -34,6 +34,7 @@ import {
   timer,
 } from 'rxjs';
 
+import { CurrentUserService } from '../../core/api/current-user.service';
 import { NewsApi } from '../../core/api/news.api';
 import {
   CurrentEventService,
@@ -75,6 +76,7 @@ export class NewsComments implements OnInit {
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly currentEventService = inject(CurrentEventService);
+  private readonly navigator = this.document.defaultView?.navigator;
 
   readonly eventId = input.required<string>();
   readonly post = input.required<NewsPost>();
@@ -85,6 +87,18 @@ export class NewsComments implements OnInit {
   readonly countChanged = output<number>();
 
   protected readonly maxLength = NEWS_COMMENT_MAX;
+  protected readonly me = inject(CurrentUserService).user;
+  protected readonly myInitial = computed(() => {
+    const me = this.me();
+    return this.initialOf(me?.displayName ?? me?.handle ?? '');
+  });
+  /**
+   * Shown in the send button's tooltip. Ctrl+Enter and Cmd+Enter both send; a plain Enter
+   * still makes a new line.
+   */
+  protected readonly shortcutLabel = /Mac|iPhone|iPad/.test(this.navigator?.platform ?? '')
+    ? '⌘ Enter'
+    : 'Ctrl+Enter';
   protected readonly expanded = signal(false);
   protected readonly comments = signal<NewsComment[] | null>(null);
   protected readonly loadFailed = signal(false);
@@ -133,8 +147,8 @@ export class NewsComments implements OnInit {
     return { text: `${day}${stamp}`, full: fullTimestamp(iso) };
   }
 
-  protected initial(comment: NewsComment): string {
-    return [...comment.author.displayName.trim()][0]?.toUpperCase() ?? '?';
+  protected initialOf(name: string): string {
+    return [...name.trim()][0]?.toUpperCase() ?? '?';
   }
 
   protected send(): void {

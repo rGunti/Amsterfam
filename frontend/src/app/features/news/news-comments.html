@@ -25,7 +25,9 @@
             @if (comment.author.avatarUrl; as url) {
               <img class="avatar" [src]="url" alt="" />
             } @else {
-              <span class="avatar avatar-initial" aria-hidden="true">{{ initial(comment) }}</span>
+              <span class="avatar avatar-initial" aria-hidden="true">{{
+                initialOf(comment.author.displayName)
+              }}</span>
             }
             <div class="comment-main">
               <div class="comment-meta">
@@ -50,6 +52,9 @@
                     [maxlength]="maxLength"
                     [ngModel]="editText()"
                     (ngModelChange)="editText.set($event)"
+                    (keydown.control.enter)="$event.preventDefault(); saveEdit(comment)"
+                    (keydown.meta.enter)="$event.preventDefault(); saveEdit(comment)"
+                    (keydown.escape)="cancelEdit()"
                   ></textarea>
                 </mat-form-field>
                 <div class="edit-actions">
@@ -98,20 +103,39 @@
 
       @if (canWrite()) {
         <form class="new-comment" (ngSubmit)="send()">
+          @if (me()?.avatarUrl; as url) {
+            <img class="avatar" [src]="url" alt="" />
+          } @else {
+            <span class="avatar avatar-initial" aria-hidden="true">{{ myInitial() }}</span>
+          }
           <mat-form-field class="new-field" subscriptSizing="dynamic">
             <textarea
               matInput
               name="comment"
+              rows="1"
               placeholder="Write a comment…"
               aria-label="Write a comment"
               [maxlength]="maxLength"
               [ngModel]="draft()"
               (ngModelChange)="draft.set($event)"
+              (keydown.control.enter)="$event.preventDefault(); send()"
+              (keydown.meta.enter)="$event.preventDefault(); send()"
             ></textarea>
+            <button
+              mat-icon-button
+              matSuffix
+              type="submit"
+              class="send"
+              [attr.aria-label]="'Send comment (' + shortcutLabel + ')'"
+              [matTooltip]="'Send (' + shortcutLabel + ')'"
+              [disabled]="!draft().trim() || sending()"
+            >
+              <mat-icon>send</mat-icon>
+            </button>
+            @if (draft().length > maxLength - 200) {
+              <mat-hint align="end">{{ draft().length }} / {{ maxLength }}</mat-hint>
+            }
           </mat-form-field>
-          <button mat-flat-button type="submit" [disabled]="!draft().trim() || sending()">
-            Send
-          </button>
         </form>
       } @else if (!post().commentsEnabled) {
         <p class="note">Comments are turned off for this post.</p>

@@ -9,6 +9,7 @@ import { vi } from 'vitest';
 import { signal } from '@angular/core';
 
 import { NewsApi } from '../../core/api/news.api';
+import { CurrentUserService } from '../../core/api/current-user.service';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { NewsPost } from '../../core/models/news';
 import { NewsPostCard } from './news-post-card';
@@ -55,6 +56,7 @@ describe('NewsPostCard', () => {
         provideHttpClientTesting(),
         { provide: NewsApi, useValue: api },
         { provide: CurrentEventService, useValue: { event: signal(null) } },
+        { provide: CurrentUserService, useValue: { user: signal(null) } },
         { provide: MatDialog, useValue: { open: dialogOpen } },
       ],
     });

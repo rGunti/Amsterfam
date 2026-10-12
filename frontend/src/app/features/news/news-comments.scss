@@ -28,7 +28,9 @@
   gap: 12px;
 }
 
-.comment {
+// The box for a new comment lines up with the comments above it.
+.comment,
+.new-comment {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -101,16 +103,29 @@
 }
 
 .new-comment {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
   margin-top: 12px;
+
+  .avatar {
+    margin-top: 10px;
+  }
 
   .new-field {
     flex: 1;
+    min-width: 0;
   }
 
-  button {
-    margin-top: 8px;
+  textarea {
+    field-sizing: content;
+    min-height: 1.5em;
+    max-height: 12em;
+    resize: none;
+  }
+
+  // Keep the send button level with the last line as the box grows, like a chat box: the
+  // field's 16px bottom padding, minus half the difference between the 40px button and the
+  // 24px line.
+  ::ng-deep .mat-mdc-form-field-icon-suffix {
+    align-self: flex-end;
+    margin-bottom: 8px;
   }
 }
