@@ -379,6 +379,11 @@ public class NewsFeedApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(HttpStatusCode.OK, image.StatusCode);
         Assert.Equal("image/png", image.Content.Headers.ContentType!.MediaType);
         Assert.Equal(Png, await image.Content.ReadAsByteArrayAsync());
+        Assert.Equal(TimeSpan.FromDays(1), image.Headers.CacheControl!.MaxAge);
+
+        // The extension has to match the image's type.
+        var wrongExt = imageUrl.Replace($"{withImage.Id}.png", $"{withImage.Id}.jpg");
+        Assert.Equal(HttpStatusCode.NotFound, (await Fetch(wrongExt)).StatusCode);
 
         var head = await api.CreateClient()
             .SendAsync(new HttpRequestMessage(HttpMethod.Head, new Uri(imageUrl).PathAndQuery));
@@ -416,7 +421,8 @@ public class NewsFeedApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     {
         var html = NewsText.Html(
             "Hi <b>there</b> [rel](/events/1) [page](news) ![](https://x.test/a.png) "
-                + "[bad](javascript:alert(1)) [ok](https://example.com)",
+                + "[bad](javascript:alert(1)) [ok](https://example.com) "
+                + "<javascript:alert(2)> <https://auto.test> <me@example.com>",
             "https://app.test/"
         );
 
@@ -425,8 +431,11 @@ public class NewsFeedApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Contains("href=\"https://app.test/news\"", html);
         Assert.DoesNotContain("<img", html);
         Assert.Contains(">https://x.test/a.png</a>", html);
-        Assert.DoesNotContain("javascript:", html);
         Assert.Contains("bad", html);
         Assert.Contains("href=\"https://example.com\"", html);
+        Assert.DoesNotContain("href=\"javascript", html);
+        Assert.Contains("javascript:alert(2)", html);
+        Assert.Contains("href=\"https://auto.test\"", html);
+        Assert.Contains("href=\"mailto:me@example.com\"", html);
     }
 }

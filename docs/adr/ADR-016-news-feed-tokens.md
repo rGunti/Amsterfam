@@ -30,9 +30,9 @@ Each confirmed member can get a private Atom feed of an event's news for a feed 
   `NewsText.Excerpt` and `<content type="html">` from `NewsText.Html`. A post's attached image
   is shown at the top of the content and as an `enclosure` link (see "Images" below). The XML is written by
   hand with `XDocument`; no syndication package.
-- **Caching:** `Cache-Control: private, max-age=300` and an ETag over the published posts'
-  count, highest id and latest `PublishedAt`/`EditedAt` (so deleting a post changes it too),
-  with `If-None-Match` → 304. `LastUsedAt` is updated at most once an hour.
+- **Caching:** `Cache-Control: private, max-age=300` and an ETag hashed from the document
+  itself, so any change (edits, deletions, renamed authors) changes it, with `If-None-Match`
+  → 304. `LastUsedAt` is updated at most once an hour, by GET and HEAD alike.
 - **Proxy:** Traefik routes `/api` straight to the API with no forward-auth in front (the API
   validates JWTs itself), so `/api/v1/feeds` needs no change in `infra/`.
 
@@ -64,7 +64,8 @@ damage:
 A post's attached image (#140) is included. It's served by
 `GET /api/v1/feeds/{token}/images/{postId}.{ext}`, which runs the same token checks as the feed and only
 serves published posts of the token's own event. The URL carries `?v={fileId}` so readers fetch a
-replaced image again.
+replaced image again, which also lets it be cached for a day
+(`private, max-age=86400`). The extension in the URL must match the image's type.
 
 This isn't the "public unguessable image URL" ADR-011 rejects: the image is only reachable with
 the member's own feed token, which already reveals the post it belongs to, and it stops working
@@ -79,7 +80,7 @@ images from other hosts.
 - No comments, reactions or acknowledgements.
 - Markdown is rendered with the same Markdig pipeline as `NewsText.PlainText`, with raw HTML
   disabled (shown as text). Relative links are made absolute against `App:PublicUrl`, and links
-  that aren't http(s) or mailto are dropped, keeping their text.
+  that aren't http(s) or mailto, `<scheme:…>` autolinks included, are dropped, keeping their text.
 
 This narrows two earlier decisions for the Atom channel only: ADR-014's rejection of
 server-rendered HTML (the app itself still renders Markdown in the browser; readers expect HTML),

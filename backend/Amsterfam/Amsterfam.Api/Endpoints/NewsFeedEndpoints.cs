@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -10,6 +11,7 @@ using Amsterfam.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
+using Npgsql;
 
 namespace Amsterfam.Api.Endpoints;
 
@@ -130,7 +132,10 @@ public static class NewsFeedEndpoints
         {
             await db.SaveChangesAsync();
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException e)
+            when (e.InnerException
+                    is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation }
+            )
         {
             // Another request created a link at the same moment.
             return TypedResults.Conflict(
@@ -209,6 +214,7 @@ public static class NewsFeedEndpoints
 
         var ev = feedToken.Event;
 
+        // HEAD counts too: it's the reader checking in.
         var now = time.GetUtcNow();
         if (feedToken.LastUsedAt is null || now - feedToken.LastUsedAt >= LastUsedResolution)
         {
@@ -216,21 +222,28 @@ public static class NewsFeedEndpoints
             await db.SaveChangesAsync();
         }
 
-        var published = db.NewsPosts.Where(p => p.EventId == ev.Id && p.PublishedAt != null);
-        var stamp = await published
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                Count = g.Count(),
-                MaxId = g.Max(p => p.Id),
-                LastPublished = g.Max(p => p.PublishedAt),
-                LastEdited = g.Max(p => p.EditedAt),
-            })
-            .FirstOrDefaultAsync();
+        var posts = await db
+            .NewsPosts.Where(p => p.EventId == ev.Id && p.PublishedAt != null)
+            .OrderByDescending(p => p.PublishedAt)
+            .ThenByDescending(p => p.Id)
+            .Take(MaxEntries)
+            .Include(p => p.Author)
+            .ToListAsync();
 
-        // Count and highest id change when a post is deleted, which the dates alone wouldn't.
+        var imageIds = posts.Where(p => p.ImageFileId != null).Select(p => p.ImageFileId);
+        var images = await db
+            .EventFiles.Where(f => imageIds.Contains(f.Id))
+            .Select(f => new FeedImage(f.Id, f.ContentType, f.Size))
+            .ToDictionaryAsync(f => f.Id);
+
+        var updated =
+            posts.Select(p => p.EditedAt ?? p.PublishedAt).Max()
+            ?? new DateTimeOffset(DateTime.SpecifyKind(ev.CreatedAt, DateTimeKind.Utc));
+        var feed = BuildFeed(app.Value, FeedBase(app.Value, token), ev, posts, images, updated);
+
+        // Hashing the document itself catches every change: edits, deletions, renamed authors.
         var etag = new EntityTagHeaderValue(
-            $"\"{SecureToken.Hash($"{ev.Name}|{stamp?.Count}|{stamp?.MaxId}|{stamp?.LastPublished:O}|{stamp?.LastEdited:O}")[..32]}\""
+            $"\"{Convert.ToHexStringLower(SHA256.HashData(feed))[..32]}\""
         );
         var response = request.HttpContext.Response;
         response.Headers.CacheControl = "private, max-age=300";
@@ -242,23 +255,6 @@ public static class NewsFeedEndpoints
         )
             return TypedResults.StatusCode(StatusCodes.Status304NotModified);
 
-        var posts = await published
-            .OrderByDescending(p => p.PublishedAt)
-            .ThenByDescending(p => p.Id)
-            .Take(MaxEntries)
-            .Include(p => p.Author)
-            .ToListAsync();
-
-        var updated =
-            Latest(stamp?.LastPublished, stamp?.LastEdited)
-            ?? new DateTimeOffset(DateTime.SpecifyKind(ev.CreatedAt, DateTimeKind.Utc));
-        var imageIds = posts.Where(p => p.ImageFileId != null).Select(p => p.ImageFileId);
-        var images = await db
-            .EventFiles.Where(f => imageIds.Contains(f.Id))
-            .Select(f => new FeedImage(f.Id, f.ContentType, f.Size))
-            .ToDictionaryAsync(f => f.Id);
-
-        var feed = BuildFeed(app.Value, FeedBase(app.Value, token), ev, posts, images, updated);
         return TypedResults.Bytes(feed, "application/atom+xml; charset=utf-8");
     }
 
@@ -275,12 +271,14 @@ public static class NewsFeedEndpoints
         };
 
     /// <summary>
-    /// A published post's image, for the feed. The extension in the URL is only for readers. Guarded by the same token checks as the feed,
-    /// so it exposes nothing the feed link doesn't already (ADR-016).
+    /// A published post's image, for the feed. Guarded by the same token checks as the feed,
+    /// so it exposes nothing the feed link doesn't already (ADR-016). The extension must match
+    /// the image's type. The URL carries the file id, so the image can be cached for long.
     /// </summary>
     private static async Task<IResult> GetImage(
         string token,
         int postId,
+        string ext,
         HttpRequest request,
         AmsterfamDbContext db
     )
@@ -289,20 +287,27 @@ public static class NewsFeedEndpoints
         if (feedToken is null)
             return TypedResults.NotFound();
 
-        var imageFileId = await db
+        var image = await db
             .NewsPosts.Where(p =>
                 p.Id == postId && p.EventId == feedToken.EventId && p.PublishedAt != null
             )
-            .Select(p => p.ImageFileId)
+            .Join(
+                db.EventFiles,
+                p => p.ImageFileId,
+                f => (Guid?)f.Id,
+                (p, f) => new { f.Id, f.ContentType }
+            )
             .FirstOrDefaultAsync();
-        return await ImageUpload.ServeAsync(db, imageFileId, request);
-    }
+        if (image is null || !ext.Equals(Extension(image.ContentType), StringComparison.Ordinal))
+            return TypedResults.NotFound();
 
-    private static DateTimeOffset? Latest(DateTimeOffset? a, DateTimeOffset? b) =>
-        a is null ? b
-        : b is null ? a
-        : a > b ? a
-        : b;
+        return await ImageUpload.ServeAsync(
+            db,
+            image.Id,
+            request,
+            cacheControl: "private, max-age=86400"
+        );
+    }
 
     private static byte[] BuildFeed(
         AppOptions app,

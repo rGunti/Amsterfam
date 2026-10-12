@@ -49,9 +49,10 @@ public static partial class NewsText
 
     /// <summary>
     /// The body as an HTML fragment for channels outside the app (the Atom feed, ADR-016).
-    /// Relative links are made absolute against <paramref name="baseUrl"/>, images become
-    /// plain links (ADR-011: no images outside the app), and links that aren't http(s) or
-    /// mailto are dropped, keeping their text.
+    /// Relative links are made absolute against <paramref name="baseUrl"/>, Markdown images
+    /// become plain links (readers never load images from other hosts), and links, including
+    /// <c>&lt;scheme:…&gt;</c> autolinks, that aren't http(s) or mailto are dropped, keeping
+    /// their text.
     /// </summary>
     public static string Html(string markdown, string baseUrl)
     {
@@ -74,6 +75,13 @@ public static partial class NewsText
             }
         }
 
+        // Angle-bracket autolinks are a separate node type and accept any scheme.
+        foreach (var autolink in document.Descendants<AutolinkInline>().ToList())
+        {
+            if (!autolink.IsEmail && !IsSafeScheme(autolink.Url))
+                autolink.ReplaceBy(new LiteralInline(autolink.Url));
+        }
+
         using var writer = new StringWriter();
         var renderer = new HtmlRenderer(writer);
         Pipeline.Setup(renderer);
@@ -87,12 +95,16 @@ public static partial class NewsText
         if (string.IsNullOrWhiteSpace(url))
             return null;
         // On Unix "/path" parses as an absolute file URI, so rule that out first.
-        if (!url.StartsWith('/') && Uri.TryCreate(url, UriKind.Absolute, out var absolute))
-            return absolute.Scheme is "http" or "https" or "mailto" ? url : null;
+        if (!url.StartsWith('/') && Uri.TryCreate(url, UriKind.Absolute, out _))
+            return IsSafeScheme(url) ? url : null;
 
         var root = baseUrl.TrimEnd('/');
         return url.StartsWith('/') ? root + url : $"{root}/{url}";
     }
+
+    private static bool IsSafeScheme(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && uri.Scheme is "http" or "https" or "mailto";
 
     /// <summary>Replaces a link with its own content.</summary>
     private static void Unwrap(LinkInline link)
