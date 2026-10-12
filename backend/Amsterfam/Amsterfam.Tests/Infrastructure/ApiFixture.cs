@@ -11,6 +11,8 @@ namespace Amsterfam.Tests.Infrastructure;
 
 public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string PublicUrl = "https://amsterfam.test";
+
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 
     public async Task InitializeAsync()
@@ -28,6 +30,7 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
         // Tests drive auto-transitions directly via EventAutoTransitioner.
         builder.UseSetting("AutoTransitions:Enabled", "false");
+        builder.UseSetting("App:PublicUrl", PublicUrl);
 
         builder.ConfigureServices(services =>
         {

@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Amsterfam.Api.Dtos;
 using Amsterfam.Api.Services;
 using Amsterfam.Core.Entities;
@@ -41,11 +40,6 @@ public static class JoinLinkEndpoints
             data: new { label = link.DisplayLabel, kind = link.Kind.ToString() },
             visibility: link.Kind == JoinLinkKind.Organiser ? EventLogVisibility.Owner : null
         );
-
-    private static string NewToken() => Base64Url(RandomNumberGenerator.GetBytes(32));
-
-    private static string Base64Url(byte[] bytes) =>
-        Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     private static JoinLinkResponse ToResponse(EventJoinLink l, DateTimeOffset now) =>
         new(
@@ -127,7 +121,7 @@ public static class JoinLinkEndpoints
         var link = new EventJoinLink
         {
             EventId = eventId,
-            Token = NewToken(),
+            Token = SecureToken.New(),
             Kind = kind,
             Label = string.IsNullOrEmpty(label) ? null : label,
             CreatedById = user.Id,
@@ -226,7 +220,7 @@ public static class JoinLinkEndpoints
         var replacement = new EventJoinLink
         {
             EventId = eventId,
-            Token = NewToken(),
+            Token = SecureToken.New(),
             Kind = old.Kind,
             Label = old.Label,
             CreatedById = user.Id,

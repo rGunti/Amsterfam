@@ -85,3 +85,13 @@ public record NewsCommentResponse(
 );
 
 public record UpsertNewsCommentRequest(string Body);
+
+/// <summary>Whether the caller has a feed link for the event. The link itself is never shown again.</summary>
+public record NewsFeedTokenStatus(
+    bool Active,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? LastUsedAt
+);
+
+/// <summary>A new feed link, returned once when it's created.</summary>
+public record NewsFeedTokenCreated(string Url, DateTimeOffset CreatedAt);

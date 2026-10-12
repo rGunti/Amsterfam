@@ -1,11 +1,15 @@
 using System.Text.RegularExpressions;
 using Markdig;
+using Markdig.Renderers;
+using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 
 namespace Amsterfam.Api.Services;
 
 /// <summary>
 /// Turns a news post's Markdown body into plain text, for previews and for channels that
-/// can't render Markdown. Raw HTML in the source is treated as text, never as markup.
+/// can't render Markdown, or into HTML for the Atom feed. Raw HTML in the source is treated as
+/// text, never as markup.
 /// </summary>
 public static partial class NewsText
 {
@@ -41,6 +45,64 @@ public static partial class NewsText
         if (cut < maxLength / 2)
             cut = maxLength;
         return (text[..cut].TrimEnd() + "…", true);
+    }
+
+    /// <summary>
+    /// The body as an HTML fragment for channels outside the app (the Atom feed, ADR-016).
+    /// Relative links are made absolute against <paramref name="baseUrl"/>, images become
+    /// plain links (ADR-011: no images outside the app), and links that aren't http(s) or
+    /// mailto are dropped, keeping their text.
+    /// </summary>
+    public static string Html(string markdown, string baseUrl)
+    {
+        var document = Markdown.Parse(markdown, Pipeline);
+        foreach (var link in document.Descendants<LinkInline>().ToList())
+        {
+            var url = Absolute(link.Url, baseUrl);
+            if (url is null)
+            {
+                Unwrap(link);
+                continue;
+            }
+
+            link.Url = url;
+            if (link.IsImage)
+            {
+                link.IsImage = false;
+                if (link.FirstChild is null)
+                    link.AppendChild(new LiteralInline(url));
+            }
+        }
+
+        using var writer = new StringWriter();
+        var renderer = new HtmlRenderer(writer);
+        Pipeline.Setup(renderer);
+        renderer.Render(document);
+        writer.Flush();
+        return writer.ToString().Trim();
+    }
+
+    private static string? Absolute(string? url, string baseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+        // On Unix "/path" parses as an absolute file URI, so rule that out first.
+        if (!url.StartsWith('/') && Uri.TryCreate(url, UriKind.Absolute, out var absolute))
+            return absolute.Scheme is "http" or "https" or "mailto" ? url : null;
+
+        var root = baseUrl.TrimEnd('/');
+        return url.StartsWith('/') ? root + url : $"{root}/{url}";
+    }
+
+    /// <summary>Replaces a link with its own content.</summary>
+    private static void Unwrap(LinkInline link)
+    {
+        while (link.FirstChild is { } child)
+        {
+            child.Remove();
+            link.InsertBefore(child);
+        }
+        link.Remove();
     }
 
     [GeneratedRegex(@"\n{2,}")]

@@ -6,6 +6,8 @@ import {
   NewsAcks,
   NewsComment,
   NewsFeed,
+  NewsFeedTokenCreated,
+  NewsFeedTokenStatus,
   NewsPost,
   NewsSummary,
   UpsertNewsPostRequest,
@@ -68,6 +70,19 @@ export class NewsApi {
 
   markSeen(eventId: string): Observable<void> {
     return this.http.post<void>(this.url(eventId, '/seen'), null);
+  }
+
+  feedToken(eventId: string): Observable<NewsFeedTokenStatus> {
+    return this.http.get<NewsFeedTokenStatus>(this.url(eventId, '/feed-token'));
+  }
+
+  /** Creates the viewer's feed link, replacing any previous one. */
+  createFeedToken(eventId: string): Observable<NewsFeedTokenCreated> {
+    return this.http.post<NewsFeedTokenCreated>(this.url(eventId, '/feed-token'), null);
+  }
+
+  revokeFeedToken(eventId: string): Observable<void> {
+    return this.http.delete<void>(this.url(eventId, '/feed-token'));
   }
 
   summary(eventId: string): Observable<NewsSummary> {

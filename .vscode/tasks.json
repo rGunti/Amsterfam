@@ -1,0 +1,33 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start Frontend",
+			"type": "shell",
+			"command": "pnpm start",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/frontend/"
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true
+			}
+		},
+		{
+			"label": "Start Backend (Watch)",
+			"type": "shell",
+			"command": "dotnet watch --launch-profile http",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/backend/Amsterfam/Amsterfam.Api/"
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true
+			}
+		}
+	]
+}
