@@ -3,6 +3,8 @@ namespace Amsterfam.Api.Dtos;
 /// <summary>
 /// <see cref="CanAcknowledge"/> is false for the post's author, who has nothing to confirm.
 /// <see cref="AckCount"/> and <see cref="AckTotal"/> are only filled in for organisers.
+/// <see cref="NewCommentCount"/> counts other people's comments since the caller last opened
+/// the feed.
 /// </summary>
 public record NewsPostResponse(
     int Id,
@@ -21,7 +23,10 @@ public record NewsPostResponse(
     IReadOnlyList<string> MyReactions,
     int? AckCount,
     int? AckTotal,
-    Guid? ImageFileId
+    Guid? ImageFileId,
+    bool CommentsEnabled,
+    int CommentCount,
+    int NewCommentCount
 );
 
 public record NewsReactionCount(string Emoji, int Count);
@@ -41,7 +46,8 @@ public record UpsertNewsPostRequest(
     string Body,
     bool RequiresAck = false,
     bool Pin = false,
-    bool ResetAcks = false
+    bool ResetAcks = false,
+    bool CommentsEnabled = true
 );
 
 public record NewsAckEntry(TimelineUser User, DateTimeOffset At);
@@ -61,3 +67,21 @@ public record NewsSummaryResponse(
     NewsPostResponse? Latest,
     IReadOnlyList<NewsPostResponse> NeedsAck
 );
+
+/// <summary>
+/// A comment on a post. <see cref="CanEdit"/> is for its author; <see cref="CanDelete"/> also
+/// for organisers. Both are false on a read-only event.
+/// </summary>
+public record NewsCommentResponse(
+    int Id,
+    TimelineUser Author,
+    string Body,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? EditedAt,
+    bool CanEdit,
+    bool CanDelete,
+    IReadOnlyList<NewsReactionCount> Reactions,
+    IReadOnlyList<string> MyReactions
+);
+
+public record UpsertNewsCommentRequest(string Body);

@@ -68,6 +68,28 @@ notifications (#142 onwards).
 - Image changes are edits (`NewsEdited` with `changed: ["image"]`). A new post's first image
   is uploaded with `initial=true` straight after creating it, so it doesn't look edited.
 
+## Comments (#147)
+
+- **Who:** confirmed members read and write comments on published posts, while the event
+  is writable and the post has `CommentsEnabled` (organisers can turn it off, e.g. for a
+  pure "info" post; existing comments stay readable). Only the author edits a comment
+  (`EditedAt`, shown as "edited"); the author or any organiser deletes it (hard delete).
+  Members who leave keep their comments, and deleting the post deletes them.
+- **Shape:** one flat list per post, oldest first, keyset-paged on `(CreatedAt, Id)`. Plain
+  text up to 2000 characters, rendered with links made clickable; no Markdown or mentions.
+- **Unread:** the nav badge still counts posts only. Posts carry `commentCount` and
+  `newCommentCount` (other people's comments since `NewsSeenAt`), so no new read tracking.
+  An open comment list fetches newer comments on the event poll's interval.
+- **Not in the timeline, not outside the app:** comments are conversation already shown
+  on the post, and logging them would flood the timeline. They're never sent to Discord,
+  Telegram, push, email or RSS.
+- **Reactions on comments:** the same fixed emoji list and rules as post reactions, not
+  logged. They still work with comments turned off (a reaction adds no text), and go with
+  the comment when it's deleted.
+- **Moderation is logged:** when an organiser deletes someone else's comment, an
+  organisers-only `NewsCommentRemoved` entry records `{ postId, title }` with the comment's
+  author as subject, never the text. Deleting your own comment logs nothing.
+
 ## Up-front columns
 
 `NewsPost` already has `PublishAt`, `PinnedAt`, `RequiresAck`, `Notify`, `CommentsEnabled`

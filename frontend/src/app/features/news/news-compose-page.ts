@@ -32,6 +32,7 @@ interface Draft {
   body: string;
   requiresAck?: boolean;
   pin?: boolean;
+  commentsEnabled?: boolean;
 }
 
 /** What saving does to the post's image. */
@@ -120,6 +121,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
     pin: new FormControl(false, { nonNullable: true }),
     /** Edits only: ask everyone to acknowledge again. */
     resetAcks: new FormControl(false, { nonNullable: true }),
+    commentsEnabled: new FormControl(true, { nonNullable: true }),
   });
 
   /** Whether the post being edited already asked for acknowledgement when it was loaded. */
@@ -168,6 +170,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
             body: value.body ?? '',
             requiresAck: value.requiresAck ?? false,
             pin: value.pin ?? false,
+            commentsEnabled: value.commentsEnabled ?? true,
           });
         }
       });
@@ -183,6 +186,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
           body: draft.body ?? '',
           requiresAck: draft.requiresAck ?? false,
           pin: draft.pin ?? false,
+          commentsEnabled: draft.commentsEnabled ?? true,
         });
         this.form.markAsDirty();
         this.restoredDraft.set(true);
@@ -197,6 +201,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
           title: post.title ?? '',
           body: post.body,
           requiresAck: post.requiresAck,
+          commentsEnabled: post.commentsEnabled,
         });
         this.hadAck.set(post.requiresAck);
         this.existingImageId.set(post.imageFileId ?? null);
@@ -342,14 +347,15 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
       this.form.markAllAsTouched();
       return;
     }
-    const { title, body, requiresAck, pin, resetAcks } = this.form.getRawValue();
+    const { title, body, requiresAck, pin, resetAcks, commentsEnabled } = this.form.getRawValue();
     const request: UpsertNewsPostRequest =
       this.postId === null
-        ? { title: title.trim() || null, body, requiresAck, pin }
+        ? { title: title.trim() || null, body, requiresAck, pin, commentsEnabled }
         : {
             title: title.trim() || null,
             body,
             requiresAck,
+            commentsEnabled,
             resetAcks: requiresAck && this.hadAck() && resetAcks,
           };
     this.saving.set(true);

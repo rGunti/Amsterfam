@@ -126,6 +126,19 @@ describe('describeEntry', () => {
     expect(describeEntry(unpinned, 99).text).toBe('Alice unpinned a news post');
   });
 
+  it('describes an organiser removing a comment, without its text', () => {
+    const removed = entry({
+      type: 'NewsCommentRemoved',
+      subject: bob,
+      data: { postId: 3, title: 'Deposit' },
+    });
+    expect(describeEntry(removed, 99).text).toBe('Alice removed a comment by Bob on “Deposit”');
+    expect(describeEntry(removed, 99).icon).toBe('speaker_notes_off');
+
+    const untitled = entry({ type: 'NewsCommentRemoved', subject: bob, data: { postId: 3 } });
+    expect(describeEntry(untitled, 99).text).toBe('Alice removed a comment by Bob on a news post');
+  });
+
   it('notes restricted visibility', () => {
     expect(visibilityNote('Everyone')).toBeNull();
     expect(visibilityNote('Organisers')).toBe('Only organisers see this');

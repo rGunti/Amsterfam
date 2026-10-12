@@ -210,3 +210,41 @@ test('an organiser posts with an image, sees it in the timeline, then removes it
   await expect(page.getByRole('heading', { name: 'Beach day' })).toBeVisible();
   await expect(page.locator('.post-image')).toHaveCount(0);
 });
+
+test('an organiser sees a new comment on a post and removes it', async ({ page, request }) => {
+  const eventId = await createOpenEvent(request, BROWSER_USER);
+  const attendee = `e2e-news-commenter-${Date.now()}`;
+  await joinViaLink(request, eventId, BROWSER_USER, attendee);
+  await confirm(request, eventId, BROWSER_USER, attendee);
+
+  const post = await request.post(`${API}/api/v1/events/${eventId}/news`, {
+    headers: asUser(BROWSER_USER),
+    data: { title: 'Deposit due', body: 'Pay by Friday.' },
+  });
+  expect(post.ok()).toBeTruthy();
+  const postId = (await post.json()).id as number;
+  const comment = await request.post(`${API}/api/v1/events/${eventId}/news/${postId}/comments`, {
+    headers: asUser(attendee),
+    data: { body: 'Which Friday exactly?' },
+  });
+  expect(comment.ok()).toBeTruthy();
+
+  await page.goto(`/events/${eventId}/news`);
+  const toggle = page.locator('.comments-toggle');
+  await expect(toggle).toContainText('1 comment');
+  await expect(toggle).toContainText('1 new');
+
+  await toggle.click();
+  await expect(page.locator('.comment')).toContainText('Which Friday exactly?');
+  await expect(toggle).not.toContainText('new');
+
+  await page.getByRole('button', { name: 'Comment actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete' }).click();
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.locator('.comment')).toHaveCount(0);
+  await expect(toggle).toContainText('Comment');
+
+  await page.getByRole('link', { name: 'Timeline' }).click();
+  await expect(page.getByText(/You removed a comment by .+ on “Deposit due”/)).toBeVisible();
+  await expect(page.getByText('Which Friday exactly?')).toHaveCount(0);
+});

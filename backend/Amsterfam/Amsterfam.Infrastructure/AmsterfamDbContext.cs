@@ -33,6 +33,8 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<NewsPost> NewsPosts => Set<NewsPost>();
     public DbSet<NewsAcknowledgement> NewsAcknowledgements => Set<NewsAcknowledgement>();
     public DbSet<NewsReaction> NewsReactions => Set<NewsReaction>();
+    public DbSet<NewsComment> NewsComments => Set<NewsComment>();
+    public DbSet<NewsCommentReaction> NewsCommentReactions => Set<NewsCommentReaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -192,6 +194,40 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.HasOne(r => r.Post)
                 .WithMany()
                 .HasForeignKey(r => r.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NewsComment>(e =>
+        {
+            e.HasIndex(c => new { c.PostId, c.CreatedAt });
+            e.Property(c => c.Body).HasMaxLength(NewsComment.MaxBodyLength);
+            e.HasOne(c => c.Post)
+                .WithMany()
+                .HasForeignKey(c => c.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Members who leave keep their comments, like expenses.
+            e.HasOne(c => c.Author)
+                .WithMany()
+                .HasForeignKey(c => c.AuthorId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<NewsCommentReaction>(e =>
+        {
+            e.HasKey(r => new
+            {
+                r.CommentId,
+                r.UserId,
+                r.Emoji,
+            });
+            e.Property(r => r.Emoji).HasMaxLength(NewsReaction.MaxEmojiLength);
+            e.HasOne(r => r.Comment)
+                .WithMany()
+                .HasForeignKey(r => r.CommentId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(r => r.User)
                 .WithMany()

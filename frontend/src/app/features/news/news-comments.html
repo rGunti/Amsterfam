@@ -1,0 +1,190 @@
+<section class="comments" aria-label="Comments">
+  <button
+    mat-button
+    type="button"
+    class="comments-toggle"
+    [attr.aria-expanded]="expanded()"
+    (click)="toggle()"
+  >
+    <mat-icon>{{ expanded() ? 'expand_less' : 'chat_bubble_outline' }}</mat-icon>
+    {{ toggleLabel() }}
+    @if (newCount() > 0) {
+      <span class="new-count">· {{ newCount() }} new</span>
+    }
+  </button>
+
+  @if (expanded()) {
+    @if (loadFailed()) {
+      <p class="note">Could not load the comments.</p>
+    } @else if (comments() === null) {
+      <p class="note">Loading…</p>
+    } @else {
+      <ol class="comment-list">
+        @for (comment of comments(); track comment.id) {
+          <li class="comment" [attr.aria-busy]="busyId() === comment.id">
+            @if (comment.author.avatarUrl; as url) {
+              <img class="avatar" [src]="url" alt="" />
+            } @else {
+              <span class="avatar avatar-initial" aria-hidden="true">{{
+                initialOf(comment.author.displayName)
+              }}</span>
+            }
+            <div class="comment-main">
+              <div class="comment-meta">
+                <span class="author">{{ comment.author.displayName }}</span>
+                <time
+                  class="time"
+                  [attr.datetime]="comment.createdAt"
+                  [matTooltip]="when(comment.createdAt).full"
+                  >{{ when(comment.createdAt).text }}</time
+                >
+                @if (comment.editedAt) {
+                  <span class="time" [matTooltip]="'Edited ' + when(comment.editedAt).full"
+                    >· edited</span
+                  >
+                }
+              </div>
+              @if (editingId() === comment.id) {
+                <mat-form-field class="edit-field" subscriptSizing="dynamic">
+                  <textarea
+                    matInput
+                    aria-label="Edit your comment"
+                    [maxlength]="maxLength"
+                    [ngModel]="editText()"
+                    (ngModelChange)="editText.set($event)"
+                    (keydown.control.enter)="$event.preventDefault(); saveEdit(comment)"
+                    (keydown.meta.enter)="$event.preventDefault(); saveEdit(comment)"
+                    (keydown.escape)="cancelEdit()"
+                  ></textarea>
+                </mat-form-field>
+                <div class="edit-actions">
+                  <button mat-button type="button" (click)="cancelEdit()">Cancel</button>
+                  <button
+                    mat-flat-button
+                    type="button"
+                    [disabled]="!editText().trim() || busyId() === comment.id"
+                    (click)="saveEdit(comment)"
+                  >
+                    Save
+                  </button>
+                </div>
+              } @else {
+                <app-linkified-text class="comment-body" [text]="comment.body" />
+              }
+              @if (comment.reactions.length > 0 || canReact()) {
+                <div class="comment-reactions" role="group" aria-label="Reactions">
+                  @for (r of comment.reactions; track r.emoji) {
+                    <button
+                      type="button"
+                      class="reaction"
+                      [class.reaction-mine]="comment.myReactions.includes(r.emoji)"
+                      [attr.aria-pressed]="comment.myReactions.includes(r.emoji)"
+                      [attr.aria-label]="r.emoji + ' ' + r.count"
+                      [disabled]="!canReact()"
+                      (click)="toggleReaction(comment, r.emoji)"
+                    >
+                      <span>{{ r.emoji }}</span>
+                      <span class="reaction-count">{{ r.count }}</span>
+                    </button>
+                  }
+                  @if (canReact()) {
+                    <button
+                      type="button"
+                      class="reaction reaction-add"
+                      aria-label="Add a reaction"
+                      matTooltip="Add a reaction"
+                      [matMenuTriggerFor]="reactMenu"
+                    >
+                      <mat-icon>add_reaction</mat-icon>
+                    </button>
+                    <mat-menu #reactMenu="matMenu" class="comment-reaction-menu">
+                      <div class="reaction-picker">
+                        @for (emoji of reactionChoices; track emoji) {
+                          <button
+                            mat-icon-button
+                            type="button"
+                            [class.reaction-mine]="comment.myReactions.includes(emoji)"
+                            [attr.aria-pressed]="comment.myReactions.includes(emoji)"
+                            [attr.aria-label]="emoji"
+                            (click)="toggleReaction(comment, emoji)"
+                          >
+                            {{ emoji }}
+                          </button>
+                        }
+                      </div>
+                    </mat-menu>
+                  }
+                </div>
+              }
+            </div>
+            @if ((comment.canEdit && canWrite()) || comment.canDelete) {
+              <button
+                mat-icon-button
+                class="comment-menu"
+                [matMenuTriggerFor]="menu"
+                aria-label="Comment actions"
+                [disabled]="busyId() === comment.id || editingId() === comment.id"
+              >
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu">
+                @if (comment.canEdit && canWrite()) {
+                  <button mat-menu-item (click)="startEdit(comment)">
+                    <mat-icon>edit</mat-icon>
+                    <span>Edit</span>
+                  </button>
+                }
+                @if (comment.canDelete) {
+                  <button mat-menu-item (click)="confirmDelete(comment)">
+                    <mat-icon>delete</mat-icon>
+                    <span>Delete</span>
+                  </button>
+                }
+              </mat-menu>
+            }
+          </li>
+        }
+      </ol>
+
+      @if (canWrite()) {
+        <form class="new-comment" (ngSubmit)="send()">
+          @if (me()?.avatarUrl; as url) {
+            <img class="avatar" [src]="url" alt="" />
+          } @else {
+            <span class="avatar avatar-initial" aria-hidden="true">{{ myInitial() }}</span>
+          }
+          <mat-form-field class="new-field" subscriptSizing="dynamic">
+            <textarea
+              matInput
+              name="comment"
+              rows="1"
+              placeholder="Write a comment…"
+              aria-label="Write a comment"
+              [maxlength]="maxLength"
+              [ngModel]="draft()"
+              (ngModelChange)="draft.set($event)"
+              (keydown.control.enter)="$event.preventDefault(); send()"
+              (keydown.meta.enter)="$event.preventDefault(); send()"
+            ></textarea>
+            <button
+              mat-icon-button
+              matSuffix
+              type="submit"
+              class="send"
+              [attr.aria-label]="'Send comment (' + shortcutLabel + ')'"
+              [matTooltip]="'Send (' + shortcutLabel + ')'"
+              [disabled]="!draft().trim() || sending()"
+            >
+              <mat-icon>send</mat-icon>
+            </button>
+            @if (draft().length > maxLength - 200) {
+              <mat-hint align="end">{{ draft().length }} / {{ maxLength }}</mat-hint>
+            }
+          </mat-form-field>
+        </form>
+      } @else if (!post().commentsEnabled) {
+        <p class="note">Comments are turned off for this post.</p>
+      }
+    }
+  }
+</section>

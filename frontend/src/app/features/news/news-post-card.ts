@@ -15,8 +15,8 @@ import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/co
 import { Markdown } from '../../shared/markdown/markdown';
 import { fullTimestamp, timelineGroup } from '../../shared/timestamp';
 import { NewsAcksDialog, NewsAcksDialogData } from './news-acks-dialog';
-
-const reactionOrder = (emoji: string) => (NEWS_REACTIONS as readonly string[]).indexOf(emoji);
+import { NewsComments } from './news-comments';
+import { toggleReaction } from './reactions';
 
 /**
  * One news post: author, time, title and the Markdown body, with reactions and a "Got it"
@@ -33,6 +33,7 @@ const reactionOrder = (emoji: string) => (NEWS_REACTIONS as readonly string[]).i
     RouterLink,
     AuthImage,
     Markdown,
+    NewsComments,
   ],
   templateUrl: './news-post-card.html',
   styleUrl: './news-post-card.scss',
@@ -48,11 +49,13 @@ export class NewsPostCard {
   readonly isNew = input(false);
   /** Links the title to the post's own page (in the feed, not on that page itself). */
   readonly linkTitle = input(true);
-  /** A short version for the event overview: clamped body, no reactions. */
+  /** A short version for the event overview: clamped body, no reactions or comments. */
   readonly compact = input(false);
+  /** Show the comments open, e.g. on the post's own page. */
+  readonly commentsExpanded = input(false);
 
   readonly deleted = output<NewsPost>();
-  /** The post changed here (pin, reaction, acknowledgement). */
+  /** The post changed here (pin, reaction, acknowledgement, comments). */
   readonly changed = output<NewsPost>();
 
   protected readonly reactionChoices = NEWS_REACTIONS;
@@ -122,17 +125,7 @@ export class NewsPostCard {
   protected toggleReaction(emoji: string): void {
     const before = this.current();
     const mine = before.myReactions.includes(emoji);
-    const delta = mine ? -1 : 1;
-    const count = (before.reactions.find((r) => r.emoji === emoji)?.count ?? 0) + delta;
-    const others = before.reactions.filter((r) => r.emoji !== emoji);
-    const reactions = count > 0 ? [...others, { emoji, count }] : others;
-    this.update({
-      ...before,
-      reactions: reactions.sort((a, b) => reactionOrder(a.emoji) - reactionOrder(b.emoji)),
-      myReactions: mine
-        ? before.myReactions.filter((e) => e !== emoji)
-        : [...before.myReactions, emoji],
-    });
+    this.update(toggleReaction(before, emoji));
 
     const request = mine
       ? this.api.unreact(this.eventId(), before.id, emoji)
@@ -194,6 +187,10 @@ export class NewsPostCard {
     this.dialog.open<NewsAcksDialog, NewsAcksDialogData>(NewsAcksDialog, {
       data: { eventId: this.eventId(), postId: post.id, title: post.title },
     });
+  }
+
+  protected onCommentCount(commentCount: number): void {
+    this.update({ ...this.current(), commentCount, newCommentCount: 0 });
   }
 
   private update(post: NewsPost): void {

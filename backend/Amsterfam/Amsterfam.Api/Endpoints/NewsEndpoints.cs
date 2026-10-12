@@ -15,6 +15,8 @@ public static class NewsEndpoints
 {
     public const int DefaultLimit = 20;
     public const int MaxLimit = 50;
+    public const int DefaultCommentLimit = 50;
+    public const int MaxCommentLimit = 100;
 
     public static IEndpointRouteBuilder MapNewsEndpoints(this IEndpointRouteBuilder app)
     {
@@ -42,6 +44,24 @@ public static class NewsEndpoints
         group.MapGet("/{postId:int}/image", GetImage);
         group.MapPut("/{postId:int}/image", PutImage).LogsToTimeline();
         group.MapDelete("/{postId:int}/image", DeleteImage).LogsToTimeline();
+        group.MapGet("/{postId:int}/comments", GetComments);
+        group
+            .MapPost("/{postId:int}/comments", AddComment)
+            .NotLoggedToTimeline("conversation, shown on the post");
+        group
+            .MapPut("/{postId:int}/comments/{commentId:int}", EditComment)
+            .NotLoggedToTimeline("conversation, shown on the post");
+        // Only an organiser removing someone else's comment is logged (moderation).
+        group.MapDelete("/{postId:int}/comments/{commentId:int}", DeleteComment).LogsToTimeline();
+        group
+            .MapPut("/{postId:int}/comments/{commentId:int}/reactions/{emoji}", AddCommentReaction)
+            .NotLoggedToTimeline("reaction");
+        group
+            .MapDelete(
+                "/{postId:int}/comments/{commentId:int}/reactions/{emoji}",
+                RemoveCommentReaction
+            )
+            .NotLoggedToTimeline("reaction");
 
         return app;
     }
@@ -205,6 +225,7 @@ public static class NewsEndpoints
             CreatedAt = now,
             PublishAt = now,
             RequiresAck = request.RequiresAck,
+            CommentsEnabled = request.CommentsEnabled,
         };
 
         // The timeline entry needs the post's id, so the post is saved first; the transaction
@@ -250,6 +271,7 @@ public static class NewsEndpoints
         post.Title = NormaliseTitle(request.Title);
         post.Body = request.Body.Trim();
         post.RequiresAck = request.RequiresAck;
+        post.CommentsEnabled = request.CommentsEnabled;
         post.EditedAt = time.GetUtcNow();
         // Edits keep acknowledgements unless the organiser asks everyone to look again.
         if (request.ResetAcks)
@@ -718,6 +740,301 @@ public static class NewsEndpoints
         );
     }
 
+    /// <summary>
+    /// A published post's comments, oldest first. Pass the last comment's <c>createdAt</c> and
+    /// id as <paramref name="after"/> and <paramref name="afterId"/> for the next page, or to
+    /// fetch only what's new.
+    /// </summary>
+    private static async Task<IResult> GetComments(
+        Guid eventId,
+        int postId,
+        DateTimeOffset? after,
+        int? afterId,
+        int? limit,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.Read);
+        if (caller is null)
+            return error!;
+        if (await FindPublishedAsync(db, eventId, postId) is null)
+            return TypedResults.NotFound();
+
+        var take = Math.Clamp(limit ?? DefaultCommentLimit, 1, MaxCommentLimit);
+        var query = db.NewsComments.Where(c => c.PostId == postId);
+        if (after is not null)
+        {
+            var id = afterId ?? 0;
+            query = query.Where(c => c.CreatedAt > after || (c.CreatedAt == after && c.Id > id));
+        }
+
+        var comments = await query
+            .OrderBy(c => c.CreatedAt)
+            .ThenBy(c => c.Id)
+            .Take(take)
+            .Include(c => c.Author)
+            .ToListAsync();
+        return TypedResults.Ok(await ToCommentResponsesAsync(db, caller, comments));
+    }
+
+    private static async Task<IResult> AddComment(
+        Guid eventId,
+        int postId,
+        [FromBody] UpsertNewsCommentRequest request,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db,
+        TimeProvider time
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.MemberWrite);
+        if (caller is null)
+            return error!;
+        var post = await FindPublishedAsync(db, eventId, postId);
+        if (post is null)
+            return TypedResults.NotFound();
+        if (ValidateComment(post, request) is { } invalid)
+            return invalid;
+
+        var comment = new NewsComment
+        {
+            PostId = postId,
+            AuthorId = caller.UserId,
+            Body = request.Body.Trim(),
+            CreatedAt = time.GetUtcNow(),
+        };
+        db.NewsComments.Add(comment);
+        await db.SaveChangesAsync();
+
+        await db.Entry(comment).Reference(c => c.Author).LoadAsync();
+        return TypedResults.Created(
+            $"/api/v1/events/{eventId}/news/{postId}/comments/{comment.Id}",
+            (await ToCommentResponsesAsync(db, caller, [comment]))[0]
+        );
+    }
+
+    /// <summary>Only the comment's author can edit it, and only while comments are on.</summary>
+    private static async Task<IResult> EditComment(
+        Guid eventId,
+        int postId,
+        int commentId,
+        [FromBody] UpsertNewsCommentRequest request,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db,
+        TimeProvider time
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.MemberWrite);
+        if (caller is null)
+            return error!;
+        var post = await FindPublishedAsync(db, eventId, postId);
+        if (post is null)
+            return TypedResults.NotFound();
+        var comment = await db
+            .NewsComments.Include(c => c.Author)
+            .FirstOrDefaultAsync(c => c.Id == commentId && c.PostId == postId);
+        if (comment is null)
+            return TypedResults.NotFound();
+        if (comment.AuthorId != caller.UserId)
+            return TypedResults.Forbid();
+        if (ValidateComment(post, request) is { } invalid)
+            return invalid;
+
+        comment.Body = request.Body.Trim();
+        comment.EditedAt = time.GetUtcNow();
+        await db.SaveChangesAsync();
+        return TypedResults.Ok((await ToCommentResponsesAsync(db, caller, [comment]))[0]);
+    }
+
+    /// <summary>
+    /// The author or any organiser can delete a comment, even with comments turned off. An
+    /// organiser removing someone else's comment leaves an organisers-only timeline entry
+    /// without the text; deleting your own logs nothing.
+    /// </summary>
+    private static async Task<IResult> DeleteComment(
+        Guid eventId,
+        int postId,
+        int commentId,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db,
+        EventLog log
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.MemberWrite);
+        if (caller is null)
+            return error!;
+        var post = await FindPublishedAsync(db, eventId, postId);
+        if (post is null)
+            return TypedResults.NotFound();
+        var comment = await db.NewsComments.FirstOrDefaultAsync(c =>
+            c.Id == commentId && c.PostId == postId
+        );
+        if (comment is null)
+            return TypedResults.NotFound();
+        if (comment.AuthorId != caller.UserId && !caller.IsOrganiser)
+            return TypedResults.Forbid();
+
+        db.NewsComments.Remove(comment);
+        if (comment.AuthorId != caller.UserId)
+            log.Record(
+                eventId,
+                EventLogType.NewsCommentRemoved,
+                caller.UserId,
+                subjectUserId: comment.AuthorId,
+                data: NewsPublisher.LogData(post)
+            );
+        await db.SaveChangesAsync();
+        return TypedResults.NoContent();
+    }
+
+    private static IResult? ValidateComment(NewsPost post, UpsertNewsCommentRequest request)
+    {
+        if (!post.CommentsEnabled)
+            return TypedResults.BadRequest(
+                new { error = "Comments are turned off for this post." }
+            );
+        if (string.IsNullOrWhiteSpace(request.Body))
+            return TypedResults.BadRequest(new { error = "A comment needs some text." });
+        if (request.Body.Trim().Length > NewsComment.MaxBodyLength)
+            return TypedResults.BadRequest(
+                new
+                {
+                    error = $"Comments can be at most {NewsComment.MaxBodyLength} characters long.",
+                }
+            );
+        return null;
+    }
+
+    /// <summary>
+    /// Reacting to a comment. Allowed even with comments turned off, like post reactions:
+    /// it adds no text to the conversation.
+    /// </summary>
+    private static async Task<IResult> AddCommentReaction(
+        Guid eventId,
+        int postId,
+        int commentId,
+        string emoji,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db,
+        TimeProvider time
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.MemberWrite);
+        if (caller is null)
+            return error!;
+        if (!NewsReaction.IsAllowed(emoji))
+            return TypedResults.BadRequest(new { error = "That reaction isn't available." });
+        if (!await CommentExistsAsync(db, eventId, postId, commentId))
+            return TypedResults.NotFound();
+
+        var exists = await db.NewsCommentReactions.AnyAsync(r =>
+            r.CommentId == commentId && r.UserId == caller.UserId && r.Emoji == emoji
+        );
+        if (!exists)
+        {
+            db.NewsCommentReactions.Add(
+                new NewsCommentReaction
+                {
+                    CommentId = commentId,
+                    UserId = caller.UserId,
+                    Emoji = emoji,
+                    CreatedAt = time.GetUtcNow(),
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> RemoveCommentReaction(
+        Guid eventId,
+        int postId,
+        int commentId,
+        string emoji,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.MemberWrite);
+        if (caller is null)
+            return error!;
+        if (!NewsReaction.IsAllowed(emoji))
+            return TypedResults.BadRequest(new { error = "That reaction isn't available." });
+        if (!await CommentExistsAsync(db, eventId, postId, commentId))
+            return TypedResults.NotFound();
+
+        var reaction = await db.NewsCommentReactions.FirstOrDefaultAsync(r =>
+            r.CommentId == commentId && r.UserId == caller.UserId && r.Emoji == emoji
+        );
+        if (reaction is not null)
+        {
+            db.NewsCommentReactions.Remove(reaction);
+            await db.SaveChangesAsync();
+        }
+        return TypedResults.NoContent();
+    }
+
+    /// <summary>The comment exists on that post, and the post is a published one in the event.</summary>
+    private static Task<bool> CommentExistsAsync(
+        AmsterfamDbContext db,
+        Guid eventId,
+        int postId,
+        int commentId
+    ) =>
+        db.NewsComments.AnyAsync(c =>
+            c.Id == commentId
+            && c.PostId == postId
+            && c.Post.EventId == eventId
+            && c.Post.PublishedAt != null
+        );
+
+    /// <summary>Builds comment responses, with reactions, in one extra query.</summary>
+    private static async Task<List<NewsCommentResponse>> ToCommentResponsesAsync(
+        AmsterfamDbContext db,
+        Caller caller,
+        IReadOnlyList<NewsComment> comments
+    )
+    {
+        var ids = comments.Select(c => c.Id).ToList();
+        var reactions = await db
+            .NewsCommentReactions.Where(r => ids.Contains(r.CommentId))
+            .Select(r => new
+            {
+                r.CommentId,
+                r.UserId,
+                r.Emoji,
+            })
+            .ToListAsync();
+
+        return comments
+            .Select(c =>
+            {
+                var isAuthor = c.AuthorId == caller.UserId;
+                var commentReactions = reactions.Where(r => r.CommentId == c.Id).ToList();
+                return new NewsCommentResponse(
+                    c.Id,
+                    ToTimelineUser(c.Author),
+                    c.Body,
+                    c.CreatedAt,
+                    c.EditedAt,
+                    caller.IsWritable && isAuthor,
+                    caller.IsWritable && (isAuthor || caller.IsOrganiser),
+                    NewsReaction
+                        .Allowed.Select(e => new NewsReactionCount(
+                            e,
+                            commentReactions.Count(r => r.Emoji == e)
+                        ))
+                        .Where(r => r.Count > 0)
+                        .ToList(),
+                    commentReactions
+                        .Where(r => r.UserId == caller.UserId)
+                        .Select(r => r.Emoji)
+                        .ToList()
+                );
+            })
+            .ToList();
+    }
+
     private static Task<NewsPost?> FindPublishedAsync(
         AmsterfamDbContext db,
         Guid eventId,
@@ -794,6 +1111,19 @@ public static class NewsEndpoints
             .NewsAcknowledgements.Where(a => ids.Contains(a.PostId))
             .Select(a => new { a.PostId, a.UserId })
             .ToListAsync();
+        var seenAt = caller.Attendance.NewsSeenAt;
+        var comments = await db
+            .NewsComments.Where(c => ids.Contains(c.PostId))
+            .GroupBy(c => c.PostId)
+            .Select(g => new
+            {
+                PostId = g.Key,
+                Count = g.Count(),
+                New = g.Count(c =>
+                    c.AuthorId != caller.UserId && (seenAt == null || c.CreatedAt > seenAt)
+                ),
+            })
+            .ToDictionaryAsync(c => c.PostId);
         // Organisers see counts over current confirmed members, leaving out the author.
         var memberIds = caller.IsOrganiser
             ? await db
@@ -842,7 +1172,10 @@ public static class NewsEndpoints
                     memberIds is not null && p.RequiresAck
                         ? memberIds.Count(id => id != p.AuthorId)
                         : null,
-                    p.ImageFileId
+                    p.ImageFileId,
+                    p.CommentsEnabled,
+                    comments.GetValueOrDefault(p.Id)?.Count ?? 0,
+                    comments.GetValueOrDefault(p.Id)?.New ?? 0
                 );
             })
             .ToList();

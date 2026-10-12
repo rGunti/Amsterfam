@@ -25,6 +25,11 @@ export interface NewsPost {
   ackTotal: number | null;
   /** Set when the post has an image; changes when the image does. Fetch it with auth. */
   imageFileId: string | null;
+  /** Members can add comments; existing ones stay readable either way. */
+  commentsEnabled: boolean;
+  commentCount: number;
+  /** Other people's comments since the viewer last opened the feed. */
+  newCommentCount: number;
 }
 
 export interface NewsReactionCount {
@@ -47,6 +52,24 @@ export interface UpsertNewsPostRequest {
   pin?: boolean;
   /** Edit only: clear everyone's acknowledgements so they confirm again. */
   resetAcks?: boolean;
+  /** Defaults to true on the server. */
+  commentsEnabled?: boolean;
+}
+
+/** A plain-text comment on a post, oldest first in a list. */
+export interface NewsComment {
+  id: number;
+  author: TimelineUser;
+  body: string;
+  createdAt: string;
+  editedAt: string | null;
+  /** The viewer wrote it and the event isn't read-only. */
+  canEdit: boolean;
+  /** The viewer wrote it or is an organiser, and the event isn't read-only. */
+  canDelete: boolean;
+  /** Only emoji with at least one reaction, in {@link NEWS_REACTIONS} order. */
+  reactions: NewsReactionCount[];
+  myReactions: string[];
 }
 
 export interface NewsAcks {
@@ -67,3 +90,4 @@ export const NEWS_REACTIONS = ['👍', '❤️', '😂', '🎉', '😮', '🙏']
 
 export const NEWS_TITLE_MAX = 120;
 export const NEWS_BODY_MAX = 4000;
+export const NEWS_COMMENT_MAX = 2000;

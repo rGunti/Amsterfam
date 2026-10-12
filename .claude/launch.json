@@ -7,6 +7,14 @@
       "runtimeArgs": ["start"],
       "cwd": "frontend",
       "port": 4200
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--launch-profile", "http"],
+      "cwd": "backend/Amsterfam/Amsterfam.Api",
+      "port": 5293,
+      "autoPort": false
     }
   ]
 }
