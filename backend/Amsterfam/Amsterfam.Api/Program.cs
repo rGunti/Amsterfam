@@ -38,6 +38,7 @@ builder.Services.AddScoped<EventAutoTransitioner>();
 builder.Services.AddScoped<EventLog>();
 builder.Services.AddScoped<NewsPublisher>();
 builder.Services.AddScoped<NotificationDispatcher>();
+builder.Services.AddSingleton<DiscordTestThrottle>();
 builder.Services.AddHttpClient<DiscordChannel>(c => c.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<DiscordChannel>());
 

@@ -240,4 +240,27 @@ public class DiscordWebhookApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         Assert.Equal(HttpStatusCode.Conflict, (await Set(t, WebhookUrl(9))).StatusCode);
     }
+
+    [Fact]
+    public async Task Test_IsThrottledPerEvent()
+    {
+        var t = await CreateTrip(10);
+        var other = await CreateTrip(11);
+        (await Set(t, WebhookUrl(10))).EnsureSuccessStatusCode();
+        (await Set(other, WebhookUrl(11))).EnsureSuccessStatusCode();
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await t.Owner.PostAsync($"{t.Webhook}/test", null)).StatusCode
+        );
+        var again = await t.Owner.PostAsync($"{t.Webhook}/test", null);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, again.StatusCode);
+        Assert.NotNull(again.Headers.RetryAfter?.Delta);
+        Assert.Single(api.Discord.CallsTo("770010"));
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await other.Owner.PostAsync($"{other.Webhook}/test", null)).StatusCode
+        );
+    }
 }

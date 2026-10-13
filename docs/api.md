@@ -153,7 +153,7 @@ Organisers only (403 otherwise, 404 for an unknown event); changes need a writab
 GET    /api/v1/events/{id}/discord-webhook        ({ configured, hint }; hint = the URL's last 4 characters)
 PUT    /api/v1/events/{id}/discord-webhook        (body: url; logs DiscordWebhookChanged)
 DELETE /api/v1/events/{id}/discord-webhook        (204; logs DiscordWebhookChanged)
-POST   /api/v1/events/{id}/discord-webhook/test   (sends a test message; 204, 400 without a webhook, 502 with { error } if Discord refuses)
+POST   /api/v1/events/{id}/discord-webhook/test   (sends a test message; 204, 400 without a webhook, 429 with Retry-After within 10 s of the event's last test, 502 with { error } if Discord refuses)
 ```
 - The URL must be `https://discord.com/api/webhooks/{id}/{token}` (or `discordapp.com`), with no port, user info, query or fragment; 400 with `{ "error": "..." }` otherwise.
 - The URL never appears in any response or timeline entry. `DiscordWebhookChanged` is organisers-only, with data `{ configured }`.

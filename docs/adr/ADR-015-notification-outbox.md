@@ -67,6 +67,10 @@ Every outside channel is text only and links back to the app:
 - A delete goes to the event's *current* webhook. If the webhook was removed in the meantime, the
   row is Skipped; if it was replaced, Discord's 404 counts as done. Copying the webhook's secret
   onto every row just to delete old messages isn't worth it.
+- Deleting a whole event (only possible once it's archived or cancelled) deletes all its outbox
+  rows with it, and its Discord messages stay in the channel. The webhook is deleted with the
+  event, so taking them back would mean copying its secret onto every row; for an old trip's
+  announcements that's not worth it.
 - If a post is deleted while its message is being sent, the row is already gone when the send
   is saved. The dispatcher notices (a concurrency error on save) and queues a Delete row for the
   message it just sent.
