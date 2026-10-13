@@ -38,6 +38,8 @@ export class NewsPage implements OnInit {
 
   readonly event = this.currentEventService.event;
   readonly posts = signal<NewsPost[]>([]);
+  /** Organisers only: posts that haven't gone out yet, soonest first. */
+  readonly scheduled = signal<NewsPost[]>([]);
   /** When the viewer last opened the feed before this visit; later posts get a "New" mark. */
   readonly seenAt = signal<string | null>(null);
   readonly loading = signal(true);
@@ -49,8 +51,11 @@ export class NewsPage implements OnInit {
     return ev !== null && canPostNews(ev);
   });
 
+  readonly isOrganiser = computed(() => this.event()?.currentUserRole === 'Organiser');
+
   ngOnInit(): void {
     this.load();
+    this.loadScheduled();
   }
 
   loadMore(): void {
@@ -83,6 +88,7 @@ export class NewsPage implements OnInit {
 
   onDeleted(post: NewsPost): void {
     this.posts.update((posts) => posts.filter((p) => p.id !== post.id));
+    this.scheduled.update((posts) => posts.filter((p) => p.id !== post.id));
   }
 
   /** Keeps pinned posts first after one is pinned or unpinned here. */
@@ -113,6 +119,18 @@ export class NewsPage implements OnInit {
         this.error.set(true);
         this.loading.set(false);
       },
+    });
+  }
+
+  private loadScheduled(): void {
+    const ev = this.event();
+    if (!ev || !this.isOrganiser()) {
+      return;
+    }
+    this.api.scheduled(ev.id).subscribe({
+      next: (posts) => this.scheduled.set(posts),
+      // The feed itself still works; scheduled posts show up on the next visit.
+      error: () => undefined,
     });
   }
 

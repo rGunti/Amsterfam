@@ -15,6 +15,24 @@
     </div>
   </header>
 
+  @if (scheduled().length > 0) {
+    <section class="scheduled" aria-labelledby="scheduled-heading">
+      <h2 id="scheduled-heading">Scheduled</h2>
+      <p class="scheduled-hint">Only organisers see these until they go out.</p>
+      <ol class="posts">
+        @for (post of scheduled(); track post.id) {
+          <li>
+            <app-news-post-card
+              [eventId]="event()!.id"
+              [post]="post"
+              (deleted)="onDeleted($event)"
+            />
+          </li>
+        }
+      </ol>
+    </section>
+  }
+
   <ol class="posts">
     @for (post of posts(); track post.id) {
       <li>

@@ -17,6 +17,7 @@ const post: NewsPost = {
   body: 'Pay by Friday.',
   author: { id: 1, displayName: 'Alice', avatarUrl: null },
   createdAt: '2030-01-01T10:00:00Z',
+  publishAt: '2030-01-01T10:00:00Z',
   publishedAt: '2030-01-01T10:00:00Z',
   editedAt: null,
   canEdit: false,

@@ -32,6 +32,22 @@
   gap: 16px;
 }
 
+.scheduled {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+}
+
+.scheduled-hint {
+  margin: 4px 0 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .note {
   margin: 16px 0 0;
   color: var(--mat-sys-on-surface-variant);

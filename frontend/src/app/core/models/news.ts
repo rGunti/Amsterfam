@@ -7,6 +7,9 @@ export interface NewsPost {
   body: string;
   author: TimelineUser;
   createdAt: string;
+  /** When the post goes (or went) out. */
+  publishAt: string;
+  /** Null while the post is scheduled; only organisers see it then. */
   publishedAt: string | null;
   editedAt: string | null;
   canEdit: boolean;
@@ -54,6 +57,11 @@ export interface UpsertNewsPostRequest {
   resetAcks?: boolean;
   /** Defaults to true on the server. */
   commentsEnabled?: boolean;
+  /**
+   * More than a minute ahead schedules the post; null or sooner publishes it now. Can't
+   * change once the post is out.
+   */
+  publishAt?: string | null;
 }
 
 /** A plain-text comment on a post, oldest first in a list. */

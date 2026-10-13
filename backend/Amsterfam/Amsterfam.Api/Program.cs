@@ -48,6 +48,15 @@ builder
     .ValidateOnStart();
 
 builder
+    .Services.AddOptions<NewsOptions>()
+    .Bind(builder.Configuration.GetSection(NewsOptions.SectionName))
+    .Validate(
+        o => o.WorkerInterval > TimeSpan.Zero,
+        $"{NewsOptions.SectionName}:WorkerInterval must be positive."
+    )
+    .ValidateOnStart();
+
+builder
     .Services.AddOptions<AppOptions>()
     .Bind(builder.Configuration.GetSection(AppOptions.SectionName))
     .Validate(
@@ -63,6 +72,15 @@ if (
 )
 {
     builder.Services.AddHostedService<EventAutoTransitionService>();
+}
+
+if (
+    builder
+        .Configuration.GetSection(NewsOptions.SectionName)
+        .GetValue(nameof(NewsOptions.WorkerEnabled), true)
+)
+{
+    builder.Services.AddHostedService<NewsWorker>();
 }
 
 // In E2E test runs, swap real Authentik JWT validation for a header-based test

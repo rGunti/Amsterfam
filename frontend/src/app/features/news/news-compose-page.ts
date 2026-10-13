@@ -1,10 +1,18 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { ErrorStateMatcher } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -21,6 +29,7 @@ import {
   NewsPost,
   UpsertNewsPostRequest,
 } from '../../core/models/news';
+import { APP_LOCALE } from '../../shared/app-locale';
 import { AuthImage } from '../../shared/auth-image/auth-image';
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { prepareImage } from '../../shared/image-upload';
@@ -33,6 +42,36 @@ interface Draft {
   requiresAck?: boolean;
   pin?: boolean;
   commentsEnabled?: boolean;
+  when?: When;
+  publishAt?: string;
+}
+
+type When = 'now' | 'later';
+
+/** The server publishes anything closer than this straight away. */
+const SCHEDULE_MIN_MS = 60_000;
+
+/** A `datetime-local` value (local time, minutes) for an instant. */
+function toLocalInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
+
+/** "Later" needs a time far enough ahead that it really is a schedule. */
+function scheduleValidator(group: AbstractControl): ValidationErrors | null {
+  const when = group.get('when')?.value as When;
+  const value = group.get('publishAt')?.value as string;
+  if (when !== 'later') {
+    return null;
+  }
+  const at = value ? new Date(value).getTime() : NaN;
+  if (Number.isNaN(at)) {
+    return { publishAtRequired: true };
+  }
+  return at - Date.now() > SCHEDULE_MIN_MS ? null : { publishAtTooSoon: true };
 }
 
 /** What saving does to the post's image. */
@@ -107,21 +146,47 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
     ? Number(this.route.snapshot.paramMap.get('postId'))
     : null;
 
-  readonly form = new FormGroup({
-    title: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.maxLength(NEWS_TITLE_MAX)],
-    }),
-    body: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(NEWS_BODY_MAX)],
-    }),
-    requiresAck: new FormControl(false, { nonNullable: true }),
-    /** New posts only; existing posts are pinned from their menu. */
-    pin: new FormControl(false, { nonNullable: true }),
-    /** Edits only: ask everyone to acknowledge again. */
-    resetAcks: new FormControl(false, { nonNullable: true }),
-    commentsEnabled: new FormControl(true, { nonNullable: true }),
+  readonly form = new FormGroup(
+    {
+      title: new FormControl('', {
+        nonNullable: true,
+        validators: [Validators.maxLength(NEWS_TITLE_MAX)],
+      }),
+      body: new FormControl('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.maxLength(NEWS_BODY_MAX)],
+      }),
+      requiresAck: new FormControl(false, { nonNullable: true }),
+      /** New posts only; existing posts are pinned from their menu. */
+      pin: new FormControl(false, { nonNullable: true }),
+      /** Edits only: ask everyone to acknowledge again. */
+      resetAcks: new FormControl(false, { nonNullable: true }),
+      commentsEnabled: new FormControl(true, { nonNullable: true }),
+      /** New and scheduled posts only: publish straight away or at {@link publishAt}. */
+      when: new FormControl<When>('now', { nonNullable: true }),
+      /** A `datetime-local` value, in the viewer's time zone. */
+      publishAt: new FormControl('', { nonNullable: true }),
+    },
+    { validators: scheduleValidator },
+  );
+
+  /** Whether the post being edited is already out; its time can't change then. */
+  readonly published = signal(false);
+  readonly later = computed(() => this.value().when === 'later' && !this.published());
+  /** The time field shows the form-level schedule errors once it's been touched. */
+  readonly scheduleErrors: ErrorStateMatcher = {
+    isErrorState: (control) =>
+      !!control &&
+      (control.touched || control.dirty) &&
+      (this.form.hasError('publishAtRequired') || this.form.hasError('publishAtTooSoon')),
+  };
+  /** Earliest value the time picker offers. */
+  readonly minPublishAt = toLocalInput(new Date(Date.now() + SCHEDULE_MIN_MS));
+  readonly submitLabel = computed(() => {
+    if (this.postId === null) {
+      return this.later() ? 'Schedule' : 'Publish';
+    }
+    return this.published() || this.later() ? 'Save' : 'Publish now';
   });
 
   /** Whether the post being edited already asked for acknowledgement when it was loaded. */
@@ -171,6 +236,8 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
             requiresAck: value.requiresAck ?? false,
             pin: value.pin ?? false,
             commentsEnabled: value.commentsEnabled ?? true,
+            when: value.when ?? 'now',
+            publishAt: value.publishAt ?? '',
           });
         }
       });
@@ -187,6 +254,8 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
           requiresAck: draft.requiresAck ?? false,
           pin: draft.pin ?? false,
           commentsEnabled: draft.commentsEnabled ?? true,
+          when: draft.when ?? 'now',
+          publishAt: draft.publishAt ?? '',
         });
         this.form.markAsDirty();
         this.restoredDraft.set(true);
@@ -202,7 +271,10 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
           body: post.body,
           requiresAck: post.requiresAck,
           commentsEnabled: post.commentsEnabled,
+          when: post.publishedAt === null ? 'later' : 'now',
+          publishAt: post.publishedAt === null ? toLocalInput(new Date(post.publishAt)) : '',
         });
+        this.published.set(post.publishedAt !== null);
         this.hadAck.set(post.requiresAck);
         this.existingImageId.set(post.imageFileId ?? null);
         this.form.markAsPristine();
@@ -347,16 +419,26 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
       this.form.markAllAsTouched();
       return;
     }
-    const { title, body, requiresAck, pin, resetAcks, commentsEnabled } = this.form.getRawValue();
+    const { title, body, requiresAck, pin, resetAcks, commentsEnabled, publishAt } =
+      this.form.getRawValue();
+    // Left out for "now" on a new post and once published; "now" on a scheduled post
+    // sends it out.
+    let when: string | undefined;
+    if (this.later()) {
+      when = new Date(publishAt).toISOString();
+    } else if (this.postId !== null && !this.published()) {
+      when = new Date().toISOString();
+    }
     const request: UpsertNewsPostRequest =
       this.postId === null
-        ? { title: title.trim() || null, body, requiresAck, pin, commentsEnabled }
+        ? { title: title.trim() || null, body, requiresAck, pin, commentsEnabled, publishAt: when }
         : {
             title: title.trim() || null,
             body,
             requiresAck,
             commentsEnabled,
             resetAcks: requiresAck && this.hadAck() && resetAcks,
+            publishAt: when,
           };
     this.saving.set(true);
 
@@ -369,6 +451,21 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
         this.saved = true;
         if (this.postId === null) {
           writeDraft(this.eventId, null);
+        }
+        if (post.publishedAt === null) {
+          this.snackBar.open(
+            `Scheduled for ${new Date(post.publishAt).toLocaleString(APP_LOCALE, {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}.`,
+            'OK',
+            { duration: 5000 },
+          );
+          void this.router.navigate(['/events', this.eventId, 'news']);
+          return;
         }
         void this.router.navigate(['/events', this.eventId, 'news', post.id]);
       },

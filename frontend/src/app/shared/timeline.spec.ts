@@ -126,6 +126,19 @@ describe('describeEntry', () => {
     expect(describeEntry(unpinned, 99).text).toBe('Alice unpinned a news post');
   });
 
+  it('describes scheduling a news post with its time', () => {
+    const scheduled = entry({
+      type: 'NewsScheduled',
+      data: { postId: 3, title: 'Dinner', publishAt: '2030-07-02T18:00:00Z' },
+    });
+    const line = describeEntry(scheduled, 99);
+    expect(line.text).toMatch(/^Alice scheduled a news post “Dinner” for .*2/);
+    expect(line.icon).toBe('schedule_send');
+
+    const untitled = entry({ type: 'NewsScheduled', data: { postId: 3, title: null } });
+    expect(describeEntry(untitled, 99).text).toBe('Alice scheduled a news post');
+  });
+
   it('describes an organiser removing a comment, without its text', () => {
     const removed = entry({
       type: 'NewsCommentRemoved',

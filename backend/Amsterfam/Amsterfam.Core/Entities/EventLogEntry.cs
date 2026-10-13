@@ -36,7 +36,8 @@ public class EventLogEntry
             or EventLogType.JoinLinkCreated
             or EventLogType.JoinLinkRevoked
             or EventLogType.JoinLinkRegenerated
-            or EventLogType.NewsCommentRemoved => EventLogVisibility.Organisers,
+            or EventLogType.NewsCommentRemoved
+            or EventLogType.NewsScheduled => EventLogVisibility.Organisers,
             _ => EventLogVisibility.Everyone,
         };
 
@@ -80,6 +81,9 @@ public enum EventLogType
     NewsPinned,
     NewsUnpinned,
     NewsCommentRemoved,
+
+    /// <summary>A post was saved to go out later; organisers only until it's published.</summary>
+    NewsScheduled,
 }
 
 public enum EventLogVisibility

@@ -22,7 +22,8 @@ public class EventLog(AmsterfamDbContext db, TimeProvider time)
         int? actorId,
         int? subjectUserId = null,
         object? data = null,
-        EventLogVisibility? visibility = null
+        EventLogVisibility? visibility = null,
+        DateTimeOffset? occurredAt = null
     ) =>
         db.EventLogEntries.Add(
             new EventLogEntry
@@ -30,7 +31,7 @@ public class EventLog(AmsterfamDbContext db, TimeProvider time)
                 EventId = eventId,
                 Type = type,
                 Visibility = visibility ?? EventLogEntry.DefaultVisibility(type),
-                OccurredAt = time.GetUtcNow(),
+                OccurredAt = occurredAt ?? time.GetUtcNow(),
                 ActorId = actorId,
                 SubjectUserId = subjectUserId,
                 Data = data is null ? null : JsonSerializer.Serialize(data, JsonOptions),

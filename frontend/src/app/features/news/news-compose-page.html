@@ -82,12 +82,45 @@
       <p class="image-hint">Shown in the app only, not in notifications.</p>
     </div>
 
+    @if (!published()) {
+      <div class="schedule">
+        <mat-button-toggle-group
+          formControlName="when"
+          aria-label="When to publish"
+          hideSingleSelectionIndicator
+        >
+          <mat-button-toggle value="now">Now</mat-button-toggle>
+          <mat-button-toggle value="later">Later</mat-button-toggle>
+        </mat-button-toggle-group>
+        @if (later()) {
+          <mat-form-field class="publish-at-field" appearance="outline">
+            <mat-label>Goes out at</mat-label>
+            <input
+              matInput
+              type="datetime-local"
+              formControlName="publishAt"
+              [min]="minPublishAt"
+              [errorStateMatcher]="scheduleErrors"
+            />
+            <mat-hint>Only organisers see the post until then.</mat-hint>
+            @if (form.hasError('publishAtRequired')) {
+              <mat-error>Pick a date and time.</mat-error>
+            } @else if (form.hasError('publishAtTooSoon')) {
+              <mat-error>Pick a time at least a minute from now.</mat-error>
+            }
+          </mat-form-field>
+        }
+      </div>
+    }
+
     <div class="options">
       <mat-checkbox formControlName="requiresAck">
         Ask everyone to acknowledge (“Got it”)
       </mat-checkbox>
       @if (postId === null) {
-        <mat-checkbox formControlName="pin">Pin to the top of the feed</mat-checkbox>
+        <mat-checkbox formControlName="pin">
+          Pin to the top of the feed{{ later() ? ' when it goes out' : '' }}
+        </mat-checkbox>
       } @else if (hadAck() && requiresAck()) {
         <mat-checkbox formControlName="resetAcks"> Ask everyone to acknowledge again </mat-checkbox>
       }
@@ -97,7 +130,7 @@
     <div class="actions">
       <a mat-button [routerLink]="['/events', eventId, 'news']">Cancel</a>
       <button mat-flat-button type="submit" [disabled]="saving() || form.invalid">
-        {{ postId === null ? 'Publish' : 'Save' }}
+        {{ submitLabel() }}
       </button>
     </div>
   }

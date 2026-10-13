@@ -96,6 +96,23 @@ notifications (#142 onwards).
 and `ImageFileId` so #139–#147 don't each need a migration. Until those land, posts publish
 immediately and the other columns keep their defaults.
 
+## Scheduled publishing (#141)
+
+- **Who sees it:** a post with `PublishAt` more than a minute ahead stays unpublished and is
+  organisers-only, in its own list above the feed. Its timeline entries (`NewsScheduled`,
+  edits, deletion) are organisers-only too; the public `NewsPosted` comes when it goes out.
+- **Worker:** `NewsWorker` (a `BackgroundService` on `TimeProvider`, like the auto-transition
+  service) calls `NewsPublisher.PublishDueAsync(now)` every 30 s. Each due post is claimed
+  with `UPDATE … SET PublishedAt = now WHERE Id = … AND PublishedAt IS NULL` in its own
+  transaction together with its timeline entry (and later its outbox rows), so it goes out
+  exactly once even with two instances. `NewsPosted` names the author as actor and the
+  publish time as `OccurredAt`.
+- **Read-only events:** posts that come due on an archived or cancelled event aren't
+  published; organisers still see them, marked overdue.
+- **Pinning:** "pin" on a scheduled post is kept in `PinnedAt` and turned into a real pin
+  (with its `NewsPinned` entry) at publish time.
+- **Fixed once out:** a published post's `PublishAt` can't change.
+
 ## Rejected alternatives
 
 - **Per-post read receipts:** more rows and a privacy question ("who hasn't read it?") for
