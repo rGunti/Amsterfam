@@ -85,6 +85,18 @@ export interface NewsSummary {
   needsAck: NewsPost[];
 }
 
+/** Whether the viewer has a private feed link. The link itself is only shown when created. */
+export interface NewsFeedTokenStatus {
+  active: boolean;
+  createdAt: string | null;
+  lastUsedAt: string | null;
+}
+
+export interface NewsFeedTokenCreated {
+  url: string;
+  createdAt: string;
+}
+
 /** The fixed reaction set; the server rejects anything else. */
 export const NEWS_REACTIONS = ['👍', '❤️', '😂', '🎉', '😮', '🙏'] as const;
 

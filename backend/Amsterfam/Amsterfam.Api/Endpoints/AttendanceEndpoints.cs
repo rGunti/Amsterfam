@@ -118,7 +118,8 @@ public static class AttendanceEndpoints
         int userId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
-        EventLog log
+        EventLog log,
+        TimeProvider time
     )
     {
         if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
@@ -159,6 +160,18 @@ public static class AttendanceEndpoints
         log.Record(eventId, type, requestingUser.Id, userId);
 
         db.EventAttendances.Remove(attendance);
+
+        // A feed link shouldn't come back to life if they're confirmed again later (ADR-016).
+        var now = time.GetUtcNow();
+        foreach (
+            var token in await db
+                .NewsFeedTokens.Where(t =>
+                    t.EventId == eventId && t.UserId == userId && t.RevokedAt == null
+                )
+                .ToListAsync()
+        )
+            token.RevokedAt = now;
+
         await db.SaveChangesAsync();
         return TypedResults.NoContent();
     }

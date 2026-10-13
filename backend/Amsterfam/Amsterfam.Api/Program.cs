@@ -47,6 +47,15 @@ builder
     )
     .ValidateOnStart();
 
+builder
+    .Services.AddOptions<AppOptions>()
+    .Bind(builder.Configuration.GetSection(AppOptions.SectionName))
+    .Validate(
+        o => o.HasValidPublicUrl(),
+        $"{AppOptions.SectionName}:PublicUrl must be an absolute http(s) URL."
+    )
+    .ValidateOnStart();
+
 if (
     builder
         .Configuration.GetSection(AutoTransitionOptions.SectionName)
@@ -132,6 +141,7 @@ app.MapPaymentMethodEndpoints();
 app.MapTimelineEndpoints();
 app.MapExpenseEndpoints();
 app.MapNewsEndpoints();
+app.MapNewsFeedEndpoints();
 
 app.Run();
 

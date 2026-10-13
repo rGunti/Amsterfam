@@ -35,6 +35,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<NewsReaction> NewsReactions => Set<NewsReaction>();
     public DbSet<NewsComment> NewsComments => Set<NewsComment>();
     public DbSet<NewsCommentReaction> NewsCommentReactions => Set<NewsCommentReaction>();
+    public DbSet<NewsFeedToken> NewsFeedTokens => Set<NewsFeedToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -232,6 +233,24 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.HasOne(r => r.User)
                 .WithMany()
                 .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NewsFeedToken>(e =>
+        {
+            e.Property(t => t.TokenHash).HasMaxLength(NewsFeedToken.TokenHashLength);
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            // At most one active token per member and event.
+            e.HasIndex(t => new { t.UserId, t.EventId })
+                .IsUnique()
+                .HasFilter("\"RevokedAt\" IS NULL");
+            e.HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(t => t.Event)
+                .WithMany()
+                .HasForeignKey(t => t.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
@@ -8,6 +9,7 @@ import { NewsApi } from '../../core/api/news.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { NewsPost } from '../../core/models/news';
 import { canPostNews } from '../../shared/event-status';
+import { NewsFeedSheet, NewsFeedSheetData } from './news-feed-sheet';
 import { NewsPostCard } from './news-post-card';
 
 const PAGE_SIZE = 20;
@@ -32,6 +34,7 @@ export class NewsPage implements OnInit {
   private readonly api = inject(NewsApi);
   private readonly currentEventService = inject(CurrentEventService);
   private readonly currentUser = inject(CurrentUserService);
+  private readonly bottomSheet = inject(MatBottomSheet);
 
   readonly event = this.currentEventService.event;
   readonly posts = signal<NewsPost[]>([]);
@@ -67,6 +70,15 @@ export class NewsPage implements OnInit {
       post.author.id !== this.currentUser.user()?.id &&
       (seenAt === null || new Date(post.publishedAt) > new Date(seenAt))
     );
+  }
+
+  openFeedSheet(): void {
+    const ev = this.event();
+    if (ev) {
+      this.bottomSheet.open<NewsFeedSheet, NewsFeedSheetData>(NewsFeedSheet, {
+        data: { eventId: ev.id },
+      });
+    }
   }
 
   onDeleted(post: NewsPost): void {

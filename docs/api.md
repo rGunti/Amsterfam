@@ -130,12 +130,18 @@ PUT    /api/v1/events/{id}/news/{postId}/comments/{commentId}    (comment author
 DELETE /api/v1/events/{id}/news/{postId}/comments/{commentId}    (author or organiser; organiser removing another's comment logs NewsCommentRemoved)
 PUT    /api/v1/events/{id}/news/{postId}/comments/{commentId}/reactions/{emoji}   (confirmed; same emoji list as posts; works with comments off)
 DELETE /api/v1/events/{id}/news/{postId}/comments/{commentId}/reactions/{emoji}   (confirmed)
+GET    /api/v1/events/{id}/news/feed-token  (confirmed; { active, createdAt, lastUsedAt } of the caller's feed link)
+POST   /api/v1/events/{id}/news/feed-token  (confirmed; creates the caller's feed link, revoking the old one; returns { url, createdAt } once)
+DELETE /api/v1/events/{id}/news/feed-token  (confirmed; revokes it; 204 even without one)
+GET    /api/v1/feeds/{token}/news.atom      (anonymous; Atom feed, see ADR-016)
+GET    /api/v1/feeds/{token}/images/{postId}.{ext}   (anonymous; a published post's image, same token checks)
 ```
 - The feed returns `{ posts, seenAt }`; a post is `{ id, title, body, author, createdAt, publishedAt, editedAt, canEdit }`.
 - `body` is raw Markdown (max 4000 characters); `title` is optional (max 120, blank = none). 400 with `{ "error": "..." }` otherwise.
 - `limit` defaults to 20 (max 50). Page by passing the last post's `publishedAt` and `id`.
 - Posts carry `imageFileId` (null without an image). Image upload, sniffing, the 5 MB limit and ETag caching work like the banner. Replacing or removing an image, or deleting the post, deletes the old file. Image changes log `NewsEdited` with `changed: ["image"]` and set `editedAt`, except `initial=true` on a post without an image (the compose page adding it right after creating the post).
 - Comments are plain text (max 2000), default `limit` 50 (max 100). A comment is `{ id, author, body, createdAt, editedAt, canEdit, canDelete, reactions, myReactions }`. Posts carry `commentsEnabled`, `commentCount` and `newCommentCount` (others' comments since the caller's last `seen`). Writing on a post with comments off is a 400; editing is author-only, deleting author or organiser (403 otherwise).
+- The Atom feed needs no login: the token in the URL is checked on every request (not revoked, owner still a confirmed member, event visible to them), and any failure is a 404. It holds the latest 50 published posts with links back to the app and no comments. A post's image is embedded and linked as an `enclosure`, served through the token-guarded images route. `Cache-Control: private, max-age=300`, ETag with `If-None-Match` → 304.
 - `GET /api/v1/events/{id}` returns `unreadNewsCount` for confirmed members: posts by others published after the caller's last `seen`.
 
 ### Availability

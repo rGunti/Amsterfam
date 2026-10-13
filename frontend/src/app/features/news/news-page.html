@@ -1,12 +1,18 @@
 <div class="news">
   <header class="news-header">
     <h1>News</h1>
-    @if (canPost()) {
-      <a mat-flat-button [routerLink]="['/events', event()!.id, 'news', 'new']">
-        <mat-icon>add</mat-icon>
-        New post
-      </a>
-    }
+    <div class="news-actions">
+      <button mat-stroked-button (click)="openFeedSheet()">
+        <mat-icon>rss_feed</mat-icon>
+        Subscribe via RSS
+      </button>
+      @if (canPost()) {
+        <a mat-flat-button [routerLink]="['/events', event()!.id, 'news', 'new']">
+          <mat-icon>add</mat-icon>
+          New post
+        </a>
+      }
+    </div>
   </header>
 
   <ol class="posts">

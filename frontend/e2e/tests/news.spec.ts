@@ -248,3 +248,35 @@ test('an organiser sees a new comment on a post and removes it', async ({ page, 
   await expect(page.getByText(/You removed a comment by .+ on “Deposit due”/)).toBeVisible();
   await expect(page.getByText('Which Friday exactly?')).toHaveCount(0);
 });
+
+test('an attendee subscribes via RSS, a reader fetches the feed, then the link is revoked', async ({
+  page,
+  request,
+}) => {
+  const organiser = `e2e-news-organiser-${Date.now()}`;
+  const eventId = await createOpenEvent(request, organiser);
+  await joinViaLink(request, eventId, organiser, BROWSER_USER);
+  await confirm(request, eventId, organiser, BROWSER_USER);
+  const post = await request.post(`${API}/api/v1/events/${eventId}/news`, {
+    headers: asUser(organiser),
+    data: { title: 'Ferry times', body: 'The ferry leaves at **noon**.' },
+  });
+  expect(post.ok()).toBeTruthy();
+
+  await page.goto(`/events/${eventId}/news`);
+  await page.getByRole('button', { name: 'Subscribe via RSS' }).click();
+  await page.getByRole('button', { name: 'Create feed link' }).click();
+  const url = (await page.locator('app-news-feed-sheet .url').textContent())!.trim();
+
+  // A feed reader has no credentials; the token in the URL is all it needs.
+  const feedPath = new URL(url).pathname;
+  const feed = await request.get(`${API}${feedPath}`);
+  expect(feed.status()).toBe(200);
+  expect(feed.headers()['content-type']).toContain('application/atom+xml');
+  expect(await feed.text()).toContain('Ferry times');
+
+  await page.getByRole('button', { name: 'Revoke' }).click();
+  await page.locator('mat-dialog-container').getByRole('button', { name: 'Revoke' }).click();
+  await expect(page.getByRole('button', { name: 'Create feed link' })).toBeVisible();
+  expect((await request.get(`${API}${feedPath}`)).status()).toBe(404);
+});

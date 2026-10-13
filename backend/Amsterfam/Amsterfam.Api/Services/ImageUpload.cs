@@ -51,15 +51,17 @@ public static class ImageUpload
     /// <summary>
     /// Streams a stored file, or 404 when <paramref name="fileId"/> is null or gone. Callers
     /// must have checked access already. The file id doubles as the ETag, so revalidation
-    /// never loads the content.
+    /// never loads the content. URLs that change with the file can pass a longer
+    /// <paramref name="cacheControl"/>.
     /// </summary>
     public static async Task<IResult> ServeAsync(
         AmsterfamDbContext db,
         Guid? fileId,
-        HttpRequest request
+        HttpRequest request,
+        string cacheControl = "private, no-cache"
     )
     {
-        request.HttpContext.Response.Headers.CacheControl = "private, no-cache";
+        request.HttpContext.Response.Headers.CacheControl = cacheControl;
         if (fileId is null)
             return TypedResults.NotFound();
 

@@ -95,4 +95,8 @@ describe('NewsPage', () => {
     TestBed.resetTestingModule();
     expect(render('Organiser').textContent).toContain('New post');
   });
+
+  it('offers everyone a feed subscription', () => {
+    expect(render('Attendee').textContent).toContain('Subscribe via RSS');
+  });
 });

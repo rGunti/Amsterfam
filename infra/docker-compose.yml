@@ -108,6 +108,7 @@ services:
       Jwt__Issuer: "${JWT_ISSUER:-http://localhost:9000/application/o/amsterfam/}"
       Jwt__Audience: "amsterfam"
       Cors__AllowedOrigins__0: "${FRONTEND_ORIGIN:-http://localhost:4200}"
+      App__PublicUrl: "${FRONTEND_ORIGIN:-http://localhost:4200}"
       ASPNETCORE_ENVIRONMENT: Production
     ports:
       - "8080:8080"

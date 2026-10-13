@@ -160,6 +160,12 @@ An announcement by an organiser, read by confirmed members (ADR-014). Deleted wi
 - `CreatedAt`, `PublishAt`, `PublishedAt?` (visible once set), `EditedAt?`
 - Reserved for later issues: `PinnedAt?` (#139), `RequiresAck` (#139), `ImageFileId?` (#140), `Notify` (#142), `CommentsEnabled` (#147)
 
+### NewsFeedToken
+A member's private Atom feed link for an event's news (ADR-016). Deleted with the event or user.
+- `Id`, `UserId`, `EventId`, `TokenHash` (hex SHA-256, unique; the token itself is never stored)
+- `CreatedAt`, `RevokedAt?`, `LastUsedAt?` (updated at most hourly)
+- At most one active (not revoked) token per user and event. Revoked when the member is removed.
+
 ### EventAttendance
 Join between User and Event.
 - `Id`, `EventId` (Guid, matches `Event.Id`), `UserId`, `Role` (Organiser | Attendee | Pending)
