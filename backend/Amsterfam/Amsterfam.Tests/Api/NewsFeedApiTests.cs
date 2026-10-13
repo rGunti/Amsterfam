@@ -70,7 +70,7 @@ public class NewsFeedApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var response = await client.PostAsync(t.FeedToken, null);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var created = (await response.Content.ReadFromJsonAsync<NewsFeedTokenCreated>())!;
-        Assert.StartsWith($"{ApiFixture.PublicUrl}/api/v1/feeds/", created.Url);
+        Assert.StartsWith($"{ApiFixture.ApiUrl}/api/v1/feeds/", created.Url);
         return created.Url;
     }
 

@@ -167,7 +167,7 @@ public static class NewsFeedEndpoints
     }
 
     private static string FeedBase(AppOptions app, string token) =>
-        $"{app.BaseUrl}/api/v1/feeds/{token}";
+        $"{app.ApiBaseUrl}/api/v1/feeds/{token}";
 
     private static string FeedUrl(AppOptions app, string token) =>
         $"{FeedBase(app, token)}/news.atom";

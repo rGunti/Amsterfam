@@ -42,6 +42,7 @@ interface Draft {
   requiresAck?: boolean;
   pin?: boolean;
   commentsEnabled?: boolean;
+  notify?: boolean;
   when?: When;
   publishAt?: string;
 }
@@ -162,6 +163,8 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
       /** Edits only: ask everyone to acknowledge again. */
       resetAcks: new FormControl(false, { nonNullable: true }),
       commentsEnabled: new FormControl(true, { nonNullable: true }),
+      /** Until the post is out: mirror it to outside channels such as Discord on publish. */
+      notify: new FormControl(true, { nonNullable: true }),
       /** New and scheduled posts only: publish straight away or at {@link publishAt}. */
       when: new FormControl<When>('now', { nonNullable: true }),
       /** A `datetime-local` value, in the viewer's time zone. */
@@ -236,6 +239,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
             requiresAck: value.requiresAck ?? false,
             pin: value.pin ?? false,
             commentsEnabled: value.commentsEnabled ?? true,
+            notify: value.notify ?? true,
             when: value.when ?? 'now',
             publishAt: value.publishAt ?? '',
           });
@@ -254,6 +258,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
           requiresAck: draft.requiresAck ?? false,
           pin: draft.pin ?? false,
           commentsEnabled: draft.commentsEnabled ?? true,
+          notify: draft.notify ?? true,
           when: draft.when ?? 'now',
           publishAt: draft.publishAt ?? '',
         });
@@ -271,6 +276,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
           body: post.body,
           requiresAck: post.requiresAck,
           commentsEnabled: post.commentsEnabled,
+          notify: post.notify,
           when: post.publishedAt === null ? 'later' : 'now',
           publishAt: post.publishedAt === null ? toLocalInput(new Date(post.publishAt)) : '',
         });
@@ -419,7 +425,7 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
       this.form.markAllAsTouched();
       return;
     }
-    const { title, body, requiresAck, pin, resetAcks, commentsEnabled, publishAt } =
+    const { title, body, requiresAck, pin, resetAcks, commentsEnabled, notify, publishAt } =
       this.form.getRawValue();
     // Left out for "now" on a new post and once published; "now" on a scheduled post
     // sends it out.
@@ -431,12 +437,21 @@ export class NewsComposePage implements OnInit, HasUnsavedChanges {
     }
     const request: UpsertNewsPostRequest =
       this.postId === null
-        ? { title: title.trim() || null, body, requiresAck, pin, commentsEnabled, publishAt: when }
+        ? {
+            title: title.trim() || null,
+            body,
+            requiresAck,
+            pin,
+            commentsEnabled,
+            notify,
+            publishAt: when,
+          }
         : {
             title: title.trim() || null,
             body,
             requiresAck,
             commentsEnabled,
+            notify,
             resetAcks: requiresAck && this.hadAck() && resetAcks,
             publishAt: when,
           };

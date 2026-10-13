@@ -325,3 +325,31 @@ test('an attendee subscribes via RSS, a reader fetches the feed, then the link i
   await expect(page.getByRole('button', { name: 'Create feed link' })).toBeVisible();
   expect((await request.get(`${API}${feedPath}`)).status()).toBe(404);
 });
+
+test('an organiser connects Discord without the webhook URL ever showing again', async ({
+  page,
+  request,
+}) => {
+  const eventId = await createOpenEvent(request, BROWSER_USER);
+  await page.goto(`/events/${eventId}`);
+  await expect(page.locator('app-discord-webhook-card')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Notifications' }).click();
+  await expect(page).toHaveURL(new RegExp(`/events/${eventId}/notifications$`));
+
+  const card = page.locator('app-discord-webhook-card');
+  const url = card.getByLabel('Webhook URL');
+  await url.fill('https://example.com/api/webhooks/1/abc');
+  await card.getByRole('button', { name: 'Connect' }).click();
+  await expect(card).toContainText("That isn't a Discord webhook URL.");
+
+  await url.fill('https://discord.com/api/webhooks/123/e2e-secret-wxyz');
+  await card.getByRole('button', { name: 'Connect' }).click();
+  await expect(card).toContainText('ending in “wxyz”');
+
+  await page.reload();
+  await expect(card).toContainText('ending in “wxyz”');
+  await expect(page.locator('body')).not.toContainText('e2e-secret');
+
+  await card.getByRole('button', { name: 'Disconnect' }).click();
+  await expect(card.getByLabel('Webhook URL')).toBeVisible();
+});

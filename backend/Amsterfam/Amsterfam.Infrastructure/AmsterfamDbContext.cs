@@ -36,6 +36,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<NewsComment> NewsComments => Set<NewsComment>();
     public DbSet<NewsCommentReaction> NewsCommentReactions => Set<NewsCommentReaction>();
     public DbSet<NewsFeedToken> NewsFeedTokens => Set<NewsFeedToken>();
+    public DbSet<NotificationDispatch> NotificationDispatches => Set<NotificationDispatch>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -78,6 +79,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.Property(ev => ev.Status).HasConversion<string>();
             e.Property(ev => ev.Currency).HasMaxLength(3).HasDefaultValue(Currencies.Default);
             e.Property(ev => ev.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(ev => ev.DiscordWebhookUrl).HasMaxLength(Event.MaxDiscordWebhookUrlLength);
             e.HasOne(ev => ev.CreatedBy)
                 .WithMany()
                 .HasForeignKey(ev => ev.CreatedById)
@@ -251,6 +253,30 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.HasOne(t => t.Event)
                 .WithMany()
                 .HasForeignKey(t => t.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NotificationDispatch>(e =>
+        {
+            e.HasIndex(d => new { d.Status, d.NextAttemptAt });
+            e.Property(d => d.Action).HasConversion<string>().HasMaxLength(20);
+            e.Property(d => d.Channel).HasConversion<string>().HasMaxLength(20);
+            e.Property(d => d.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(d => d.LastError).HasMaxLength(NotificationDispatch.MaxErrorLength);
+            e.Property(d => d.ExternalId).HasMaxLength(NotificationDispatch.MaxExternalIdLength);
+            e.HasOne(d => d.Event)
+                .WithMany()
+                .HasForeignKey(d => d.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Deleting a post sorts out its rows itself (NewsEndpoints.DeletePost); the delete
+            // rows it leaves behind must outlive the post.
+            e.HasOne(d => d.NewsPost)
+                .WithMany()
+                .HasForeignKey(d => d.NewsPostId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(d => d.RecipientUser)
+                .WithMany()
+                .HasForeignKey(d => d.RecipientUserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -179,18 +179,21 @@ resource "authentik_provider_oauth2" "amsterfam" {
   allowed_redirect_uris = concat(
     [
       {
-        matching_mode = "strict"
-        url           = "http://localhost:4200/auth/callback"
+        matching_mode     = "strict"
+        redirect_uri_type = "authorization"
+        url               = "http://localhost:4200/auth/callback"
       },
       {
-        matching_mode = "strict"
-        url           = "http://localhost:8080/auth/callback"
+        matching_mode     = "strict"
+        redirect_uri_type = "authorization"
+        url               = "http://localhost:8080/auth/callback"
       },
     ],
     [
       for uri in var.additional_redirect_uris : {
-        matching_mode = "strict"
-        url           = uri
+        matching_mode     = "strict"
+        redirect_uri_type = "authorization"
+        url               = uri
       }
     ],
   )

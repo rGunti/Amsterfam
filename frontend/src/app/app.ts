@@ -23,6 +23,7 @@ import { VersionApi } from './core/api/version.api';
 import { InstallPromptService } from './core/install-prompt/install-prompt.service';
 import {
   canManageJoinLinks,
+  canManageNotifications,
   canUseDatePoll,
   canViewExpenses,
   canViewNews,
@@ -79,6 +80,7 @@ export class App {
   protected readonly statusClass = statusClass;
   protected readonly canUseDatePoll = canUseDatePoll;
   protected readonly canManageJoinLinks = canManageJoinLinks;
+  protected readonly canManageNotifications = canManageNotifications;
   protected readonly canViewNews = canViewNews;
   protected readonly canViewTimeline = canViewTimeline;
   protected readonly canViewExpenses = canViewExpenses;

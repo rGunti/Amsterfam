@@ -64,6 +64,7 @@ Per user, list of preferred ways for others to pay them back (splitting costs). 
 - `PollRangeStart`, `PollRangeEnd` (`DateOnly?`) — candidate range for the date-finding poll; settable while `Status` is `Draft` or `LookingForDate`, voting only while `LookingForDate`
 - `Status`: Draft | LookingForDate | Open | InProgress | Closed | Archived | Cancelled — see *Event lifecycle* below
 - `AutoTransitionsPaused` (bool) — set when the owner resets an event back to Open; the scheduled job skips it until the next manual transition
+- `DiscordWebhookUrl?` (max 300) — where news is mirrored (ADR-015); a secret, never returned or logged
 - `CreatedBy`, `CreatedAt`
 
 #### Event lifecycle
@@ -158,7 +159,14 @@ One recorded change to an event, shown newest-first on the event's timeline (iss
 An announcement by an organiser, read by confirmed members (ADR-014). Deleted with the event.
 - `Id`, `EventId`, `AuthorId`, `Title?` (max 120), `Body` (raw Markdown, max 4000)
 - `CreatedAt`, `PublishAt`, `PublishedAt?` (visible once set), `EditedAt?`
-- Reserved for later issues: `PinnedAt?` (#139), `RequiresAck` (#139), `ImageFileId?` (#140), `Notify` (#142), `CommentsEnabled` (#147)
+- Reserved for later issues: `PinnedAt?` (#139), `RequiresAck` (#139), `ImageFileId?` (#140), `CommentsEnabled` (#147)
+- `Notify` — mirror the post to the event's outside channels when it's published (ADR-015); fixed once it's out
+
+### NotificationDispatch
+One message to an outside channel about a news post (ADR-015). Written by `NewsPublisher.PublishAsync`, sent by `NotificationDispatcher`. Deleted with the event (or recipient).
+- `Id` (long), `EventId`, `NewsPostId?` (set null when the post is deleted), `Action` (Send | Delete), `Channel` (Discord | Telegram | Push | Email), `RecipientUserId?` (null for group channels)
+- `Status` (Pending | Sent | Failed | Skipped), `Attempts` (max 4), `NextAttemptAt` (retries after 1, 5, 30 min), `LastError?`, `CreatedAt`, `SentAt?`, `ExternalId?` (e.g. the Discord message id)
+- Deleting a post removes its unsent rows and turns sent Discord rows into Delete rows.
 
 ### NewsFeedToken
 A member's private Atom feed link for an event's news (ADR-016). Deleted with the event or user.

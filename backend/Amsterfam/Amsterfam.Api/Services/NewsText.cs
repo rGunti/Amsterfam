@@ -21,6 +21,14 @@ public static partial class NewsText
         .DisableHtml()
         .Build();
 
+    /// <summary>Tracks where each inline starts and ends, for editing the source text.</summary>
+    private static readonly MarkdownPipeline PrecisePipeline = new MarkdownPipelineBuilder()
+        .UseEmphasisExtras()
+        .UseAutoLinks()
+        .DisableHtml()
+        .UsePreciseSourceLocation()
+        .Build();
+
     /// <summary>The body as plain text, paragraphs separated by blank lines.</summary>
     public static string PlainText(string markdown)
     {
@@ -90,6 +98,52 @@ public static partial class NewsText
         return writer.ToString().Trim();
     }
 
+    /// <summary>
+    /// The body as Markdown for chat apps that render it themselves (Discord). Longer bodies
+    /// are cut after the last whole block that fits, so a link or code block is never split;
+    /// if not even the first block fits, it falls back to <see cref="Excerpt"/>. Images become
+    /// plain links, so nothing is embedded.
+    /// </summary>
+    public static string DiscordMarkdown(string markdown, int maxLength)
+    {
+        var source = markdown.ReplaceLineEndings("\n").Trim();
+        if (source.Length > maxLength)
+        {
+            var document = Markdown.Parse(source, Pipeline);
+            var end = document.TakeWhile(b => b.Span.End < maxLength).LastOrDefault()?.Span.End;
+            // Plain text, but Discord still renders Markdown, so it's escaped.
+            if (end is null)
+                return EscapeDiscordMarkdown(Excerpt(source, maxLength).Text);
+            source = source[..(end.Value + 1)].TrimEnd() + "\n\n…";
+        }
+        return ImagesAsLinks(source);
+    }
+
+    /// <summary>
+    /// Backslash-escapes the characters Discord treats as inline Markdown, so plain text (a
+    /// title, an excerpt) shows as written.
+    /// </summary>
+    public static string EscapeDiscordMarkdown(string text) =>
+        DiscordMarkdownChars().Replace(text, @"\$0");
+
+    private static string ImagesAsLinks(string source)
+    {
+        var document = Markdown.Parse(source, PrecisePipeline);
+        var images = document
+            .Descendants<LinkInline>()
+            .Where(l => l.IsImage && !l.Span.IsEmpty)
+            .OrderByDescending(l => l.Span.Start);
+        foreach (var image in images)
+        {
+            var hasText = image.FirstChild is not null;
+            source = hasText
+                // "![alt](url)" → "[alt](url)"
+                ? source.Remove(image.Span.Start, 1)
+                : source[..image.Span.Start] + $"<{image.Url}>" + source[(image.Span.End + 1)..];
+        }
+        return source;
+    }
+
     private static string? Absolute(string? url, string baseUrl)
     {
         if (string.IsNullOrWhiteSpace(url))
@@ -116,6 +170,9 @@ public static partial class NewsText
         }
         link.Remove();
     }
+
+    [GeneratedRegex(@"[\\*_~`|\[\]]")]
+    private static partial Regex DiscordMarkdownChars();
 
     [GeneratedRegex(@"\n{2,}")]
     private static partial Regex BlankLines();

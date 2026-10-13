@@ -6,7 +6,7 @@ namespace Amsterfam.Api.Services;
 
 /// <summary>
 /// The single place a news post goes live (ADR-014). Like <see cref="EventLog"/>,
-/// <see cref="Publish"/> only changes the context; the caller's SaveChanges stores the post and
+/// <see cref="PublishAsync"/> only changes the context; the caller's SaveChanges stores the post and
 /// its timeline entry together. The post must already have its id.
 /// </summary>
 public class NewsPublisher(AmsterfamDbContext db, EventLog log, ILogger<NewsPublisher> logger)
@@ -23,9 +23,15 @@ public class NewsPublisher(AmsterfamDbContext db, EventLog log, ILogger<NewsPubl
 
     /// <summary>
     /// Puts the post live. A scheduled post that was asked to be pinned carries that as
-    /// <see cref="NewsPost.PinnedAt"/>; it's pinned for real (and logged) here.
+    /// <see cref="NewsPost.PinnedAt"/>; it's pinned for real (and logged) here. With
+    /// <see cref="NewsPost.Notify"/>, it also queues the outside notifications (ADR-015).
     /// </summary>
-    public void Publish(NewsPost post, int actorId, DateTimeOffset now)
+    public async Task PublishAsync(
+        NewsPost post,
+        int actorId,
+        DateTimeOffset now,
+        CancellationToken ct = default
+    )
     {
         post.PublishedAt = now;
         log.Record(
@@ -44,6 +50,39 @@ public class NewsPublisher(AmsterfamDbContext db, EventLog log, ILogger<NewsPubl
                 actorId,
                 data: LogData(post),
                 occurredAt: now
+            );
+        }
+        if (post.Notify)
+            await QueueNotificationsAsync(post, now, ct);
+    }
+
+    /// <summary>
+    /// One row per group channel the event has set up. Personal channels (Telegram, push,
+    /// email; later issues) add one row per confirmed member who opted in, except the author.
+    /// </summary>
+    private async Task QueueNotificationsAsync(
+        NewsPost post,
+        DateTimeOffset now,
+        CancellationToken ct
+    )
+    {
+        var hasDiscord = await db
+            .Events.Where(e => e.Id == post.EventId)
+            .Select(e => e.DiscordWebhookUrl != null)
+            .SingleAsync(ct);
+        if (hasDiscord)
+        {
+            db.NotificationDispatches.Add(
+                new NotificationDispatch
+                {
+                    EventId = post.EventId,
+                    NewsPostId = post.Id,
+                    Action = NotificationAction.Send,
+                    Channel = NotificationChannel.Discord,
+                    Status = NotificationStatus.Pending,
+                    NextAttemptAt = now,
+                    CreatedAt = now,
+                }
             );
         }
     }
@@ -101,8 +140,7 @@ public class NewsPublisher(AmsterfamDbContext db, EventLog log, ILogger<NewsPubl
             return false;
 
         var post = await db.NewsPosts.SingleAsync(p => p.Id == id, ct);
-        Publish(post, post.AuthorId, now);
-        // Outbox rows for notifications (#142) belong here, in the same transaction.
+        await PublishAsync(post, post.AuthorId, now, ct);
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
         return true;

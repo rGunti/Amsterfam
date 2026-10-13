@@ -33,6 +33,8 @@ export interface NewsPost {
   commentCount: number;
   /** Other people's comments since the viewer last opened the feed. */
   newCommentCount: number;
+  /** The post goes (or went) out to the event's outside channels, e.g. Discord. */
+  notify: boolean;
 }
 
 export interface NewsReactionCount {
@@ -62,6 +64,11 @@ export interface UpsertNewsPostRequest {
    * change once the post is out.
    */
   publishAt?: string | null;
+  /**
+   * Mirror the post to the event's outside channels when it's published. Defaults to true;
+   * ignored once the post is out, since edits never notify.
+   */
+  notify?: boolean;
 }
 
 /** A plain-text comment on a post, oldest first in a list. */

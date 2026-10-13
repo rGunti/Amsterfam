@@ -186,6 +186,19 @@
             }
           </a>
         }
+        @if (canManageNotifications(currentEvent)) {
+          <a
+            mat-list-item
+            [routerLink]="['/events', currentEvent.id, 'notifications']"
+            routerLinkActive
+            #notificationsActive="routerLinkActive"
+            [activated]="notificationsActive.isActive"
+            (click)="onNavLinkClick()"
+          >
+            <mat-icon matListItemIcon>notifications</mat-icon>
+            <span matListItemTitle>Notifications</span>
+          </a>
+        }
       } @else {
         <a mat-list-item routerLink="/" (click)="onNavLinkClick()">
           <mat-icon matListItemIcon>event</mat-icon>

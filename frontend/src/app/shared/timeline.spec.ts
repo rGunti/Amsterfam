@@ -139,6 +139,15 @@ describe('describeEntry', () => {
     expect(describeEntry(untitled, 99).text).toBe('Alice scheduled a news post');
   });
 
+  it('describes connecting and disconnecting Discord, without the URL', () => {
+    const set = entry({ type: 'DiscordWebhookChanged', data: { configured: true } });
+    expect(describeEntry(set, 99).text).toBe('Alice connected a Discord channel for news');
+    expect(describeEntry(set, 99).icon).toBe('webhook');
+
+    const removed = entry({ type: 'DiscordWebhookChanged', data: { configured: false } });
+    expect(describeEntry(removed, 99).text).toBe('Alice disconnected the Discord channel');
+  });
+
   it('describes an organiser removing a comment, without its text', () => {
     const removed = entry({
       type: 'NewsCommentRemoved',
