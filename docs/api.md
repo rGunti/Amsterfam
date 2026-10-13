@@ -118,8 +118,8 @@ See ADR-014.
 GET    /api/v1/events/{id}/news?before={publishedAt}&beforeId={postId}&limit={n}   (newest first)
 GET    /api/v1/events/{id}/news/scheduled   (organiser; unpublished posts, soonest first)
 GET    /api/v1/events/{id}/news/{postId}    (unpublished posts: organisers only)
-POST   /api/v1/events/{id}/news             (organiser; body: title?, body, commentsEnabled?, publishAt?)
-PUT    /api/v1/events/{id}/news/{postId}    (organiser; body: title?, body, commentsEnabled?, publishAt?)
+POST   /api/v1/events/{id}/news             (organiser; body: title?, body, commentsEnabled?, publishAt?, notify?)
+PUT    /api/v1/events/{id}/news/{postId}    (organiser; body: title?, body, commentsEnabled?, publishAt?, notify?)
 DELETE /api/v1/events/{id}/news/{postId}    (organiser)
 POST   /api/v1/events/{id}/news/seen        (marks everything published so far as read)
 GET    /api/v1/events/{id}/news/{postId}/image   (unpublished posts: organisers only)
@@ -144,7 +144,19 @@ GET    /api/v1/feeds/{token}/images/{postId}.{ext}   (anonymous; a published pos
 - Comments are plain text (max 2000), default `limit` 50 (max 100). A comment is `{ id, author, body, createdAt, editedAt, canEdit, canDelete, reactions, myReactions }`. Posts carry `commentsEnabled`, `commentCount` and `newCommentCount` (others' comments since the caller's last `seen`). Writing on a post with comments off is a 400; editing is author-only, deleting author or organiser (403 otherwise).
 - The Atom feed needs no login: the token in the URL is checked on every request (not revoked, owner still a confirmed member, event visible to them), and any failure is a 404. It holds the latest 50 published posts with links back to the app and no comments. A post's image is embedded and linked as an `enclosure`, served through the token-guarded images route. `Cache-Control: private, max-age=300`, ETag with `If-None-Match` → 304.
 - **Scheduling:** a `publishAt` more than a minute ahead keeps the post unpublished (`publishedAt` null) and logs an organisers-only `NewsScheduled` `{ postId, title, publishAt }`; anything sooner publishes now. Until it's out, the post is organiser-only (404 for others), edits don't set `editedAt`, and edits, image changes and deletion log organisers-only entries. Editing a scheduled post's `publishAt` to now publishes it; changing a published post's `publishAt` is a 400. `pin` on a scheduled post pins it when it publishes. The `NewsWorker` publishes due posts every `News:WorkerInterval` (default 30 s, off with `News:WorkerEnabled=false`) as their author, skipping read-only events, whose posts stay listed as overdue.
+- **Notifications (ADR-015):** `notify` (default true) mirrors the post to the event's outside channels when it's published; it's ignored once the post is out, since edits notify nobody. Posts carry `notify`. Deleting a sent post also deletes its Discord message.
 - `GET /api/v1/events/{id}` returns `unreadNewsCount` for confirmed members: posts by others published after the caller's last `seen`.
+
+### Discord webhook
+Organisers only (403 otherwise, 404 for an unknown event); changes need a writable event (409). See ADR-015.
+```
+GET    /api/v1/events/{id}/discord-webhook        ({ configured, hint }; hint = the URL's last 4 characters)
+PUT    /api/v1/events/{id}/discord-webhook        (body: url; logs DiscordWebhookChanged)
+DELETE /api/v1/events/{id}/discord-webhook        (204; logs DiscordWebhookChanged)
+POST   /api/v1/events/{id}/discord-webhook/test   (sends a test message; 204, 400 without a webhook, 502 with { error } if Discord refuses)
+```
+- The URL must be `https://discord.com/api/webhooks/{id}/{token}` (or `discordapp.com`), with no port, user info, query or fragment; 400 with `{ "error": "..." }` otherwise.
+- The URL never appears in any response or timeline entry. `DiscordWebhookChanged` is organisers-only, with data `{ configured }`.
 
 ### Availability
 ```

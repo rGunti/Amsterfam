@@ -36,6 +36,7 @@ const post = (id: number, publishedAt: string, author = alice): NewsPost => ({
   commentsEnabled: true,
   commentCount: 0,
   newCommentCount: 0,
+  notify: true,
 });
 
 describe('NewsPage', () => {

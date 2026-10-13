@@ -36,6 +36,7 @@ const base: NewsPost = {
   commentsEnabled: true,
   commentCount: 0,
   newCommentCount: 0,
+  notify: true,
 };
 
 describe('NewsPostCard', () => {

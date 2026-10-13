@@ -4,6 +4,7 @@ import { authGuard } from './core/auth/auth.guard';
 import { eventGuard } from './core/event/event.guard';
 import { cancelledEventGuard } from './core/event/cancelled-event.guard';
 import { joinLinksGuard } from './features/join-links/join-links.guard';
+import { notificationsGuard } from './features/notifications/notifications.guard';
 import { datePollGuard } from './features/date-poll/date-poll.guard';
 import { newsComposeGuard, newsGuard } from './features/news/news.guard';
 import { timelineGuard } from './features/timeline/timeline.guard';
@@ -95,6 +96,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/join-links/join-links-page').then((m) => m.JoinLinksPage),
         canActivate: [joinLinksGuard],
+      },
+      {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/notifications-page').then((m) => m.NotificationsPage),
+        canActivate: [notificationsGuard],
       },
     ],
   },

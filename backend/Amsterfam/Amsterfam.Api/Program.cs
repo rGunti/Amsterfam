@@ -37,6 +37,9 @@ builder.Services.AddScoped<IEventBalanceCheck, ExpenseBalanceCheck>();
 builder.Services.AddScoped<EventAutoTransitioner>();
 builder.Services.AddScoped<EventLog>();
 builder.Services.AddScoped<NewsPublisher>();
+builder.Services.AddScoped<NotificationDispatcher>();
+builder.Services.AddHttpClient<DiscordChannel>(c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<DiscordChannel>());
 
 builder
     .Services.AddOptions<AutoTransitionOptions>()
@@ -160,6 +163,7 @@ app.MapTimelineEndpoints();
 app.MapExpenseEndpoints();
 app.MapNewsEndpoints();
 app.MapNewsFeedEndpoints();
+app.MapDiscordWebhookEndpoints();
 
 app.Run();
 

@@ -1,4 +1,5 @@
 using Amsterfam.Api.Auth;
+using Amsterfam.Api.Services;
 using Amsterfam.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
@@ -15,6 +16,9 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     /// <summary>Different from <see cref="PublicUrl"/>, so tests catch links to the wrong one.</summary>
     public const string ApiUrl = "https://api.amsterfam.test";
+
+    /// <summary>Every call the app makes to Discord ends up here instead.</summary>
+    public StubDiscordHandler Discord { get; } = new();
 
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 
@@ -37,6 +41,7 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("News:WorkerEnabled", "false");
         builder.UseSetting("App:PublicUrl", PublicUrl);
         builder.UseSetting("App:ApiUrl", ApiUrl);
+        // ...and notifications via NotificationDispatcher.RunAsync.
 
         builder.ConfigureServices(services =>
         {
@@ -56,6 +61,12 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
                     TestAuthHandler.SchemeName,
                     _ => { }
                 );
+
+            services
+                .AddHttpClient<DiscordChannel>()
+                .ConfigurePrimaryHttpMessageHandler(() => Discord)
+                // The stub is shared, so the factory must never dispose it.
+                .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
         });
     }
 

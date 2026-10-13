@@ -238,6 +238,10 @@ function describeParts(
           : '';
       return { icon: 'schedule_send', parts: t`${actor} scheduled a news post${quoted}${when}` };
     }
+    case 'DiscordWebhookChanged':
+      return data['configured']
+        ? { icon: 'webhook', parts: t`${actor} connected a Discord channel for news` }
+        : { icon: 'webhook', parts: t`${actor} disconnected the Discord channel` };
     case 'NewsCommentRemoved': {
       const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : null;
       const on = title ? ` on “${title}”` : ' on a news post';

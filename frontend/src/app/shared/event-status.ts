@@ -89,6 +89,11 @@ export function canManageJoinLinks(ev: EventResponse): boolean {
   return ev.currentUserRole === 'Organiser' && !isReadOnly(ev.status);
 }
 
+/** Organisers set up where news is sent (Discord, …) while the event can still change. */
+export function canManageNotifications(ev: EventResponse): boolean {
+  return ev.currentUserRole === 'Organiser' && !isReadOnly(ev.status);
+}
+
 /** Confirmed members see the timeline; pending requests don't. */
 export function canViewTimeline(ev: EventResponse): boolean {
   return ev.currentUserRole === 'Attendee' || ev.currentUserRole === 'Organiser';

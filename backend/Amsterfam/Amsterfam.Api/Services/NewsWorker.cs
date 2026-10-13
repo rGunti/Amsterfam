@@ -4,7 +4,8 @@ namespace Amsterfam.Api.Services;
 
 /// <summary>
 /// Publishes scheduled news posts once they're due (<see cref="NewsPublisher.PublishDueAsync"/>),
-/// every <see cref="NewsOptions.WorkerInterval"/> and once at startup.
+/// then sends due notifications (<see cref="NotificationDispatcher.RunAsync"/>), every
+/// <see cref="NewsOptions.WorkerInterval"/> and once at startup.
 /// </summary>
 public class NewsWorker(
     IServiceScopeFactory scopeFactory,
@@ -34,6 +35,17 @@ public class NewsWorker(
         {
             // Keep ticking; unpublished posts are picked up again next time.
             logger.LogError(ex, "Scheduled news run failed");
+        }
+
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var dispatcher = scope.ServiceProvider.GetRequiredService<NotificationDispatcher>();
+            await dispatcher.RunAsync(time.GetUtcNow(), ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Notification run failed");
         }
     }
 }

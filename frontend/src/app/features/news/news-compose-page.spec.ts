@@ -47,6 +47,7 @@ describe('NewsComposePage', () => {
                 canEdit: true,
                 requiresAck: editedRequiresAck,
                 commentsEnabled: false,
+                notify: true,
                 imageFileId: editedImageId,
                 publishAt: editedPublishAt,
                 publishedAt: editedPublishedAt,
@@ -153,7 +154,28 @@ describe('NewsComposePage', () => {
       requiresAck: true,
       pin: true,
       commentsEnabled: true,
+      notify: true,
     });
+  });
+
+  it('notifies channels by default, and lets the organiser opt out', () => {
+    const fixture = render();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Notify channels');
+    const page = fixture.componentInstance;
+    page.form.patchValue({ body: 'Quiet one', notify: false });
+    page.save();
+    expect(create).toHaveBeenCalledWith('ev-1', expect.objectContaining({ notify: false }));
+  });
+
+  it('hides the notify option once a post is out, since edits never notify', () => {
+    const published = render({ postId: '5' });
+    expect((published.nativeElement as HTMLElement).textContent).not.toContain('Notify channels');
+
+    TestBed.resetTestingModule();
+    editedPublishedAt = null;
+    editedPublishAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    const scheduled = render({ postId: '5' });
+    expect((scheduled.nativeElement as HTMLElement).textContent).toContain('Notify channels');
   });
 
   it('lets the organiser turn comments off, and keeps that when editing', () => {
@@ -195,6 +217,7 @@ describe('NewsComposePage', () => {
       body: 'Old body',
       requiresAck: true,
       commentsEnabled: false,
+      notify: true,
       resetAcks: true,
     });
   });

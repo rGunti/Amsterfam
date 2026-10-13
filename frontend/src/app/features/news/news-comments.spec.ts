@@ -33,6 +33,7 @@ const post: NewsPost = {
   commentsEnabled: true,
   commentCount: 2,
   newCommentCount: 1,
+  notify: true,
 };
 
 const comment = (overrides: Partial<NewsComment> = {}): NewsComment => ({

@@ -37,7 +37,8 @@ public class EventLogEntry
             or EventLogType.JoinLinkRevoked
             or EventLogType.JoinLinkRegenerated
             or EventLogType.NewsCommentRemoved
-            or EventLogType.NewsScheduled => EventLogVisibility.Organisers,
+            or EventLogType.NewsScheduled
+            or EventLogType.DiscordWebhookChanged => EventLogVisibility.Organisers,
             _ => EventLogVisibility.Everyone,
         };
 
@@ -84,6 +85,9 @@ public enum EventLogType
 
     /// <summary>A post was saved to go out later; organisers only until it's published.</summary>
     NewsScheduled,
+
+    /// <summary>The Discord webhook was set or removed; data never holds the URL.</summary>
+    DiscordWebhookChanged,
 }
 
 public enum EventLogVisibility

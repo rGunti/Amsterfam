@@ -256,6 +256,7 @@ public static class NewsEndpoints
             PublishAt = scheduled ? request.PublishAt!.Value : now,
             RequiresAck = request.RequiresAck,
             CommentsEnabled = request.CommentsEnabled,
+            Notify = request.Notify,
             // On a scheduled post this only records the wish; Publish pins it for real.
             PinnedAt = scheduled && request.Pin ? request.PublishAt : null,
         };
@@ -276,7 +277,7 @@ public static class NewsEndpoints
         }
         else
         {
-            publisher.Publish(post, caller.UserId, now);
+            await publisher.PublishAsync(post, caller.UserId, now);
             if (request.Pin)
                 Pin(post, caller.UserId, now, log);
         }
@@ -333,6 +334,9 @@ public static class NewsEndpoints
         post.Body = request.Body.Trim();
         post.RequiresAck = request.RequiresAck;
         post.CommentsEnabled = request.CommentsEnabled;
+        // Notifications go out once, on publish; an edit never sends anything.
+        if (post.PublishedAt is null)
+            post.Notify = request.Notify;
         // Edits keep acknowledgements unless the organiser asks everyone to look again.
         if (request.ResetAcks)
             db.NewsAcknowledgements.RemoveRange(
@@ -354,7 +358,7 @@ public static class NewsEndpoints
             post.PublishAt = now;
             if (post.PinnedAt is not null)
                 post.PinnedAt = now;
-            publisher.Publish(post, caller.UserId, now);
+            await publisher.PublishAsync(post, caller.UserId, now);
         }
         else
         {
@@ -382,6 +386,8 @@ public static class NewsEndpoints
         int postId,
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
+        TimeProvider time,
+        NotificationDispatcher dispatcher,
         EventLog log
     )
     {
@@ -396,6 +402,7 @@ public static class NewsEndpoints
             return TypedResults.NotFound();
 
         var imageId = post.ImageFileId;
+        await dispatcher.RetractAsync(post.Id, time.GetUtcNow());
         db.NewsPosts.Remove(post);
         log.Record(
             eventId,
@@ -1272,7 +1279,8 @@ public static class NewsEndpoints
                     p.ImageFileId,
                     p.CommentsEnabled,
                     comments.GetValueOrDefault(p.Id)?.Count ?? 0,
-                    comments.GetValueOrDefault(p.Id)?.New ?? 0
+                    comments.GetValueOrDefault(p.Id)?.New ?? 0,
+                    p.Notify
                 );
             })
             .ToList();

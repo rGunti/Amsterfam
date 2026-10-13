@@ -2,6 +2,8 @@ namespace Amsterfam.Core.Entities;
 
 public class Event
 {
+    public const int MaxDiscordWebhookUrlLength = 300;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public required string Name { get; set; }
     public string? Description { get; set; }
@@ -16,6 +18,11 @@ public class Event
     public EventStatus Status { get; set; } = EventStatus.Draft;
     public bool AutoTransitionsPaused { get; set; }
     public Guid? BannerFileId { get; set; }
+
+    /// <summary>
+    /// Where news posts are mirrored (ADR-015). A secret: stored plain, never returned or logged.
+    /// </summary>
+    public string? DiscordWebhookUrl { get; set; }
     public int CreatedById { get; set; }
     public DateTime CreatedAt { get; set; }
 

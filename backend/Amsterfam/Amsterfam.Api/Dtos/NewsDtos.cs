@@ -27,7 +27,8 @@ public record NewsPostResponse(
     Guid? ImageFileId,
     bool CommentsEnabled,
     int CommentCount,
-    int NewCommentCount
+    int NewCommentCount,
+    bool Notify
 );
 
 public record NewsReactionCount(string Emoji, int Count);
@@ -43,6 +44,8 @@ public record NewsFeedResponse(IReadOnlyList<NewsPostResponse> Posts, DateTimeOf
 /// <see cref="ResetAcks"/> only when editing, and clears everyone's acknowledgements.
 /// <see cref="PublishAt"/> more than a minute ahead schedules the post (organisers only see
 /// it until then); null or sooner means "now". It can't change once the post is out.
+/// <see cref="Notify"/> mirrors the post to the event's outside channels when it's published
+/// (ADR-015); it's ignored once the post is out, since edits never notify.
 /// </summary>
 public record UpsertNewsPostRequest(
     string? Title,
@@ -51,7 +54,8 @@ public record UpsertNewsPostRequest(
     bool Pin = false,
     bool ResetAcks = false,
     bool CommentsEnabled = true,
-    DateTimeOffset? PublishAt = null
+    DateTimeOffset? PublishAt = null,
+    bool Notify = true
 );
 
 public record NewsAckEntry(TimelineUser User, DateTimeOffset At);
