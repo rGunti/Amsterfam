@@ -16,6 +16,12 @@ public interface INotificationChannel
     /// <summary>Whether the event still has this channel set up.</summary>
     bool IsConfigured(Event ev);
 
+    /// <summary>
+    /// A channel's own reason not to send this row, checked after the dispatcher's; null to send.
+    /// </summary>
+    Task<string?> SkipReasonAsync(NotificationDispatch dispatch, CancellationToken ct) =>
+        Task.FromResult<string?>(null);
+
     /// <summary>Sends the post; returns the channel's id for the message, if it has one.</summary>
     Task<string?> SendAsync(
         NotificationDispatch dispatch,

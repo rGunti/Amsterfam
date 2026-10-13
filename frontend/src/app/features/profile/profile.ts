@@ -21,7 +21,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Observable } from 'rxjs';
@@ -31,6 +30,7 @@ import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/co
 import { UserProfileDetails } from '../../shared/user-profile-details/user-profile-details';
 import { AboutMeForm } from './about-me-form';
 import { PaymentMethodDialog, PaymentMethodDialogData } from './payment-method-dialog';
+import { PushSettingsCard } from './push-settings-card';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { UserApi } from '../../core/api/user.api';
@@ -51,7 +51,7 @@ import { PaymentMethod } from '../../core/models/payment-method';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    MatSlideToggleModule,
+    PushSettingsCard,
     UserProfileDetails,
     AboutMeForm,
     AuthSourceIcon,
@@ -77,7 +77,6 @@ export class Profile implements OnInit {
   readonly form: FormGroup<{ displayName: FormControl<string> }>;
   readonly paymentMethods = signal<PaymentMethod[]>([]);
   readonly paymentMethodsLoading = signal(true);
-  readonly pushBusy = signal(false);
 
   readonly headerText = viewChild<ElementRef<HTMLElement>>('headerText');
   readonly avatarSize = signal(40);
@@ -212,28 +211,6 @@ export class Profile implements OnInit {
       // A shared device shouldn't keep getting this user's news.
       void this.push.disable().finally(() => this.authService.logout());
     });
-  }
-
-  async togglePush(change: MatSlideToggleChange): Promise<void> {
-    this.pushBusy.set(true);
-    try {
-      if (change.checked) {
-        await this.push.enable();
-      } else {
-        await this.push.disable();
-      }
-    } catch {
-      change.source.checked = this.push.subscribed();
-      this.snackBar.open(
-        this.push.blocked
-          ? 'Notifications are blocked for this app. Allow them in your browser settings.'
-          : 'Could not change push notifications',
-        'Dismiss',
-        { duration: 5000 },
-      );
-    } finally {
-      this.pushBusy.set(false);
-    }
   }
 
   private openPaymentMethodDialog(method: PaymentMethod | null) {

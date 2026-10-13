@@ -263,6 +263,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.HasIndex(s => s.Endpoint).IsUnique();
             e.Property(s => s.P256dh).HasMaxLength(PushSubscription.MaxKeyLength);
             e.Property(s => s.Auth).HasMaxLength(PushSubscription.MaxKeyLength);
+            e.Property(s => s.Name).HasMaxLength(PushSubscription.MaxNameLength);
             e.HasOne(s => s.User)
                 .WithMany()
                 .HasForeignKey(s => s.UserId)

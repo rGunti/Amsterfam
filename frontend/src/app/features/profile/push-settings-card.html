@@ -1,0 +1,76 @@
+<mat-card class="profile-card">
+  <mat-card-header>
+    <mat-card-title>Notifications</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <mat-slide-toggle [checked]="push.subscribed()" [disabled]="busy()" (change)="toggle($event)">
+      Push notifications for news on this device
+    </mat-slide-toggle>
+    <p class="hint">
+      On iPhone and iPad, add Amsterfam to your Home Screen first (iOS 16.4 or later).
+    </p>
+
+    @if (push.devices().length > 0) {
+      <h3 class="devices-title">Your devices</h3>
+      @for (device of push.devices(); track device.id) {
+        <div class="device-row">
+          <mat-icon>{{ isThisDevice(device) ? 'smartphone' : 'devices' }}</mat-icon>
+          @if (editingId() === device.id) {
+            <mat-form-field class="name-field" subscriptSizing="dynamic">
+              <mat-label>Device name</mat-label>
+              <input
+                matInput
+                [formControl]="nameControl"
+                [maxlength]="maxNameLength"
+                (keydown.enter)="saveRename(device)"
+                (keydown.escape)="cancelRename()"
+              />
+            </mat-form-field>
+            <span class="device-actions">
+              <button mat-icon-button (click)="saveRename(device)" aria-label="Save name">
+                <mat-icon>check</mat-icon>
+              </button>
+              <button mat-icon-button (click)="cancelRename()" aria-label="Cancel">
+                <mat-icon>close</mat-icon>
+              </button>
+            </span>
+          } @else {
+            <div class="device-text">
+              <span class="device-name">
+                {{ device.name }}
+                @if (isThisDevice(device)) {
+                  <span class="this-device">· this device</span>
+                }
+              </span>
+              <span class="device-meta">
+                @if (device.lastSuccessAt) {
+                  Last notified {{ device.lastSuccessAt | date: 'mediumDate' }}
+                } @else {
+                  Added {{ device.createdAt | date: 'mediumDate' }}
+                }
+              </span>
+            </div>
+            <span class="device-actions">
+              <button
+                mat-icon-button
+                (click)="startRename(device)"
+                aria-label="Rename"
+                matTooltip="Rename"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="revoke(device)"
+                aria-label="Remove"
+                matTooltip="Remove"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </span>
+          }
+        </div>
+      }
+    }
+  </mat-card-content>
+</mat-card>

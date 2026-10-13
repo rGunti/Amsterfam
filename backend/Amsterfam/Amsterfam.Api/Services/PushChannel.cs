@@ -37,6 +37,15 @@ public class PushChannel(
 
     public bool IsConfigured(Event ev) => options.Value.IsEnabled;
 
+    public async Task<string?> SkipReasonAsync(
+        NotificationDispatch dispatch,
+        CancellationToken ct
+    ) =>
+        dispatch.Action == NotificationAction.Send
+        && !await db.PushSubscriptions.AnyAsync(s => s.UserId == dispatch.RecipientUserId, ct)
+            ? "The recipient has no devices subscribed any more."
+            : null;
+
     /// <summary>
     /// Sends to every device of the recipient. Throws (to be retried) only if no device got it
     /// and at least one failed for a reason worth retrying; a retry goes to all devices again,
@@ -87,9 +96,15 @@ public class PushChannel(
                     .PushSubscriptions.Where(s => s.Id == subscription.Id)
                     .ExecuteDeleteAsync(ct);
             }
-            // Anything else (an error status, a timeout, no connection) is worth retrying. The
-            // message is our own: the library's could include the endpoint.
-            catch (Exception ex) when (!ct.IsCancellationRequested)
+            // An error status, a timeout or no connection is worth retrying. The message is our
+            // own: the library's could include the endpoint.
+            catch (Exception ex)
+                when (!ct.IsCancellationRequested
+                    && ex
+                        is PushServiceClientException
+                            or HttpRequestException
+                            or TaskCanceledException
+                )
             {
                 lastFailure = ex is PushServiceClientException push
                     ? $"The push service answered {(int)push.StatusCode} {push.StatusCode}."
@@ -99,6 +114,19 @@ public class PushChannel(
                     subscription.Id,
                     lastFailure
                 );
+            }
+            // Anything else is about this subscription (e.g. keys that can't be used) and won't
+            // get better by retrying, so the device is dropped.
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                logger.LogWarning(
+                    "Push subscription {SubscriptionId} can't be sent to ({Error}); removing it",
+                    subscription.Id,
+                    ex.GetType().Name
+                );
+                await db
+                    .PushSubscriptions.Where(s => s.Id == subscription.Id)
+                    .ExecuteDeleteAsync(ct);
             }
         }
 

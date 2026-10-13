@@ -1,0 +1,54 @@
+.profile-card {
+  max-width: 480px;
+  margin: 24px auto;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.devices-title {
+  margin: 16px 0 4px;
+  font: var(--mat-sys-title-small);
+}
+
+.device-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+}
+
+.device-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.device-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.this-device,
+.device-meta {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.device-meta {
+  font: var(--mat-sys-body-small);
+}
+
+.name-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-actions {
+  display: flex;
+  flex-shrink: 0;
+}

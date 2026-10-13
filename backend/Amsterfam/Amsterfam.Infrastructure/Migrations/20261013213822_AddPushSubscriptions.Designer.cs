@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Amsterfam.Infrastructure.Migrations
 {
     [DbContext(typeof(AmsterfamDbContext))]
-    [Migration("20261013204732_AddPushSubscriptions")]
+    [Migration("20261013213822_AddPushSubscriptions")]
     partial class AddPushSubscriptions
     {
         /// <inheritdoc />
@@ -1176,6 +1176,11 @@ namespace Amsterfam.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("LastSuccessAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
 
                     b.Property<string>("P256dh")
                         .IsRequired()

@@ -23,6 +23,11 @@ namespace Amsterfam.Infrastructure.Migrations
                             NpgsqlValueGenerationStrategy.IdentityByDefaultColumn
                         ),
                     UserId = table.Column<int>(type: "integer", nullable: false),
+                    Name = table.Column<string>(
+                        type: "character varying(60)",
+                        maxLength: 60,
+                        nullable: false
+                    ),
                     Endpoint = table.Column<string>(
                         type: "character varying(1024)",
                         maxLength: 1024,

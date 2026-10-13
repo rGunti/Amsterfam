@@ -1174,6 +1174,11 @@ namespace Amsterfam.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("LastSuccessAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
                     b.Property<string>("P256dh")
                         .IsRequired()
                         .HasMaxLength(200)

@@ -25,11 +25,17 @@ public class PushApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     private static async Task<int> MyId(HttpClient client) =>
         (await client.GetFromJsonAsync<UserResponse>("/api/v1/me/"))!.Id;
 
-    private static SavePushSubscriptionRequest Subscription(string endpoint) =>
-        new(endpoint, new PushSubscriptionKeys(PushTestKeys.P256dh, PushTestKeys.Auth));
+    private static SavePushSubscriptionRequest Subscription(string endpoint, string? name = null) =>
+        new(endpoint, new PushSubscriptionKeys(PushTestKeys.P256dh, PushTestKeys.Auth), name);
 
-    private static Task<HttpResponseMessage> Subscribe(HttpClient client, string endpoint) =>
-        client.PutAsJsonAsync(Subscriptions, Subscription(endpoint));
+    private static Task<HttpResponseMessage> Subscribe(
+        HttpClient client,
+        string endpoint,
+        string? name = null
+    ) => client.PutAsJsonAsync(Subscriptions, Subscription(endpoint, name));
+
+    private static async Task<List<PushDeviceResponse>> Devices(HttpClient client) =>
+        (await client.GetFromJsonAsync<List<PushDeviceResponse>>(Subscriptions))!;
 
     private static Task<HttpResponseMessage> Unsubscribe(HttpClient client, string endpoint) =>
         client.SendAsync(
@@ -187,8 +193,19 @@ public class PushApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
-    [Fact]
-    public async Task Save_RejectsMalformedKeys()
+    [Theory]
+    [InlineData("not base64!", PushTestKeys.Auth)]
+    // Valid base64url, but not a 65-byte uncompressed point.
+    [InlineData(PushTestKeys.Auth, PushTestKeys.Auth)]
+    // Right length, wrong prefix (0x05 instead of 0x04).
+    [InlineData(
+        "BV9VCLs8NmxJrFP9ykhAXK6OVm32ahafY6jgkTxGkYOll9hR3dTv0iKHNJLvFKCOMDl4AM0frE_0LH8PJydkjIU",
+        PushTestKeys.Auth
+    )]
+    // Auth secret of the wrong length.
+    [InlineData(PushTestKeys.P256dh, "c2hvcnQ")]
+    [InlineData(PushTestKeys.P256dh, null)]
+    public async Task Save_RejectsMalformedKeys(string p256dh, string? auth)
     {
         var client = api.CreateClientWithUser("discord|push-bad-keys");
 
@@ -196,11 +213,112 @@ public class PushApiTests(ApiFixture api) : IClassFixture<ApiFixture>
             Subscriptions,
             new SavePushSubscriptionRequest(
                 PushTestKeys.Endpoint("bad-keys"),
-                new PushSubscriptionKeys("not base64!", PushTestKeys.Auth)
+                new PushSubscriptionKeys(p256dh, auth)
             )
         );
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Devices_ListsOnlyMyOwnWithNames()
+    {
+        var me = api.CreateClientWithUser("discord|push-list-me");
+        var other = api.CreateClientWithUser("discord|push-list-other");
+        await Subscribe(me, PushTestKeys.Endpoint("list-phone"), "Chrome on Android");
+        await Subscribe(me, PushTestKeys.Endpoint("list-laptop"));
+        await Subscribe(other, PushTestKeys.Endpoint("list-other"));
+
+        var devices = await Devices(me);
+
+        Assert.Equal(2, devices.Count);
+        Assert.Contains(devices, d => d.Name == "Chrome on Android");
+        Assert.Contains(devices, d => d.Name == "Unknown device");
+        Assert.DoesNotContain(devices, d => d.Endpoint == PushTestKeys.Endpoint("list-other"));
+    }
+
+    [Fact]
+    public async Task Save_KeepsTheNameWhenResaved()
+    {
+        var client = api.CreateClientWithUser("discord|push-keep-name");
+        var endpoint = PushTestKeys.Endpoint("keep-name");
+        await Subscribe(client, endpoint, "Firefox on Linux");
+
+        await Subscribe(client, endpoint, "Something else");
+
+        Assert.Equal("Firefox on Linux", Assert.Single(await Stored(endpoint)).Name);
+    }
+
+    [Fact]
+    public async Task Rename_ChangesOnlyMyOwnDevice()
+    {
+        var me = api.CreateClientWithUser("discord|push-rename-me");
+        var other = api.CreateClientWithUser("discord|push-rename-other");
+        await Subscribe(me, PushTestKeys.Endpoint("rename"));
+        var id = Assert.Single(await Devices(me)).Id;
+
+        var forbidden = await other.PatchAsJsonAsync(
+            $"{Subscriptions}/{id}",
+            new RenamePushDeviceRequest("Mine now")
+        );
+        var renamed = await me.PatchAsJsonAsync(
+            $"{Subscriptions}/{id}",
+            new RenamePushDeviceRequest("  Work laptop  ")
+        );
+        var blank = await me.PatchAsJsonAsync(
+            $"{Subscriptions}/{id}",
+            new RenamePushDeviceRequest(" ")
+        );
+
+        Assert.Equal(HttpStatusCode.NotFound, forbidden.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, renamed.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, blank.StatusCode);
+        Assert.Equal("Work laptop", Assert.Single(await Devices(me)).Name);
+    }
+
+    [Fact]
+    public async Task Revoke_RemovesOnlyMyOwnDevice()
+    {
+        var me = api.CreateClientWithUser("discord|push-revoke-me");
+        var other = api.CreateClientWithUser("discord|push-revoke-other");
+        await Subscribe(me, PushTestKeys.Endpoint("revoke"));
+        var id = Assert.Single(await Devices(me)).Id;
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await other.DeleteAsync($"{Subscriptions}/{id}")).StatusCode
+        );
+        Assert.Single(await Devices(me));
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await me.DeleteAsync($"{Subscriptions}/{id}")).StatusCode
+        );
+        Assert.Empty(await Devices(me));
+    }
+
+    [Fact]
+    public async Task Save_DropsTheLeastRecentlyUsedPastTheCap()
+    {
+        var client = api.CreateClientWithUser("discord|push-cap");
+        for (var i = 0; i < PushSubscription.MaxPerUser; i++)
+            await Subscribe(client, PushTestKeys.Endpoint($"cap-{i}"));
+        // Device 0 is the oldest but was used recently, so device 1 is the one to go.
+        await using (var db = await api.CreateDbContextAsync())
+        {
+            await db
+                .PushSubscriptions.Where(s => s.Endpoint == PushTestKeys.Endpoint("cap-0"))
+                .ExecuteUpdateAsync(s =>
+                    s.SetProperty(x => x.LastSuccessAt, DateTimeOffset.UtcNow)
+                );
+        }
+
+        await Subscribe(client, PushTestKeys.Endpoint("cap-new"));
+
+        var endpoints = (await Devices(client)).Select(d => d.Endpoint).ToList();
+        Assert.Equal(PushSubscription.MaxPerUser, endpoints.Count);
+        Assert.Contains(PushTestKeys.Endpoint("cap-0"), endpoints);
+        Assert.Contains(PushTestKeys.Endpoint("cap-new"), endpoints);
+        Assert.DoesNotContain(PushTestKeys.Endpoint("cap-1"), endpoints);
     }
 
     [Fact]
@@ -355,6 +473,47 @@ public class PushApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         await Dispatch();
 
+        Assert.Equal(NotificationStatus.Sent, Assert.Single(await PushRows(t.EventId)).Status);
+    }
+
+    [Fact]
+    public async Task Dispatch_SkipsMembersWithoutDevicesLeft()
+    {
+        var t = await CreateTrip("no-devices");
+        var endpoint = PushTestKeys.Endpoint("no-devices");
+        await Subscribe(t.Guest, endpoint);
+        await Post(t);
+        await Unsubscribe(t.Guest, endpoint);
+
+        await Dispatch();
+
+        var row = Assert.Single(await PushRows(t.EventId));
+        Assert.Equal(NotificationStatus.Skipped, row.Status);
+        Assert.Contains("no devices", row.LastError);
+    }
+
+    [Fact]
+    public async Task Dispatch_DropsSubscriptionsThatCantBeEncryptedFor()
+    {
+        var t = await CreateTrip("unusable");
+        var broken = PushTestKeys.Endpoint("unusable-broken");
+        var working = PushTestKeys.Endpoint("unusable-working");
+        await Subscribe(t.Guest, broken);
+        await Subscribe(t.Guest, working);
+        // Keys that slipped past validation (e.g. stored before it was stricter).
+        await using (var db = await api.CreateDbContextAsync())
+        {
+            await db
+                .PushSubscriptions.Where(s => s.Endpoint == broken)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.P256dh, "AAAA"));
+        }
+        await Post(t);
+
+        await Dispatch();
+
+        Assert.Empty(await Stored(broken));
+        Assert.Empty(api.Push.CallsTo(broken));
+        Assert.Single(api.Push.CallsTo(working));
         Assert.Equal(NotificationStatus.Sent, Assert.Single(await PushRows(t.EventId)).Status);
     }
 

@@ -8,9 +8,19 @@ public class PushSubscription
 {
     public const int MaxEndpointLength = 1024;
     public const int MaxKeyLength = 200;
+    public const int MaxNameLength = 60;
+
+    /// <summary>
+    /// How many devices one member can have. Past this, the one used least recently goes, so a
+    /// device that died without the push service saying so never blocks a new one.
+    /// </summary>
+    public const int MaxPerUser = 10;
 
     public int Id { get; set; }
     public int UserId { get; set; }
+
+    /// <summary>What the member calls this device, e.g. "Chrome on Android".</summary>
+    public required string Name { get; set; }
 
     /// <summary>The push service URL for this device; unique.</summary>
     public required string Endpoint { get; set; }

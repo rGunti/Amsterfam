@@ -24,8 +24,12 @@ public static partial class PushEndpointValidator
         ".push.apple.com",
     ];
 
-    /// <summary>A P-256 public key is 65 bytes (87 base64url chars); the auth secret 16 (22).</summary>
-    [GeneratedRegex("^[A-Za-z0-9_-]{16,200}={0,2}$")]
+    /// <summary>An uncompressed P-256 public key: 0x04, then 32 bytes each of x and y.</summary>
+    private const int P256dhLength = 65;
+
+    private const int AuthLength = 16;
+
+    [GeneratedRegex("^[A-Za-z0-9_-]+={0,2}$")]
     private static partial Regex Base64Url();
 
     /// <summary>Returns null when the subscription is fine, otherwise why it isn't.</summary>
@@ -33,11 +37,30 @@ public static partial class PushEndpointValidator
     {
         if (ValidateEndpoint(endpoint) is { } error)
             return error;
-        if (p256dh is null || !Base64Url().IsMatch(p256dh))
+        // Keys that don't fit would only fail later, when a post is encrypted for the device.
+        if (Decode(p256dh) is not { Length: P256dhLength } key || key[0] != 0x04)
             return "The subscription's p256dh key is missing or malformed.";
-        if (auth is null || !Base64Url().IsMatch(auth))
+        if (Decode(auth) is not { Length: AuthLength })
             return "The subscription's auth secret is missing or malformed.";
         return null;
+    }
+
+    private static byte[]? Decode(string? base64Url)
+    {
+        if (base64Url is null || base64Url.Length > PushSubscription.MaxKeyLength)
+            return null;
+        if (!Base64Url().IsMatch(base64Url))
+            return null;
+        var base64 = base64Url.TrimEnd('=').Replace('-', '+').Replace('_', '/');
+        base64 = base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '=');
+        try
+        {
+            return Convert.FromBase64String(base64);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
     }
 
     public static string? ValidateEndpoint(string? endpoint)
@@ -55,7 +78,10 @@ public static partial class PushEndpointValidator
             return "The subscription's endpoint must be an https URL.";
 
         var host = uri.IdnHost.ToLowerInvariant();
-        if (!Hosts.Contains(host) && !HostSuffixes.Any(host.EndsWith))
+        if (
+            !Hosts.Contains(host)
+            && !HostSuffixes.Any(s => host.EndsWith(s, StringComparison.Ordinal))
+        )
             return "This browser's push service isn't supported.";
         return null;
     }
