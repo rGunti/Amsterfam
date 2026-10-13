@@ -234,13 +234,13 @@ public class NewsSchedulingApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         );
         Assert.Equal(HttpStatusCode.OK, same.StatusCode);
 
-        // ...even with sub-microsecond noise the database can't store.
+        // ...even with sub-second noise from the round trip.
         var echoed = await t.Owner.PutAsJsonAsync(
             $"{t.News}/{post.Id}",
             new UpsertNewsPostRequest(
                 "Dinner",
                 "Table at **9**.",
-                PublishAt: post.PublishAt.AddTicks(5)
+                PublishAt: post.PublishAt.AddMilliseconds(5)
             )
         );
         Assert.Equal(HttpStatusCode.OK, echoed.StatusCode);
