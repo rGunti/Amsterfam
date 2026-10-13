@@ -224,6 +224,20 @@ function describeParts(
       const pinning = entry.type === 'NewsPinned' || entry.type === 'NewsUnpinned';
       return { icon: pinning ? 'push_pin' : 'campaign', parts: t`${actor} ${verb}${quoted}` };
     }
+    case 'NewsScheduled': {
+      const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : null;
+      const quoted = title ? ` “${title}”` : '';
+      const when =
+        typeof data['publishAt'] === 'string'
+          ? ` for ${new Date(data['publishAt']).toLocaleString(APP_LOCALE, {
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}`
+          : '';
+      return { icon: 'schedule_send', parts: t`${actor} scheduled a news post${quoted}${when}` };
+    }
     case 'NewsCommentRemoved': {
       const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : null;
       const on = title ? ` on “${title}”` : ' on a news post';

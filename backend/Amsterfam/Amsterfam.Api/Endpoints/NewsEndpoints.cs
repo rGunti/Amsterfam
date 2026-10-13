@@ -23,6 +23,7 @@ public static class NewsEndpoints
         var group = app.MapGroup("/api/v1/events/{eventId:guid}/news").RequireAuthorization();
 
         group.MapGet("/", GetFeed);
+        group.MapGet("/scheduled", GetScheduled);
         group.MapGet("/{postId:int}", GetPost);
         group.MapPost("/", CreatePost).LogsToTimeline();
         group.MapPut("/{postId:int}", UpdatePost).LogsToTimeline();
@@ -189,14 +190,42 @@ public static class NewsEndpoints
         if (caller is null)
             return error!;
 
+        // Organisers also see scheduled posts, e.g. to edit them.
         var post = await db
             .NewsPosts.Include(p => p.Author)
             .FirstOrDefaultAsync(p =>
-                p.Id == postId && p.EventId == eventId && p.PublishedAt != null
+                p.Id == postId
+                && p.EventId == eventId
+                && (p.PublishedAt != null || caller.IsOrganiser)
             );
         return post is null
             ? TypedResults.NotFound()
             : TypedResults.Ok(await ToResponseAsync(db, eventId, caller, post));
+    }
+
+    /// <summary>
+    /// Posts that haven't gone out yet, soonest first: organisers only. Includes overdue posts
+    /// on read-only events, which the worker leaves alone.
+    /// </summary>
+    private static async Task<IResult> GetScheduled(
+        Guid eventId,
+        ICurrentUserService currentUser,
+        AmsterfamDbContext db
+    )
+    {
+        var (caller, error) = await AuthorizeAsync(db, eventId, currentUser, Access.Read);
+        if (caller is null)
+            return error!;
+        if (!caller.IsOrganiser)
+            return TypedResults.Forbid();
+
+        var posts = await db
+            .NewsPosts.Where(p => p.EventId == eventId && p.PublishedAt == null)
+            .OrderBy(p => p.PublishAt)
+            .ThenBy(p => p.Id)
+            .Include(p => p.Author)
+            .ToListAsync();
+        return TypedResults.Ok(await ToResponsesAsync(db, eventId, caller, posts));
     }
 
     private static async Task<IResult> CreatePost(
@@ -216,6 +245,7 @@ public static class NewsEndpoints
             return invalid;
 
         var now = time.GetUtcNow();
+        var scheduled = request.PublishAt is { } at && NewsPublisher.IsScheduled(at, now);
         var post = new NewsPost
         {
             EventId = eventId,
@@ -223,9 +253,11 @@ public static class NewsEndpoints
             Title = NormaliseTitle(request.Title),
             Body = request.Body.Trim(),
             CreatedAt = now,
-            PublishAt = now,
+            PublishAt = scheduled ? request.PublishAt!.Value : now,
             RequiresAck = request.RequiresAck,
             CommentsEnabled = request.CommentsEnabled,
+            // On a scheduled post this only records the wish; Publish pins it for real.
+            PinnedAt = scheduled && request.Pin ? request.PublishAt : null,
         };
 
         // The timeline entry needs the post's id, so the post is saved first; the transaction
@@ -233,9 +265,21 @@ public static class NewsEndpoints
         await using var transaction = await db.Database.BeginTransactionAsync();
         db.NewsPosts.Add(post);
         await db.SaveChangesAsync();
-        publisher.Publish(post, caller.UserId, now);
-        if (request.Pin)
-            Pin(post, caller.UserId, now, log);
+        if (scheduled)
+        {
+            log.Record(
+                eventId,
+                EventLogType.NewsScheduled,
+                caller.UserId,
+                data: NewsPublisher.ScheduledLogData(post)
+            );
+        }
+        else
+        {
+            publisher.Publish(post, caller.UserId, now);
+            if (request.Pin)
+                Pin(post, caller.UserId, now, log);
+        }
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
 
@@ -253,6 +297,7 @@ public static class NewsEndpoints
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
         TimeProvider time,
+        NewsPublisher publisher,
         EventLog log
     )
     {
@@ -268,22 +313,59 @@ public static class NewsEndpoints
         if (post is null)
             return TypedResults.NotFound();
 
+        var now = time.GetUtcNow();
+        if (post.PublishedAt is not null)
+        {
+            if (request.PublishAt is { } at && at != post.PublishAt)
+                return TypedResults.BadRequest(
+                    new { error = "A published post can't be rescheduled." }
+                );
+            post.EditedAt = now;
+        }
+
         post.Title = NormaliseTitle(request.Title);
         post.Body = request.Body.Trim();
         post.RequiresAck = request.RequiresAck;
         post.CommentsEnabled = request.CommentsEnabled;
-        post.EditedAt = time.GetUtcNow();
         // Edits keep acknowledgements unless the organiser asks everyone to look again.
         if (request.ResetAcks)
             db.NewsAcknowledgements.RemoveRange(
                 await db.NewsAcknowledgements.Where(a => a.PostId == post.Id).ToListAsync()
             );
-        log.Record(
-            eventId,
-            EventLogType.NewsEdited,
-            caller.UserId,
-            data: NewsPublisher.LogData(post)
-        );
+
+        if (post.PublishedAt is not null)
+        {
+            log.Record(
+                eventId,
+                EventLogType.NewsEdited,
+                caller.UserId,
+                data: NewsPublisher.LogData(post)
+            );
+        }
+        else if (request.PublishAt is { } at && !NewsPublisher.IsScheduled(at, now))
+        {
+            // Moved to "now": it goes out straight away, as whoever made that call.
+            post.PublishAt = now;
+            if (post.PinnedAt is not null)
+                post.PinnedAt = now;
+            publisher.Publish(post, caller.UserId, now);
+        }
+        else
+        {
+            if (request.PublishAt is { } newAt)
+            {
+                if (post.PinnedAt is not null)
+                    post.PinnedAt = newAt;
+                post.PublishAt = newAt;
+            }
+            log.Record(
+                eventId,
+                EventLogType.NewsEdited,
+                caller.UserId,
+                data: NewsPublisher.ScheduledLogData(post),
+                visibility: EventLogVisibility.Organisers
+            );
+        }
         await db.SaveChangesAsync();
 
         return TypedResults.Ok(await ToResponseAsync(db, eventId, caller, post));
@@ -313,7 +395,8 @@ public static class NewsEndpoints
             eventId,
             EventLogType.NewsDeleted,
             caller.UserId,
-            data: NewsPublisher.LogData(post)
+            data: NewsPublisher.LogData(post),
+            visibility: VisibilityOf(post)
         );
         await db.SaveChangesAsync();
         // ImageFileId only nulls itself when the file goes, so the file has to go explicitly.
@@ -731,14 +814,21 @@ public static class NewsEndpoints
         EventLog log
     )
     {
-        post.EditedAt = now;
+        // Changes before a post is out aren't edits anyone else could notice.
+        if (post.PublishedAt is not null)
+            post.EditedAt = now;
         log.Record(
             post.EventId,
             EventLogType.NewsEdited,
             actorId,
-            data: NewsPublisher.LogData(post, changed: ["image"])
+            data: NewsPublisher.LogData(post, changed: ["image"]),
+            visibility: VisibilityOf(post)
         );
     }
+
+    /// <summary>Changes to a post nobody else can see yet stay among organisers.</summary>
+    private static EventLogVisibility? VisibilityOf(NewsPost post) =>
+        post.PublishedAt is null ? EventLogVisibility.Organisers : null;
 
     /// <summary>
     /// A published post's comments, oldest first. Pass the last comment's <c>createdAt</c> and
@@ -1146,6 +1236,7 @@ public static class NewsEndpoints
                     p.Body,
                     ToTimelineUser(p.Author),
                     p.CreatedAt,
+                    p.PublishAt,
                     p.PublishedAt,
                     p.EditedAt,
                     caller.IsOrganiser && caller.IsWritable,

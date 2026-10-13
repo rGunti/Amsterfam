@@ -20,6 +20,7 @@ const base: NewsPost = {
   body: 'Pay by Friday.',
   author: { id: 1, displayName: 'Alice', avatarUrl: null },
   createdAt: '2030-01-01T10:00:00Z',
+  publishAt: '2030-01-01T10:00:00Z',
   publishedAt: '2030-01-01T10:00:00Z',
   editedAt: null,
   canEdit: false,
@@ -156,5 +157,19 @@ describe('NewsPostCard', () => {
     const fixture = render();
     TestBed.inject(HttpTestingController).verify();
     expect((fixture.nativeElement as HTMLElement).querySelector('app-auth-image')).toBeNull();
+  });
+
+  it('marks a scheduled post and leaves out reactions and comments', () => {
+    const el = render({ publishAt: '2099-01-01T10:00:00Z', publishedAt: null })
+      .nativeElement as HTMLElement;
+    expect(el.querySelector('.schedule-chip')?.textContent).toContain('Scheduled for');
+    expect(el.querySelector('.reaction')).toBeNull();
+    expect(el.querySelector('app-news-comments')).toBeNull();
+  });
+
+  it('marks a scheduled post that missed its time as overdue', () => {
+    const el = render({ publishAt: '2020-01-01T10:00:00Z', publishedAt: null })
+      .nativeElement as HTMLElement;
+    expect(el.querySelector('.schedule-chip-overdue')?.textContent).toContain('Overdue');
   });
 });

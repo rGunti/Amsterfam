@@ -166,6 +166,51 @@ test('an attendee acknowledges a pinned post from the event overview', async ({
   await expect(page.getByRole('button', { name: '🎉 1' })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('an organiser schedules a post, then sends it out early', async ({ page, request }) => {
+  const eventId = await createOpenEvent(request, BROWSER_USER);
+  const attendee = `e2e-news-scheduled-attendee-${Date.now()}`;
+  await joinViaLink(request, eventId, BROWSER_USER, attendee);
+  await confirm(request, eventId, BROWSER_USER, attendee);
+
+  await page.goto(`/events/${eventId}/news/new`);
+  await page.getByLabel('Title (optional)').fill('Boat trip');
+  await page.getByLabel('Post', { exact: true }).fill('Meet at the **pier**.');
+  await page.getByRole('radio', { name: 'Later' }).click();
+  // Tomorrow, 10:00 local time.
+  const at = new Date();
+  at.setDate(at.getDate() + 1);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  await page
+    .getByLabel('Goes out at')
+    .fill(`${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T10:00`);
+  await page.getByRole('button', { name: 'Schedule' }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/events/${eventId}/news$`));
+  const scheduled = page.locator('section.scheduled');
+  await expect(scheduled.getByRole('heading', { name: 'Boat trip' })).toBeVisible();
+  await expect(scheduled.locator('.schedule-chip')).toContainText('Scheduled for');
+  await expect(page.getByText('No news yet.')).toBeVisible();
+
+  // Members don't see it yet.
+  const feed = await request.get(`${API}/api/v1/events/${eventId}/news`, {
+    headers: asUser(attendee),
+  });
+  expect((await feed.json()).posts).toHaveLength(0);
+
+  await scheduled.getByRole('button', { name: 'Post actions' }).click();
+  await page.getByRole('menuitem', { name: 'Edit' }).click();
+  await page.getByRole('radio', { name: 'Now' }).click();
+  await page.getByRole('button', { name: 'Publish now' }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/events/${eventId}/news/\\d+$`));
+  await expect(page.locator('.post-body strong')).toHaveText('pier');
+  await expect(page.locator('.schedule-chip')).toHaveCount(0);
+  const after = await request.get(`${API}/api/v1/events/${eventId}/news`, {
+    headers: asUser(attendee),
+  });
+  expect((await after.json()).posts).toHaveLength(1);
+});
+
 // 1x1 PNG.
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',

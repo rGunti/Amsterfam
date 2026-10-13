@@ -21,6 +21,8 @@ describe('NewsComposePage', () => {
   let uploadImage: ReturnType<typeof vi.fn>;
   let deleteImage: ReturnType<typeof vi.fn>;
   let editedImageId: string | null;
+  let editedPublishAt: string;
+  let editedPublishedAt: string | null;
 
   function render(params: Record<string, string> = {}) {
     dialogAnswer = false;
@@ -46,6 +48,8 @@ describe('NewsComposePage', () => {
                 requiresAck: editedRequiresAck,
                 commentsEnabled: false,
                 imageFileId: editedImageId,
+                publishAt: editedPublishAt,
+                publishedAt: editedPublishedAt,
               }),
             create,
             update,
@@ -77,6 +81,8 @@ describe('NewsComposePage', () => {
   beforeEach(() => {
     editedRequiresAck = false;
     editedImageId = null;
+    editedPublishAt = '2030-01-01T10:00:00Z';
+    editedPublishedAt = '2030-01-01T10:00:00Z';
     uploadImage = vi.fn(() => of({ imageFileId: 'img-2' }));
     deleteImage = vi.fn(() => of(undefined));
     create = vi.fn(() => of({ id: 9 }));
@@ -190,6 +196,75 @@ describe('NewsComposePage', () => {
       requiresAck: true,
       commentsEnabled: false,
       resetAcks: true,
+    });
+  });
+
+  describe('scheduling', () => {
+    const inTwoHours = () => new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const localInput = (d: Date) =>
+      new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+
+    it('publishes a new post now by default, without a time', () => {
+      const fixture = render();
+      const page = fixture.componentInstance;
+      expect(page.submitLabel()).toBe('Publish');
+      page.form.patchValue({ body: 'Now' });
+      page.save();
+      expect(create.mock.calls[0][1].publishAt).toBeUndefined();
+    });
+
+    it('sends the chosen time when scheduling, and goes back to the feed', () => {
+      create = vi.fn(() => of({ id: 9, publishAt: '2030-01-01T10:00:00Z', publishedAt: null }));
+      const fixture = render();
+      const page = fixture.componentInstance;
+      const at = inTwoHours();
+      at.setSeconds(0, 0);
+      page.form.patchValue({ body: 'Later', when: 'later', publishAt: localInput(at) });
+      fixture.detectChanges();
+      expect(page.submitLabel()).toBe('Schedule');
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('input[type=datetime-local]'),
+      ).not.toBeNull();
+
+      page.save();
+      expect(create).toHaveBeenCalledWith(
+        'ev-1',
+        expect.objectContaining({ publishAt: at.toISOString() }),
+      );
+      expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/events', 'ev-1', 'news']);
+    });
+
+    it("won't schedule without a time far enough ahead", () => {
+      const page = render().componentInstance;
+      page.form.patchValue({ body: 'Later', when: 'later' });
+      expect(page.form.hasError('publishAtRequired')).toBe(true);
+      page.form.patchValue({ publishAt: localInput(new Date()) });
+      expect(page.form.hasError('publishAtTooSoon')).toBe(true);
+      page.save();
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it('lets a scheduled post be moved or sent out now', () => {
+      editedPublishAt = inTwoHours().toISOString();
+      editedPublishedAt = null;
+      const page = render({ postId: '5' }).componentInstance;
+      expect(page.form.getRawValue().when).toBe('later');
+      expect(page.submitLabel()).toBe('Save');
+
+      page.form.patchValue({ when: 'now' });
+      expect(page.submitLabel()).toBe('Publish now');
+      page.save();
+      expect(typeof update.mock.calls[0][2].publishAt).toBe('string');
+    });
+
+    it("doesn't offer scheduling for a published post", () => {
+      const fixture = render({ postId: '5' });
+      const page = fixture.componentInstance;
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('[aria-label="When to publish"]'),
+      ).toBeNull();
+      page.save();
+      expect(update.mock.calls[0][2].publishAt).toBeUndefined();
     });
   });
 

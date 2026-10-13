@@ -52,6 +52,11 @@ export class NewsApi {
     return this.http.get<NewsFeed>(this.url(eventId), { params });
   }
 
+  /** Organisers only: posts that haven't gone out yet, soonest first. */
+  scheduled(eventId: string): Observable<NewsPost[]> {
+    return this.http.get<NewsPost[]>(this.url(eventId, '/scheduled'));
+  }
+
   get(eventId: string, postId: number): Observable<NewsPost> {
     return this.http.get<NewsPost>(this.url(eventId, `/${postId}`));
   }

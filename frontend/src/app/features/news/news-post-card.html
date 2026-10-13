@@ -1,6 +1,7 @@
 <article
   class="post"
   [class.post-new]="isNew()"
+  [class.post-scheduled]="scheduled()"
   [class.post-compact]="compact()"
   [attr.aria-busy]="deleting() || busy()"
 >
@@ -12,6 +13,22 @@
     }
     <div class="post-meta">
       <span class="author">{{ current().author.displayName }}</span>
+      @if (scheduled()) {
+        @if (overdue()) {
+          <span
+            class="schedule-chip schedule-chip-overdue"
+            matTooltip="Not sent: the event became read-only before it was due."
+          >
+            <mat-icon aria-hidden="true">schedule</mat-icon>
+            Overdue since {{ publishAtFull() }}
+          </span>
+        } @else {
+          <span class="schedule-chip" matTooltip="Only organisers can see this until then.">
+            <mat-icon aria-hidden="true">schedule_send</mat-icon>
+            Scheduled for {{ publishAtFull() }}
+          </span>
+        }
+      }
       <span class="time">
         <time [attr.datetime]="when().iso" [matTooltip]="when().full">{{ when().text }}</time>
         @if (editedFull(); as edited) {
@@ -23,7 +40,12 @@
       </span>
     </div>
     @if (current().pinnedAt) {
-      <mat-icon class="pinned" matTooltip="Pinned" aria-label="Pinned">push_pin</mat-icon>
+      <mat-icon
+        class="pinned"
+        [matTooltip]="scheduled() ? 'Will be pinned when it goes out' : 'Pinned'"
+        aria-label="Pinned"
+        >push_pin</mat-icon
+      >
     }
     @if (current().canEdit) {
       <button
@@ -40,10 +62,12 @@
           <mat-icon>edit</mat-icon>
           <span>Edit</span>
         </a>
-        <button mat-menu-item (click)="togglePin()">
-          <mat-icon>push_pin</mat-icon>
-          <span>{{ current().pinnedAt ? 'Unpin' : 'Pin to top' }}</span>
-        </button>
+        @if (!scheduled()) {
+          <button mat-menu-item (click)="togglePin()">
+            <mat-icon>push_pin</mat-icon>
+            <span>{{ current().pinnedAt ? 'Unpin' : 'Pin to top' }}</span>
+          </button>
+        }
         <button mat-menu-item (click)="confirmDelete()">
           <mat-icon>delete</mat-icon>
           <span>Delete</span>
@@ -76,7 +100,7 @@
     <a class="read-more" [routerLink]="['/events', eventId(), 'news', current().id]">Read more</a>
   }
 
-  @if (current().requiresAck) {
+  @if (current().requiresAck && !scheduled()) {
     <div class="ack">
       @if (!current().canAcknowledge) {
         <!-- The author has nothing to acknowledge, but organisers still see the count. -->
@@ -96,7 +120,7 @@
     </div>
   }
 
-  @if (!compact()) {
+  @if (!compact() && !scheduled()) {
     <div class="reactions" role="group" aria-label="Reactions">
       @for (r of counts(); track r.emoji) {
         <button

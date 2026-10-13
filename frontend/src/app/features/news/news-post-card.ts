@@ -74,6 +74,17 @@ export class NewsPostCard {
     }));
   });
 
+  /** Not out yet; only organisers see it. */
+  protected readonly scheduled = computed(() => this.current().publishedAt === null);
+  /**
+   * Due but not published: the worker leaves posts on read-only events alone. Checked when
+   * the post changes, which is enough for a label.
+   */
+  protected readonly overdue = computed(
+    () => this.scheduled() && new Date(this.current().publishAt).getTime() <= Date.now(),
+  );
+  protected readonly publishAtFull = computed(() => fullTimestamp(this.current().publishAt));
+
   protected readonly when = computed(() => {
     const iso = this.current().publishedAt ?? this.current().createdAt;
     const { label, stamp } = timelineGroup(iso);

@@ -30,6 +30,8 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
         // Tests drive auto-transitions directly via EventAutoTransitioner.
         builder.UseSetting("AutoTransitions:Enabled", "false");
+        // ...and scheduled news via NewsPublisher.PublishDueAsync.
+        builder.UseSetting("News:WorkerEnabled", "false");
         builder.UseSetting("App:PublicUrl", PublicUrl);
 
         builder.ConfigureServices(services =>

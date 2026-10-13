@@ -20,6 +20,7 @@ const post = (id: number, publishedAt: string, author = alice): NewsPost => ({
   body: `Body **${id}**`,
   author,
   createdAt: publishedAt,
+  publishAt: publishedAt,
   publishedAt,
   editedAt: null,
   canEdit: false,
@@ -47,15 +48,25 @@ describe('NewsPage', () => {
     seenAt: '2030-01-01T12:00:00Z',
   };
   let markSeen: ReturnType<typeof vi.fn>;
+  let scheduled: ReturnType<typeof vi.fn>;
   let setUnreadNews: ReturnType<typeof vi.fn>;
 
   function render(role: EventResponse['currentUserRole'] = 'Attendee') {
     markSeen = vi.fn(() => of(undefined));
+    scheduled = vi.fn(() =>
+      of([
+        {
+          ...post(4, '2030-01-04T10:00:00Z', me),
+          publishAt: '2099-01-01T10:00:00Z',
+          publishedAt: null,
+        },
+      ]),
+    );
     setUnreadNews = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        { provide: NewsApi, useValue: { list: () => of(feed), markSeen } },
+        { provide: NewsApi, useValue: { list: () => of(feed), markSeen, scheduled } },
         {
           provide: CurrentEventService,
           useValue: {
@@ -98,5 +109,17 @@ describe('NewsPage', () => {
 
   it('offers everyone a feed subscription', () => {
     expect(render('Attendee').textContent).toContain('Subscribe via RSS');
+  });
+
+  it('shows organisers their scheduled posts above the feed', () => {
+    const el = render('Organiser');
+    expect(scheduled).toHaveBeenCalledWith('ev-1');
+    expect(el.querySelector('.scheduled')?.textContent).toContain('Scheduled for');
+  });
+
+  it("doesn't look for scheduled posts as an attendee", () => {
+    const el = render();
+    expect(scheduled).not.toHaveBeenCalled();
+    expect(el.querySelector('.scheduled')).toBeNull();
   });
 });
