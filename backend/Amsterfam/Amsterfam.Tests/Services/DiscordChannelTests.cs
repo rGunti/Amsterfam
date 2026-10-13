@@ -85,6 +85,14 @@ public class DiscordChannelTests
     }
 
     [Fact]
+    public void Content_EscapesMarkdownInTheTitle()
+    {
+        var content = Channel().Content(Post("Hi", title: "snacks_and_drinks *now*"));
+
+        Assert.StartsWith(@"**snacks\_and\_drinks \*now\***", content);
+    }
+
+    [Fact]
     public void Content_WithoutTitle_StartsWithTheBody()
     {
         Assert.StartsWith("Meet", Channel().Content(Post("Meet at 8.", title: null)));

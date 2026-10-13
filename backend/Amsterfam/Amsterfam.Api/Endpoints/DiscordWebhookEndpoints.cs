@@ -30,14 +30,11 @@ public static class DiscordWebhookEndpoints
         AmsterfamDbContext db
     )
     {
-        var ev = await db.Events.FirstOrDefaultAsync(e => e.Id == eventId);
-        if (ev is null)
-            return TypedResults.NotFound();
         var user = await currentUser.GetOrCreateAsync();
-        if (!await EventGuards.IsOrganiser(db, eventId, user.Id))
-            return TypedResults.Forbid();
+        if (await OrganiserOnly(db, eventId, user.Id) is { } denied)
+            return denied;
 
-        return TypedResults.Ok(ToStatus(ev));
+        return TypedResults.Ok(ToStatus(await db.Events.SingleAsync(e => e.Id == eventId)));
     }
 
     private static async Task<IResult> SetWebhook(
@@ -140,13 +137,26 @@ public static class DiscordWebhookEndpoints
         AmsterfamDbContext db
     )
     {
-        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
-            return (null, 0, notWritable);
         var user = await currentUser.GetOrCreateAsync();
-        if (!await EventGuards.IsOrganiser(db, eventId, user.Id))
-            return (null, user.Id, TypedResults.Forbid());
+        if (await OrganiserOnly(db, eventId, user.Id) is { } denied)
+            return (null, user.Id, denied);
+        if (await EventGuards.EnsureWritableAsync(db, eventId) is { } notWritable)
+            return (null, user.Id, notWritable);
         return (await db.Events.SingleAsync(e => e.Id == eventId), user.Id, null);
     }
+
+    /// <summary>Like the news endpoints: 404 for non-members (and unknown events), 403 for others.</summary>
+    private static async Task<IResult?> OrganiserOnly(
+        AmsterfamDbContext db,
+        Guid eventId,
+        int userId
+    ) =>
+        await EventGuards.RoleOf(db, eventId, userId) switch
+        {
+            null => TypedResults.NotFound(),
+            AttendanceRole.Organiser => null,
+            _ => TypedResults.Forbid(),
+        };
 
     private static DiscordWebhookStatus ToStatus(Event ev) =>
         ev.DiscordWebhookUrl is { } url

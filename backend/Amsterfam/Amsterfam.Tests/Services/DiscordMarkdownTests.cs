@@ -46,6 +46,16 @@ public class DiscordMarkdownTests
     }
 
     [Fact]
+    public void TheExcerptFallback_IsEscaped()
+    {
+        var body = "Bring snacks_and_drinks, and keep this first paragraph going on and on.";
+
+        var result = NewsText.DiscordMarkdown(body, 40);
+
+        Assert.Contains(@"snacks\_and\_drinks", result);
+    }
+
+    [Fact]
     public void Images_BecomeLinks()
     {
         var result = NewsText.DiscordMarkdown(

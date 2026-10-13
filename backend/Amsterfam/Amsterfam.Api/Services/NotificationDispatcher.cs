@@ -145,7 +145,9 @@ public class NotificationDispatcher(
             dispatch.SentAt = now;
             dispatch.LastError = null;
         }
-        // An HTTP timeout is a cancellation too, but only stopping the run is a real one.
+        // An HTTP timeout is a cancellation too, but only stopping the run is a real one. When
+        // the run is stopped mid-send, the attempt counted when claiming stays counted: the
+        // send may have gone out, and one lost try is cheaper than a possible duplicate.
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             ok = false;

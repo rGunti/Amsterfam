@@ -148,7 +148,7 @@ GET    /api/v1/feeds/{token}/images/{postId}.{ext}   (anonymous; a published pos
 - `GET /api/v1/events/{id}` returns `unreadNewsCount` for confirmed members: posts by others published after the caller's last `seen`.
 
 ### Discord webhook
-Organisers only (403 otherwise, 404 for an unknown event); changes need a writable event (409). See ADR-015.
+Organisers only: other members get 403, non-members and unknown events 404; changes need a writable event (409). See ADR-015.
 ```
 GET    /api/v1/events/{id}/discord-webhook        ({ configured, hint }; hint = the URL's last 4 characters)
 PUT    /api/v1/events/{id}/discord-webhook        (body: url; logs DiscordWebhookChanged)

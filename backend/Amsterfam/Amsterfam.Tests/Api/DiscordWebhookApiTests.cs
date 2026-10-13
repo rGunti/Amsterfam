@@ -84,11 +84,19 @@ public class DiscordWebhookApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         (await pending.JoinAsync(api, t.EventId)).EnsureSuccessStatusCode();
         var stranger = api.CreateClientWithUser("discord|hook-stranger-2");
 
-        foreach (var client in new[] { t.Guest, pending, stranger })
+        // Like the news endpoints: members who aren't organisers get 403, everyone else 404.
+        foreach (
+            var (client, expected) in new[]
+            {
+                (t.Guest, HttpStatusCode.Forbidden),
+                (pending, HttpStatusCode.Forbidden),
+                (stranger, HttpStatusCode.NotFound),
+            }
+        )
         {
-            Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync(t.Webhook)).StatusCode);
+            Assert.Equal(expected, (await client.GetAsync(t.Webhook)).StatusCode);
             Assert.Equal(
-                HttpStatusCode.Forbidden,
+                expected,
                 (
                     await client.PutAsJsonAsync(
                         t.Webhook,
@@ -96,14 +104,8 @@ public class DiscordWebhookApiTests(ApiFixture api) : IClassFixture<ApiFixture>
                     )
                 ).StatusCode
             );
-            Assert.Equal(
-                HttpStatusCode.Forbidden,
-                (await client.DeleteAsync(t.Webhook)).StatusCode
-            );
-            Assert.Equal(
-                HttpStatusCode.Forbidden,
-                (await client.PostAsync($"{t.Webhook}/test", null)).StatusCode
-            );
+            Assert.Equal(expected, (await client.DeleteAsync(t.Webhook)).StatusCode);
+            Assert.Equal(expected, (await client.PostAsync($"{t.Webhook}/test", null)).StatusCode);
         }
 
         Assert.Equal(

@@ -111,12 +111,20 @@ public static partial class NewsText
         {
             var document = Markdown.Parse(source, Pipeline);
             var end = document.TakeWhile(b => b.Span.End < maxLength).LastOrDefault()?.Span.End;
+            // Plain text, but Discord still renders Markdown, so it's escaped.
             if (end is null)
-                return Excerpt(source, maxLength).Text;
+                return EscapeDiscordMarkdown(Excerpt(source, maxLength).Text);
             source = source[..(end.Value + 1)].TrimEnd() + "\n\n…";
         }
         return ImagesAsLinks(source);
     }
+
+    /// <summary>
+    /// Backslash-escapes the characters Discord treats as inline Markdown, so plain text (a
+    /// title, an excerpt) shows as written.
+    /// </summary>
+    public static string EscapeDiscordMarkdown(string text) =>
+        DiscordMarkdownChars().Replace(text, @"\$0");
 
     private static string ImagesAsLinks(string source)
     {
@@ -162,6 +170,9 @@ public static partial class NewsText
         }
         link.Remove();
     }
+
+    [GeneratedRegex(@"[\\*_~`|\[\]]")]
+    private static partial Regex DiscordMarkdownChars();
 
     [GeneratedRegex(@"\n{2,}")]
     private static partial Regex BlankLines();

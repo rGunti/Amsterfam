@@ -43,13 +43,15 @@ public class DiscordChannel(HttpClient http, IOptions<AppOptions> app) : INotifi
     public Task SendTestAsync(Event ev, CancellationToken ct) =>
         PostAsync(
             ev.DiscordWebhookUrl!,
-            $"👋 Amsterfam is connected. News for **{ev.Name}** will show up here.\n{app.Value.NewsUrl(ev.Id)}",
+            $"👋 Amsterfam is connected. News for **{NewsText.EscapeDiscordMarkdown(ev.Name)}** will show up here.\n{app.Value.NewsUrl(ev.Id)}",
             ct
         );
 
     public string Content(NewsPost post)
     {
-        var title = post.Title is null ? "" : $"**{post.Title}**\n\n";
+        var title = post.Title is null
+            ? ""
+            : $"**{NewsText.EscapeDiscordMarkdown(post.Title)}**\n\n";
         var body = NewsText.DiscordMarkdown(post.Body, MaxBodyLength);
         return $"{title}{body}\n\n{app.Value.NewsPostUrl(post.EventId, post.Id)}";
     }
