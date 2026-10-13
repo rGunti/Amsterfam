@@ -19,6 +19,12 @@ public class StubDiscordHandler : HttpMessageHandler
     /// <summary>Webhook id → the status every call to it gets.</summary>
     public ConcurrentDictionary<string, HttpStatusCode> Failing { get; } = new();
 
+    /// <summary>Webhook id → the message id posts to it get, instead of a generated one.</summary>
+    public ConcurrentDictionary<string, string> MessageIds { get; } = new();
+
+    /// <summary>Webhook id → runs before answering a post to it, e.g. to race a delete.</summary>
+    public ConcurrentDictionary<string, Func<Task>> BeforeAnswer { get; } = new();
+
     public IReadOnlyList<Call> CallsTo(string webhookId) =>
         Calls.Where(c => c.Uri.AbsolutePath.StartsWith($"/api/webhooks/{webhookId}/")).ToList();
 
@@ -38,7 +44,11 @@ public class StubDiscordHandler : HttpMessageHandler
         if (request.Method == HttpMethod.Delete)
             return new HttpResponseMessage(HttpStatusCode.NoContent);
 
-        var id = Interlocked.Increment(ref _nextMessageId);
+        if (BeforeAnswer.TryGetValue(webhookId, out var before))
+            await before();
+        var id = MessageIds.TryGetValue(webhookId, out var fixedId)
+            ? fixedId
+            : Interlocked.Increment(ref _nextMessageId).ToString();
         return new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent($$"""{"id":"{{id}}"}""", Encoding.UTF8, "application/json"),

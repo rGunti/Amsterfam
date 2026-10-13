@@ -419,4 +419,51 @@ public class NotificationOutboxApiTests(ApiFixture api) : IClassFixture<ApiFixtu
         Assert.Equal(NotificationStatus.Skipped, Assert.Single(await Rows(t.EventId)).Status);
         Assert.Single(api.Discord.CallsTo(t.WebhookId));
     }
+
+    [Fact]
+    public async Task PostDeletedWhileSending_StillDeletesTheMessage()
+    {
+        var t = await CreateTrip(17);
+        var post = await Post(t);
+        // Discord answers only after the organiser has deleted the post.
+        api.Discord.BeforeAnswer[t.WebhookId] = async () =>
+            (await t.Owner.DeleteAsync($"{t.News}/{post.Id}")).EnsureSuccessStatusCode();
+
+        await Dispatch(Tomorrow);
+        api.Discord.BeforeAnswer.TryRemove(t.WebhookId, out _);
+
+        var row = Assert.Single(await Rows(t.EventId));
+        Assert.Equal(NotificationAction.Delete, row.Action);
+        Assert.Equal(NotificationStatus.Pending, row.Status);
+        Assert.NotNull(row.ExternalId);
+
+        await Dispatch(Tomorrow.AddMinutes(1));
+
+        var call = api.Discord.CallsTo(t.WebhookId)[^1];
+        Assert.Equal(HttpMethod.Delete, call.Method);
+        Assert.EndsWith($"/messages/{row.ExternalId}", call.Uri.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task OverlongMessageId_IsNotKept_SoNoWrongMessageIsDeleted()
+    {
+        var t = await CreateTrip(18);
+        var post = await Post(t);
+        api.Discord.MessageIds[t.WebhookId] = new string(
+            '9',
+            NotificationDispatch.MaxExternalIdLength + 1
+        );
+
+        await Dispatch(Tomorrow);
+
+        var row = Assert.Single(await Rows(t.EventId));
+        Assert.Equal(NotificationStatus.Sent, row.Status);
+        Assert.Null(row.ExternalId);
+
+        (await t.Owner.DeleteAsync($"{t.News}/{post.Id}")).EnsureSuccessStatusCode();
+        await Dispatch(Tomorrow.AddMinutes(1));
+
+        Assert.Empty(await Rows(t.EventId));
+        Assert.DoesNotContain(api.Discord.CallsTo(t.WebhookId), c => c.Method == HttpMethod.Delete);
+    }
 }

@@ -67,8 +67,11 @@ Every outside channel is text only and links back to the app:
 - A delete goes to the event's *current* webhook. If the webhook was removed in the meantime, the
   row is Skipped; if it was replaced, Discord's 404 counts as done. Copying the webhook's secret
   onto every row just to delete old messages isn't worth it.
-- If a post is deleted while its message is being sent, the send can't be saved and the message
-  stays in Discord. That's rare and harmless.
+- If a post is deleted while its message is being sent, the row is already gone when the send
+  is saved. The dispatcher notices (a concurrency error on save) and queues a Delete row for the
+  message it just sent.
+- A message id longer than the column (100 characters) isn't kept: a cut-off id could delete the
+  wrong message, so such a message just can't be taken back.
 
 ## The webhook URL is a plain secret column
 

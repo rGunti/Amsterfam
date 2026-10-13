@@ -124,9 +124,18 @@ public class NotificationDispatcher(
                     dispatch.Event,
                     ct
                 );
-                dispatch.ExternalId = externalId?[
-                    ..Math.Min(externalId.Length, NotificationDispatch.MaxExternalIdLength)
-                ];
+                // A cut-off id would point at the wrong message later; without one, the message
+                // just can't be taken back.
+                if (externalId?.Length > NotificationDispatch.MaxExternalIdLength)
+                {
+                    logger.LogWarning(
+                        "Notification {DispatchId} to {Channel} got an id too long to keep",
+                        dispatch.Id,
+                        dispatch.Channel
+                    );
+                    externalId = null;
+                }
+                dispatch.ExternalId = externalId;
             }
             else
             {
@@ -168,8 +177,52 @@ public class NotificationDispatcher(
         }
 
         // What was sent is recorded even if the run is being stopped, to avoid repeats.
-        await db.SaveChangesAsync(CancellationToken.None);
+        try
+        {
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // The post was deleted while this was being sent, and RetractAsync removed the row
+            // without knowing about the message. Queue taking it back instead.
+            await RetractLateAsync(dispatch, channel!, now);
+        }
         return ok;
+    }
+
+    private async Task RetractLateAsync(
+        NotificationDispatch sent,
+        INotificationChannel channel,
+        DateTimeOffset now
+    )
+    {
+        db.ChangeTracker.Clear();
+        if (
+            sent.Action != NotificationAction.Send
+            || sent.Status != NotificationStatus.Sent
+            || sent.ExternalId is null
+            || !channel.CanDelete
+        )
+            return;
+
+        logger.LogInformation(
+            "Notification {DispatchId}'s post was deleted while sending; queuing its removal",
+            sent.Id
+        );
+        db.NotificationDispatches.Add(
+            new NotificationDispatch
+            {
+                EventId = sent.EventId,
+                Action = NotificationAction.Delete,
+                Channel = sent.Channel,
+                RecipientUserId = sent.RecipientUserId,
+                Status = NotificationStatus.Pending,
+                NextAttemptAt = now,
+                CreatedAt = now,
+                ExternalId = sent.ExternalId,
+            }
+        );
+        await db.SaveChangesAsync(CancellationToken.None);
     }
 
     private async Task<string?> SkipReasonAsync(
