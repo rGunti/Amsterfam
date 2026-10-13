@@ -316,7 +316,12 @@ public static class NewsEndpoints
         var now = time.GetUtcNow();
         if (post.PublishedAt is not null)
         {
-            if (request.PublishAt is { } at && at != post.PublishAt)
+            // Postgres keeps microseconds, so a value echoed back from a response may carry
+            // a few extra ticks; only a real change counts.
+            if (
+                request.PublishAt is { } at
+                && Math.Abs((at - post.PublishAt).Ticks) >= TimeSpan.TicksPerMicrosecond
+            )
                 return TypedResults.BadRequest(
                     new { error = "A published post can't be rescheduled." }
                 );
