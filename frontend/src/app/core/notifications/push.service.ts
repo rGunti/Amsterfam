@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { DOCUMENT, Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom, timeout } from 'rxjs';
@@ -40,6 +40,7 @@ export class PushService {
   private readonly swPush = inject(SwPush);
   private readonly api = inject(PushApi);
   private readonly currentEvent = inject(CurrentEventService);
+  private readonly document = inject(DOCUMENT);
 
   private publicKey: string | null = null;
   private started = false;
@@ -98,13 +99,25 @@ export class PushService {
     // A push while the app is open means there's news: update the badge right away.
     this.swPush.messages.subscribe(() => this.currentEvent.refreshBadges());
 
+    // If the server couldn't be asked (e.g. it was restarting), ask again when the app comes
+    // back to the foreground, rather than only after a reload.
+    this.document.addEventListener('visibilitychange', () => {
+      if (this.document.visibilityState === 'visible' && this.server() === 'error') {
+        this.fetchConfig(loadDevices);
+      }
+    });
+
+    this.fetchConfig(loadDevices);
+  }
+
+  private fetchConfig(loadDevices: () => void): void {
     this.api.getConfig().subscribe({
       next: ({ publicKey }) => {
         this.publicKey = publicKey;
         this.server.set('on');
         void this.reconcile(publicKey);
       },
-      // 404: push is off on the server; anything else: try again next start.
+      // 404: push is off on the server; anything else is retried when the app is shown again.
       error: (error: { status?: number }) => {
         this.server.set(error.status === 404 ? 'off' : 'error');
         loadDevices();
@@ -136,8 +149,11 @@ export class PushService {
     await this.loadDevices();
   }
 
-  /** Best effort on the server; the device is unsubscribed either way. */
-  async disable(): Promise<void> {
+  /**
+   * Best effort on the server; the device is unsubscribed either way. Logging out passes
+   * `reload: false`, as the device list is about to go anyway.
+   */
+  async disable({ reload = true }: { reload?: boolean } = {}): Promise<void> {
     // Without the service worker, `subscription` never emits.
     if (!this.swPush.isEnabled) {
       return;
@@ -154,7 +170,14 @@ export class PushService {
     } finally {
       await this.swPush.unsubscribe();
     }
-    await this.loadDevices().catch(() => undefined);
+    if (reload) {
+      await this.loadDevices().catch(() => undefined);
+    }
+  }
+
+  /** Whether the browser still has to ask, e.g. after its prompt was dismissed. */
+  get permissionUndecided(): boolean {
+    return this.permission() === 'default';
   }
 
   async loadDevices(): Promise<void> {

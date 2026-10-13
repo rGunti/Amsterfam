@@ -250,6 +250,23 @@ public class PushApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Save_CutsLongNamesWithoutSplittingAnEmoji()
+    {
+        var client = api.CreateClientWithUser("discord|push-emoji-name");
+        var endpoint = PushTestKeys.Endpoint("emoji-name");
+        // The emoji's two UTF-16 halves straddle the 60-character limit.
+        var name = new string('a', PushSubscription.MaxNameLength - 1) + "📱 phone";
+
+        var response = await Subscribe(client, endpoint, name);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(
+            new string('a', PushSubscription.MaxNameLength - 1),
+            Assert.Single(await Stored(endpoint)).Name
+        );
+    }
+
+    [Fact]
     public async Task Rename_ChangesOnlyMyOwnDevice()
     {
         var me = api.CreateClientWithUser("discord|push-rename-me");

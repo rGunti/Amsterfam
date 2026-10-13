@@ -122,6 +122,27 @@ describe('PushService', () => {
     expect(service.status()).toBe('error');
   });
 
+  it('asks the server again when the app is shown after an error', () => {
+    const service = setup({ configError: 503 });
+    service.init();
+    api.getConfig.mockReturnValue(of({ publicKey: PUBLIC_KEY }));
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(api.getConfig).toHaveBeenCalledTimes(2);
+    expect(service.status()).toBe('ready');
+  });
+
+  it('does not ask again once the server answered', () => {
+    const service = setup({ configured: false });
+    service.init();
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(api.getConfig).toHaveBeenCalledTimes(1);
+    expect(service.status()).toBe('off');
+  });
+
   it('is unsupported without the service worker, but still lists devices', () => {
     const service = setup({ enabled: false });
     service.init();
@@ -205,6 +226,16 @@ describe('PushService', () => {
     await service.disable();
 
     expect(swPush.unsubscribe).toHaveBeenCalled();
+  });
+
+  it('skips reloading the device list when logging out', async () => {
+    const service = setup();
+    subscription$.next(fakeSubscription());
+
+    await service.disable({ reload: false });
+
+    expect(swPush.unsubscribe).toHaveBeenCalled();
+    expect(api.list).not.toHaveBeenCalled();
   });
 
   it('does nothing on disable without the service worker', async () => {

@@ -209,7 +209,7 @@ export class Profile implements OnInit {
       }
       this.currentEventService.clear();
       // A shared device shouldn't keep getting this user's news.
-      void this.push.disable().finally(() => this.authService.logout());
+      void this.push.disable({ reload: false }).finally(() => this.authService.logout());
     });
   }
 

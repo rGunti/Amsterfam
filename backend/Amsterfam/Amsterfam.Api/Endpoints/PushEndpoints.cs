@@ -185,8 +185,13 @@ public static class PushEndpoints
         var trimmed = name?.Trim();
         if (string.IsNullOrEmpty(trimmed))
             return null;
-        return trimmed.Length <= PushSubscription.MaxNameLength
-            ? trimmed
-            : trimmed[..PushSubscription.MaxNameLength].TrimEnd();
+        if (trimmed.Length <= PushSubscription.MaxNameLength)
+            return trimmed;
+
+        var cut = trimmed[..PushSubscription.MaxNameLength];
+        // Half an emoji (a lone high surrogate) can't be stored as UTF-8.
+        if (char.IsHighSurrogate(cut[^1]))
+            cut = cut[..^1];
+        return cut.TrimEnd();
     }
 }

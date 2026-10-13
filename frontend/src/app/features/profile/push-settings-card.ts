@@ -73,7 +73,13 @@ export class PushSettingsCard {
       change.source.checked = this.push.subscribed();
       // A refused permission prompt shows up as the "blocked" reason on the card instead.
       if (this.push.status() !== 'blocked') {
-        this.snackBar.open('Could not change push notifications', 'Dismiss', { duration: 5000 });
+        this.snackBar.open(
+          change.checked && this.push.permissionUndecided
+            ? 'Allow notifications when the browser asks to turn them on.'
+            : 'Could not change push notifications',
+          'Dismiss',
+          { duration: 5000 },
+        );
       }
     } finally {
       this.busy.set(false);
