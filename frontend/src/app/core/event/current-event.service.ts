@@ -105,12 +105,26 @@ export class CurrentEventService {
               ),
         ),
       )
-      .subscribe((fresh) => {
-        const event = this._event();
-        if (event?.id === fresh.id && event.unreadNewsCount !== fresh.unreadNewsCount) {
-          this._event.set({ ...event, unreadNewsCount: fresh.unreadNewsCount });
-        }
-      });
+      .subscribe((fresh) => this.takeBadges(fresh));
+  }
+
+  /** Re-fetches the open event's badge counts now, e.g. when a push arrives. */
+  refreshBadges(): void {
+    const id = this._eventId();
+    if (id === null) {
+      return;
+    }
+    this.eventApi
+      .getEvent(id)
+      .pipe(catchError(() => EMPTY))
+      .subscribe((fresh) => this.takeBadges(fresh));
+  }
+
+  private takeBadges(fresh: EventResponse): void {
+    const event = this._event();
+    if (event?.id === fresh.id && event.unreadNewsCount !== fresh.unreadNewsCount) {
+      this._event.set({ ...event, unreadNewsCount: fresh.unreadNewsCount });
+    }
   }
 
   clear(): void {

@@ -101,4 +101,5 @@ dotnet ef database update
 - **News** (ADR-014): organisers post Markdown, confirmed members read. Posts go live only through `NewsPublisher.PublishAsync`; timeline entries never contain the body.
 - **Notifications** (ADR-015): outside channels (Discord webhook first) go through the `NotificationDispatch` outbox, written only by `NewsPublisher.PublishAsync` and sent by `NotificationDispatcher` from `NewsWorker`. Text only with a link back; `Event.DiscordWebhookUrl` is a secret, never returned or logged.
 - **News feeds** (ADR-016): `GET /api/v1/feeds/{token}/news.atom` is the only anonymous data endpoint. Tokens are stored hashed and membership is re-checked on every request.
+- **Web push** (ADR-017): the `PushSubscription` row is the per-device opt-in; `PushChannel` sends one Push outbox row per member to all their devices and deletes subscriptions on 404/410. Off unless `Push:Vapid*` and `Push:Subject` are set; never rotate the VAPID keys. Endpoints must be known push-service hosts (`PushEndpointValidator`).
 - Primary login is **Discord OAuth** via Authentik. Do not suggest replacing Authentik with a simpler auth approach unless explicitly asked.

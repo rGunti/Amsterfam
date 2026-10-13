@@ -37,6 +37,7 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
     public DbSet<NewsCommentReaction> NewsCommentReactions => Set<NewsCommentReaction>();
     public DbSet<NewsFeedToken> NewsFeedTokens => Set<NewsFeedToken>();
     public DbSet<NotificationDispatch> NotificationDispatches => Set<NotificationDispatch>();
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -253,6 +254,18 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.HasOne(t => t.Event)
                 .WithMany()
                 .HasForeignKey(t => t.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PushSubscription>(e =>
+        {
+            e.Property(s => s.Endpoint).HasMaxLength(PushSubscription.MaxEndpointLength);
+            e.HasIndex(s => s.Endpoint).IsUnique();
+            e.Property(s => s.P256dh).HasMaxLength(PushSubscription.MaxKeyLength);
+            e.Property(s => s.Auth).HasMaxLength(PushSubscription.MaxKeyLength);
+            e.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

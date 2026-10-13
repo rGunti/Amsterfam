@@ -21,6 +21,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Observable } from 'rxjs';
@@ -36,6 +37,7 @@ import { UserApi } from '../../core/api/user.api';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { PaymentMethodApi } from '../../core/api/payment-method.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
+import { PushService } from '../../core/notifications/push.service';
 import { MAX_DISPLAY_NAME_LENGTH, UpdateAboutRequest, User } from '../../core/models/user';
 import { PaymentMethod } from '../../core/models/payment-method';
 
@@ -49,6 +51,7 @@ import { PaymentMethod } from '../../core/models/payment-method';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    MatSlideToggleModule,
     UserProfileDetails,
     AboutMeForm,
     AuthSourceIcon,
@@ -62,6 +65,7 @@ export class Profile implements OnInit {
   private readonly currentUserService = inject(CurrentUserService);
   private readonly paymentMethodApi = inject(PaymentMethodApi);
   private readonly currentEventService = inject(CurrentEventService);
+  readonly push = inject(PushService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
@@ -73,6 +77,7 @@ export class Profile implements OnInit {
   readonly form: FormGroup<{ displayName: FormControl<string> }>;
   readonly paymentMethods = signal<PaymentMethod[]>([]);
   readonly paymentMethodsLoading = signal(true);
+  readonly pushBusy = signal(false);
 
   readonly headerText = viewChild<ElementRef<HTMLElement>>('headerText');
   readonly avatarSize = signal(40);
@@ -204,8 +209,31 @@ export class Profile implements OnInit {
         return;
       }
       this.currentEventService.clear();
-      this.authService.logout();
+      // A shared device shouldn't keep getting this user's news.
+      void this.push.disable().finally(() => this.authService.logout());
     });
+  }
+
+  async togglePush(change: MatSlideToggleChange): Promise<void> {
+    this.pushBusy.set(true);
+    try {
+      if (change.checked) {
+        await this.push.enable();
+      } else {
+        await this.push.disable();
+      }
+    } catch {
+      change.source.checked = this.push.subscribed();
+      this.snackBar.open(
+        this.push.blocked
+          ? 'Notifications are blocked for this app. Allow them in your browser settings.'
+          : 'Could not change push notifications',
+        'Dismiss',
+        { duration: 5000 },
+      );
+    } finally {
+      this.pushBusy.set(false);
+    }
   }
 
   private openPaymentMethodDialog(method: PaymentMethod | null) {

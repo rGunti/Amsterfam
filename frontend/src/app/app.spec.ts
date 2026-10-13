@@ -10,10 +10,12 @@ import { CurrentUserService } from './core/api/current-user.service';
 import { VersionApi } from './core/api/version.api';
 import { EventApi } from './core/api/event.api';
 import { CurrentEventService } from './core/event/current-event.service';
+import { PushService } from './core/notifications/push.service';
 
 // Matches production behavior in dev/test — the service worker itself is
 // only enabled outside isDevMode() (see app.config.ts).
 const swUpdateMock: Partial<SwUpdate> = { isEnabled: false };
+const pushServiceMock: Partial<PushService> = { init: () => undefined };
 
 const authServiceMock: Partial<AuthService> = { logout: vi.fn() };
 const currentUserServiceMock: Partial<CurrentUserService> = { user: signal(null) };
@@ -35,6 +37,7 @@ describe('App', () => {
       providers: [
         provideRouter([]),
         { provide: SwUpdate, useValue: swUpdateMock },
+        { provide: PushService, useValue: pushServiceMock },
         { provide: AuthService, useValue: authServiceMock },
         { provide: CurrentUserService, useValue: currentUserServiceMock },
         { provide: VersionApi, useValue: versionApiMock },

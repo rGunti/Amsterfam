@@ -51,6 +51,16 @@ describe('CurrentEventService badge polling', () => {
     expect(getEvent).not.toHaveBeenCalled();
   });
 
+  it('refreshes the badge on demand, e.g. when a push arrives', () => {
+    const service = start();
+
+    service.refreshBadges();
+
+    expect(getEvent).toHaveBeenCalledWith('ev-1');
+    expect(service.event()?.unreadNewsCount).toBe(2);
+    expect(service.event()?.name).toBe('Trip');
+  });
+
   it('clears the badge after the feed is opened', () => {
     const service = start();
     service.setEvent({ ...base, unreadNewsCount: 3 });
