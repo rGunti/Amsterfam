@@ -13,6 +13,9 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string PublicUrl = "https://amsterfam.test";
 
+    /// <summary>Different from <see cref="PublicUrl"/>, so tests catch links to the wrong one.</summary>
+    public const string ApiUrl = "https://api.amsterfam.test";
+
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 
     public async Task InitializeAsync()
@@ -33,6 +36,7 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         // ...and scheduled news via NewsPublisher.PublishDueAsync.
         builder.UseSetting("News:WorkerEnabled", "false");
         builder.UseSetting("App:PublicUrl", PublicUrl);
+        builder.UseSetting("App:ApiUrl", ApiUrl);
 
         builder.ConfigureServices(services =>
         {

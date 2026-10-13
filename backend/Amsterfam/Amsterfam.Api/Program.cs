@@ -61,7 +61,7 @@ builder
     .Bind(builder.Configuration.GetSection(AppOptions.SectionName))
     .Validate(
         o => o.HasValidPublicUrl(),
-        $"{AppOptions.SectionName}:PublicUrl must be an absolute http(s) URL."
+        $"{AppOptions.SectionName}:PublicUrl (and ApiUrl, if set) must be an absolute http(s) URL."
     )
     .ValidateOnStart();
 

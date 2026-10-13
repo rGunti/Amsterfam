@@ -9,9 +9,13 @@ Each confirmed member can get a private Atom feed of an event's news for a feed 
 (issue #146, part of #105). The feed URL carries a per-member, per-event token:
 
 ```
-{App:PublicUrl}/api/v1/feeds/{token}/news.atom
-{App:PublicUrl}/api/v1/feeds/{token}/images/{postId}.{ext}
+{App:ApiUrl}/api/v1/feeds/{token}/news.atom
+{App:ApiUrl}/api/v1/feeds/{token}/images/{postId}.{ext}
 ```
+
+`App:ApiUrl` defaults to `App:PublicUrl` (the app's origin), which is right wherever a proxy
+serves `/api` on that origin. It only needs setting when the API runs elsewhere, as in local
+development (app on `:4200`, API on `:5293`). Links to posts always use `App:PublicUrl`.
 
 - **Token:** 32 random bytes in base64url (`SecureToken.New`), like join links. Only its
   SHA-256 hash is stored (`NewsFeedToken.TokenHash`, unique). The URL is returned once, by
