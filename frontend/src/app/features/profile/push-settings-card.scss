@@ -3,10 +3,27 @@
   margin: 24px auto;
 }
 
+mat-slide-toggle {
+  margin-top: 8px;
+}
+
 .hint {
   margin: 8px 0 0;
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-small);
+}
+
+.reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+
+  mat-icon {
+    flex-shrink: 0;
+    height: 18px;
+    width: 18px;
+    font-size: 18px;
+  }
 }
 
 .devices-title {

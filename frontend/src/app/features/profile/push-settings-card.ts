@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -13,7 +13,17 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/confirm-dialog';
 import { MAX_DEVICE_NAME_LENGTH, PushDevice } from '../../core/models/push';
-import { PushService } from '../../core/notifications/push.service';
+import { PushService, PushStatus } from '../../core/notifications/push.service';
+
+const REASONS: Record<Exclude<PushStatus, 'ready'>, string> = {
+  loading: 'Checking whether push notifications are available…',
+  install:
+    'On iPhone and iPad, add Amsterfam to your Home Screen and open it from there (iOS 16.4 or later).',
+  unsupported: "This browser can't receive push notifications.",
+  off: "Push notifications aren't set up for Amsterfam yet.",
+  error: "Couldn't check whether push notifications are available. Try again later.",
+  blocked: 'Notifications are blocked for Amsterfam. Allow them in your browser settings.',
+};
 
 /** Push notifications on the profile page: this device's switch and all the member's devices. */
 @Component({
@@ -39,6 +49,12 @@ export class PushSettingsCard {
 
   readonly maxNameLength = MAX_DEVICE_NAME_LENGTH;
   readonly busy = signal(false);
+
+  /** Why the switch can't be used here, or null when it can. */
+  readonly reason = computed(() => {
+    const status = this.push.status();
+    return status === 'ready' ? null : REASONS[status];
+  });
   readonly editingId = signal<number | null>(null);
   readonly nameControl = new FormControl('', {
     nonNullable: true,
@@ -55,13 +71,10 @@ export class PushSettingsCard {
       }
     } catch {
       change.source.checked = this.push.subscribed();
-      this.snackBar.open(
-        this.push.blocked
-          ? 'Notifications are blocked for this app. Allow them in your browser settings.'
-          : 'Could not change push notifications',
-        'Dismiss',
-        { duration: 5000 },
-      );
+      // A refused permission prompt shows up as the "blocked" reason on the card instead.
+      if (this.push.status() !== 'blocked') {
+        this.snackBar.open('Could not change push notifications', 'Dismiss', { duration: 5000 });
+      }
     } finally {
       this.busy.set(false);
     }

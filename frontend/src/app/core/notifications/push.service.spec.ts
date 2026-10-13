@@ -48,7 +48,18 @@ describe('PushService', () => {
   let serverDevices: PushDevice[];
   let refreshBadges: ReturnType<typeof vi.fn>;
 
-  function setup(options: { enabled?: boolean; configured?: boolean } = {}): PushService {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function setup(
+    options: {
+      enabled?: boolean;
+      configured?: boolean;
+      configError?: number;
+      permission?: NotificationPermission;
+    } = {},
+  ): PushService {
+    vi.stubGlobal('PushManager', class {});
+    vi.stubGlobal('Notification', { permission: options.permission ?? 'default' });
     subscription$ = new BehaviorSubject<PushSubscription | null>(null);
     messages$ = new Subject();
     swPush = {
@@ -64,9 +75,11 @@ describe('PushService', () => {
     };
     api = {
       getConfig: vi.fn(() =>
-        options.configured === false
-          ? throwError(() => ({ status: 404 }))
-          : of({ publicKey: PUBLIC_KEY }),
+        options.configError
+          ? throwError(() => ({ status: options.configError }))
+          : options.configured === false
+            ? throwError(() => ({ status: 404 }))
+            : of({ publicKey: PUBLIC_KEY }),
       ),
       list: vi.fn(() => of(serverDevices)),
       save: vi.fn(() => of(undefined)),
@@ -86,23 +99,48 @@ describe('PushService', () => {
     return TestBed.inject(PushService);
   }
 
-  it('is available once the server hands out its key', () => {
+  it('is loading until the server answers', () => {
+    const service = setup();
+    expect(service.status()).toBe('loading');
+  });
+
+  it('is ready once the server hands out its key', () => {
     const service = setup();
     service.init();
-    expect(service.available()).toBe(true);
+    expect(service.status()).toBe('ready');
   });
 
-  it('is unavailable when push is off on the server', () => {
+  it('is off when push is not set up on the server', () => {
     const service = setup({ configured: false });
     service.init();
-    expect(service.available()).toBe(false);
+    expect(service.status()).toBe('off');
   });
 
-  it('is unavailable without the service worker', () => {
+  it('reports an error when the server could not be asked', () => {
+    const service = setup({ configError: 503 });
+    service.init();
+    expect(service.status()).toBe('error');
+  });
+
+  it('is unsupported without the service worker, but still lists devices', () => {
     const service = setup({ enabled: false });
     service.init();
     expect(api.getConfig).not.toHaveBeenCalled();
-    expect(service.available()).toBe(false);
+    expect(api.list).toHaveBeenCalled();
+    expect(service.status()).toBe('unsupported');
+  });
+
+  it('is blocked when notifications are denied and this device is not on', () => {
+    const service = setup({ permission: 'denied' });
+    service.init();
+    expect(service.status()).toBe('blocked');
+  });
+
+  it('stays ready to turn off when denied but already subscribed', () => {
+    const service = setup({ permission: 'denied' });
+    subscription$.next(fakeSubscription());
+    service.init();
+    expect(service.status()).toBe('ready');
   });
 
   it('subscribes with the server key and saves the subscription', async () => {

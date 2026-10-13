@@ -11,6 +11,12 @@ export function deviceName(userAgent: string): string {
   return browser ?? os ?? 'Unknown device';
 }
 
+/** iPhone or iPad, where push only works in the app added to the Home Screen. */
+export function isAppleMobile(userAgent = navigator.userAgent): boolean {
+  const os = osOf(userAgent);
+  return os === 'iPhone' || os === 'iPad';
+}
+
 function browserOf(ua: string): string | null {
   // Order matters: Edge and Opera also say "Chrome", Chrome also says "Safari".
   if (/Edg(e|A|iOS)?\//.test(ua)) return 'Edge';

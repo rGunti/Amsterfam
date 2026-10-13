@@ -6,10 +6,29 @@ import { firstValueFrom, timeout } from 'rxjs';
 import { PushApi } from '../api/push.api';
 import { CurrentEventService } from '../event/current-event.service';
 import { PushDevice, SavePushSubscriptionRequest } from '../models/push';
-import { deviceName } from './device-name';
+import { deviceName, isAppleMobile } from './device-name';
 
 /** How long turning push off waits for the server, so logging out never hangs on it. */
 export const REMOVE_TIMEOUT_MS = 5000;
+
+/**
+ * Whether push can be turned on here, and if not, why:
+ * - `loading`: still asking the server.
+ * - `ready`: it can.
+ * - `install`: iPhone/iPad outside the Home Screen app, where Safari has no push.
+ * - `unsupported`: this browser (or a build without the service worker) can't do push.
+ * - `off`: push isn't set up on the server.
+ * - `error`: the server couldn't be asked; it's tried again next start.
+ * - `blocked`: the member blocked notifications for the app in the browser.
+ */
+export type PushStatus =
+  | 'loading'
+  | 'ready'
+  | 'install'
+  | 'unsupported'
+  | 'off'
+  | 'error'
+  | 'blocked';
 
 /**
  * Push notifications for news (ADR-017). Having a subscription is the opt-in: turning it on
@@ -28,8 +47,15 @@ export class PushService {
   /** Counts the member's own changes, so the startup check never undoes one made meanwhile. */
   private changes = 0;
 
-  /** The service worker runs and the server has push set up. */
-  readonly available = signal(false);
+  /** The service worker runs and the browser has the Push API. */
+  readonly supported =
+    this.swPush.isEnabled &&
+    typeof window !== 'undefined' &&
+    'PushManager' in window &&
+    'Notification' in window;
+
+  private readonly server = signal<'loading' | 'on' | 'off' | 'error'>('loading');
+  private readonly permission = signal(currentPermission());
 
   /** This device's subscription in the browser, if any. */
   private readonly subscription = toSignal(this.swPush.subscription, { initialValue: null });
@@ -43,17 +69,31 @@ export class PushService {
   /** All the member's devices, as the server has them. */
   readonly devices = signal<PushDevice[]>([]);
 
-  /** Whether the browser has blocked notifications for the app. */
-  get blocked(): boolean {
-    return typeof Notification !== 'undefined' && Notification.permission === 'denied';
-  }
+  readonly status = computed<PushStatus>(() => {
+    if (!this.supported) {
+      return isAppleMobile() && !isStandalone() ? 'install' : 'unsupported';
+    }
+    const server = this.server();
+    if (server !== 'on') {
+      return server;
+    }
+    // A device that's already on can still be turned off.
+    return this.permission() === 'denied' && !this.subscribed() ? 'blocked' : 'ready';
+  });
 
-  /** Called once at startup. */
+  /** Called once at startup, once signed in. */
   init(): void {
-    if (this.started || !this.swPush.isEnabled) {
+    if (this.started) {
       return;
     }
     this.started = true;
+
+    // The device list works without push here, so other devices can be managed from anywhere.
+    const loadDevices = () => void this.loadDevices().catch(() => undefined);
+    if (!this.supported) {
+      loadDevices();
+      return;
+    }
 
     // A push while the app is open means there's news: update the badge right away.
     this.swPush.messages.subscribe(() => this.currentEvent.refreshBadges());
@@ -61,11 +101,14 @@ export class PushService {
     this.api.getConfig().subscribe({
       next: ({ publicKey }) => {
         this.publicKey = publicKey;
-        this.available.set(true);
+        this.server.set('on');
         void this.reconcile(publicKey);
       },
       // 404: push is off on the server; anything else: try again next start.
-      error: () => this.available.set(false),
+      error: (error: { status?: number }) => {
+        this.server.set(error.status === 404 ? 'off' : 'error');
+        loadDevices();
+      },
     });
   }
 
@@ -74,9 +117,13 @@ export class PushService {
       throw new Error('Push notifications are not available.');
     }
     this.changes++;
-    const subscription = await this.swPush.requestSubscription({
-      serverPublicKey: this.publicKey,
-    });
+    let subscription: PushSubscription;
+    try {
+      subscription = await this.swPush.requestSubscription({ serverPublicKey: this.publicKey });
+    } finally {
+      // The member may just have answered the browser's permission prompt.
+      this.permission.set(currentPermission());
+    }
     try {
       await firstValueFrom(
         this.api.save({ ...toRequest(subscription), name: deviceName(navigator.userAgent) }),
@@ -174,4 +221,17 @@ function sameKey(key: ArrayBuffer | null, base64Url: string): boolean {
   }
   const encoded = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   return encoded === base64Url.replace(/=+$/, '');
+}
+
+function currentPermission(): NotificationPermission {
+  return typeof Notification === 'undefined' ? 'default' : Notification.permission;
+}
+
+/** Running as the installed app rather than in a browser tab. */
+function isStandalone(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return iosStandalone || window.matchMedia?.('(display-mode: standalone)').matches === true;
 }
