@@ -17,8 +17,10 @@ public class NotificationEmailConfirmation(IEmailSender sender, IOptions<AppOpti
     public static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);
 
     /// <summary>
-    /// Mails a new link to the user's pending address, then puts the new token on
-    /// <paramref name="user"/> for the caller to save. If sending throws, nothing changes.
+    /// Mails a new link to the user's pending address and puts its token on
+    /// <paramref name="user"/> for the caller to save. The attempt time is recorded first, so
+    /// the resend cooldown also covers failed sends; if sending throws, the user is left
+    /// without a valid link and the caller should still save.
     /// </summary>
     public async Task SendAsync(User user, DateTimeOffset now, CancellationToken ct)
     {
@@ -56,10 +58,10 @@ public class NotificationEmailConfirmation(IEmailSender sender, IOptions<AppOpti
             html,
             app.Value
         );
-        await sender.SendAsync(message, ct);
-
-        user.NotificationEmailTokenHash = SecureToken.Hash(token);
+        user.NotificationEmailTokenHash = null;
         user.NotificationEmailTokenSentAt = now;
+        await sender.SendAsync(message, ct);
+        user.NotificationEmailTokenHash = SecureToken.Hash(token);
     }
 
     public static bool CanResend(User user, DateTimeOffset now) =>

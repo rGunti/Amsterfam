@@ -65,7 +65,8 @@ public static class NotificationSettingsEndpoints
 
     /// <summary>
     /// Saves the address as pending and mails it a confirmation link. If that mail can't be
-    /// sent, the address stays pending without a link (503) and can be resent.
+    /// sent, the address stays pending without a link (503) and can be resent. Shares the
+    /// resend cooldown, whatever the address, so it can't be used to mail any inbox at will.
     /// </summary>
     private static async Task<IResult> SetEmail(
         [FromBody] SetNotificationEmailRequest request,
@@ -92,13 +93,13 @@ public static class NotificationSettingsEndpoints
         {
             return TypedResults.Ok(ToResponse(user, smtp.Value));
         }
+        if (!NotificationEmailConfirmation.CanResend(user, time.GetUtcNow()))
+            return TooSoon();
 
         // A link sent for the previous address must not confirm this one.
         user.NotificationEmail = email;
         user.NotificationEmailConfirmedAt = null;
         user.NotificationEmailTokenHash = null;
-        user.NotificationEmailTokenSentAt = null;
-        await db.SaveChangesAsync(ct);
 
         return await SendConfirmationAsync(user, confirmation, db, time, smtp.Value, ct);
     }
@@ -112,8 +113,8 @@ public static class NotificationSettingsEndpoints
         var user = await currentUser.GetOrCreateAsync();
         user.NotificationEmail = null;
         user.NotificationEmailConfirmedAt = null;
+        // TokenSentAt stays, so dropping the address doesn't reset the cooldown.
         user.NotificationEmailTokenHash = null;
-        user.NotificationEmailTokenSentAt = null;
         await db.SaveChangesAsync();
         return TypedResults.Ok(ToResponse(user, smtp.Value));
     }
@@ -134,12 +135,7 @@ public static class NotificationSettingsEndpoints
         if (!NotificationAddress.IsPending(user))
             return TypedResults.Conflict(new { error = "There's no address to confirm." });
         if (!NotificationEmailConfirmation.CanResend(user, time.GetUtcNow()))
-        {
-            return TypedResults.Json(
-                new { error = "Wait a minute before asking for another link." },
-                statusCode: StatusCodes.Status429TooManyRequests
-            );
-        }
+            return TooSoon();
 
         return await SendConfirmationAsync(user, confirmation, db, time, smtp.Value, ct);
     }
@@ -168,7 +164,6 @@ public static class NotificationSettingsEndpoints
 
         user.NotificationEmailConfirmedAt = now;
         user.NotificationEmailTokenHash = null;
-        user.NotificationEmailTokenSentAt = null;
         await db.SaveChangesAsync();
         return TypedResults.Ok(ToResponse(user, smtp.Value));
     }
@@ -188,6 +183,8 @@ public static class NotificationSettingsEndpoints
         }
         catch (EmailSendException)
         {
+            // Saved anyway: the attempt counts towards the cooldown.
+            await db.SaveChangesAsync(ct);
             return TypedResults.Json(
                 new { error = "The confirmation email couldn't be sent. Try again later." },
                 statusCode: StatusCodes.Status503ServiceUnavailable
@@ -196,6 +193,12 @@ public static class NotificationSettingsEndpoints
         await db.SaveChangesAsync(ct);
         return TypedResults.Ok(ToResponse(user, smtp));
     }
+
+    private static IResult TooSoon() =>
+        TypedResults.Json(
+            new { error = "Wait a minute before asking for another link." },
+            statusCode: StatusCodes.Status429TooManyRequests
+        );
 
     private static NotificationSettingsResponse ToResponse(User user, SmtpOptions smtp) =>
         new(

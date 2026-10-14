@@ -50,6 +50,11 @@ public class User
 
     /// <summary>SHA-256 of the pending confirmation token; null once confirmed.</summary>
     public string? NotificationEmailTokenHash { get; set; }
+
+    /// <summary>
+    /// When a confirmation mail was last attempted. Expires the token and drives the resend
+    /// cooldown; kept after confirming or dropping the address so the cooldown can't be reset.
+    /// </summary>
     public DateTimeOffset? NotificationEmailTokenSentAt { get; set; }
 
     public ICollection<EventAttendance> Attendances { get; set; } = [];

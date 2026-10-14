@@ -68,7 +68,9 @@ often on an old address. So a member can set a different address, used for notif
 - **Until it's confirmed, news keeps going to the login address**, if that's a real one. An
   unconfirmed address never gets anything but the confirmation mail. A member whose login has no
   email can turn email on while their address is pending; news starts once they confirm.
-- Resending is limited to once a minute (429). `DELETE` drops the custom address, pending or
+- Confirmation mails are limited to one a minute per member (429). Setting an address and
+  resending share the limit, failed sends count too, and dropping the address doesn't reset it,
+  so the endpoint can't be used to mail an arbitrary inbox over and over. `DELETE` drops the custom address, pending or
   confirmed, and news goes back to the login address.
 - The confirmation mail names the account that asked for it but nothing about any event, so a
   mistyped address learns nothing about the trip.

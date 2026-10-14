@@ -461,13 +461,64 @@ public partial class EmailApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var client = api.CreateClientWithUser("discord|mail-change");
         await SetAddress(client, "change-old@example.com");
         var oldToken = LatestToken("change-old@example.com");
+        await PastCooldown(client);
 
-        await SetAddress(client, "change-new@example.com");
+        Assert.Equal(
+            HttpStatusCode.OK,
+            (await SetAddress(client, "change-new@example.com")).StatusCode
+        );
 
         var settings = await GetSettings(client);
         Assert.False(settings.NotificationEmailConfirmed);
         Assert.Equal(LoginEmail("discord|mail-change"), settings.EffectiveEmail);
         Assert.Equal(HttpStatusCode.BadRequest, (await Confirm(client, oldToken)).StatusCode);
+    }
+
+    private Task PastCooldown(HttpClient client) =>
+        UpdateUser(
+            client,
+            u => u.NotificationEmailTokenSentAt = DateTimeOffset.UtcNow.AddMinutes(-2)
+        );
+
+    [Fact]
+    public async Task CustomAddress_SettingAnAddressSharesTheCooldown()
+    {
+        var client = api.CreateClientWithUser("discord|mail-set-spam");
+        await SetAddress(client, "set-spam-1@example.com");
+
+        var same = await SetAddress(client, "set-spam-1@example.com");
+        var other = await SetAddress(client, "set-spam-2@example.com");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, same.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, other.StatusCode);
+        Assert.Single(api.Email.SentTo("set-spam-1@example.com"));
+        Assert.Empty(api.Email.SentTo("set-spam-2@example.com"));
+        Assert.Equal("set-spam-1@example.com", (await GetSettings(client)).NotificationEmail);
+    }
+
+    [Fact]
+    public async Task CustomAddress_DeletingDoesNotResetTheCooldown()
+    {
+        var client = api.CreateClientWithUser("discord|mail-delete-spam");
+        await SetAddress(client, "delete-spam-1@example.com");
+        await client.DeleteAsync(Address);
+
+        var response = await SetAddress(client, "delete-spam-2@example.com");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+        Assert.Empty(api.Email.SentTo("delete-spam-2@example.com"));
+    }
+
+    [Fact]
+    public async Task CustomAddress_FailedSendsCountTowardsTheCooldown()
+    {
+        var client = api.CreateClientWithUser("discord|mail-fail-spam");
+        api.Email.Failing["fail-spam@example.com"] = true;
+        await SetAddress(client, "fail-spam@example.com");
+
+        var response = await client.PostAsync($"{Address}/resend", null);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
     }
 
     [Fact]
@@ -479,10 +530,7 @@ public partial class EmailApiTests(ApiFixture api) : IClassFixture<ApiFixture>
         var tooSoon = await client.PostAsync($"{Address}/resend", null);
         Assert.Equal(HttpStatusCode.TooManyRequests, tooSoon.StatusCode);
 
-        await UpdateUser(
-            client,
-            u => u.NotificationEmailTokenSentAt = DateTimeOffset.UtcNow.AddMinutes(-2)
-        );
+        await PastCooldown(client);
         var later = await client.PostAsync($"{Address}/resend", null);
         Assert.Equal(HttpStatusCode.OK, later.StatusCode);
         Assert.Equal(2, api.Email.SentTo("resend@example.com").Count);
