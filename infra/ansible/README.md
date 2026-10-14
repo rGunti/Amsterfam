@@ -41,6 +41,21 @@ ansible-playbook deploy.yml --ask-vault-pass
 ansible-playbook site.yml --ask-vault-pass
 ```
 
+## Enabling web push
+
+Push notifications for news (ADR-017) stay off until the VAPID keys are in the vault:
+
+```bash
+npx web-push generate-vapid-keys
+ansible-vault edit group_vars/amsterfam_dev/vault.yml
+# add vault_push_vapid_public_key, vault_push_vapid_private_key and
+# vault_push_subject (mailto:…), then redeploy:
+ansible-playbook deploy.yml --ask-vault-pass
+```
+
+Generate the keys once and keep them: new keys break every existing subscription, and members
+would have to turn push on again on each device.
+
 ## Notes
 
 - No firewall role — the host sits behind an external firewall already.

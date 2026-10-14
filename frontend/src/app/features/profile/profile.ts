@@ -30,12 +30,14 @@ import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/co
 import { UserProfileDetails } from '../../shared/user-profile-details/user-profile-details';
 import { AboutMeForm } from './about-me-form';
 import { PaymentMethodDialog, PaymentMethodDialogData } from './payment-method-dialog';
+import { PushSettingsCard } from './push-settings-card';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { UserApi } from '../../core/api/user.api';
 import { CurrentUserService } from '../../core/api/current-user.service';
 import { PaymentMethodApi } from '../../core/api/payment-method.api';
 import { CurrentEventService } from '../../core/event/current-event.service';
+import { PushService } from '../../core/notifications/push.service';
 import { MAX_DISPLAY_NAME_LENGTH, UpdateAboutRequest, User } from '../../core/models/user';
 import { PaymentMethod } from '../../core/models/payment-method';
 
@@ -49,6 +51,7 @@ import { PaymentMethod } from '../../core/models/payment-method';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    PushSettingsCard,
     UserProfileDetails,
     AboutMeForm,
     AuthSourceIcon,
@@ -62,6 +65,7 @@ export class Profile implements OnInit {
   private readonly currentUserService = inject(CurrentUserService);
   private readonly paymentMethodApi = inject(PaymentMethodApi);
   private readonly currentEventService = inject(CurrentEventService);
+  readonly push = inject(PushService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
@@ -204,7 +208,8 @@ export class Profile implements OnInit {
         return;
       }
       this.currentEventService.clear();
-      this.authService.logout();
+      // A shared device shouldn't keep getting this user's news.
+      void this.push.disable({ reload: false }).finally(() => this.authService.logout());
     });
   }
 

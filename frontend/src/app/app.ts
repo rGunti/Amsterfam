@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -21,6 +21,7 @@ import { CurrentEventService } from './core/event/current-event.service';
 import { EventResponse } from './core/models/event';
 import { VersionApi } from './core/api/version.api';
 import { InstallPromptService } from './core/install-prompt/install-prompt.service';
+import { PushService } from './core/notifications/push.service';
 import {
   canManageJoinLinks,
   canManageNotifications,
@@ -58,6 +59,7 @@ export class App {
   private readonly versionApi = inject(VersionApi);
   private readonly eventApi = inject(EventApi);
   private readonly router = inject(Router);
+  private readonly pushService = inject(PushService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
   private readonly installPromptService = inject(InstallPromptService);
@@ -109,6 +111,13 @@ export class App {
 
   constructor() {
     effect(() => this.navOpen.set(!this.isHandset().matches));
+
+    // Push needs a signed-in user for its config; it listens for pushes from then on.
+    effect(() => {
+      if (this.authService.isAuthenticated()) {
+        untracked(() => this.pushService.init());
+      }
+    });
 
     effect(() => {
       // Also depend on eventId so a newly created/joined event (navigated to

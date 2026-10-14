@@ -109,6 +109,10 @@ services:
       Jwt__Audience: "amsterfam"
       Cors__AllowedOrigins__0: "${FRONTEND_ORIGIN:-http://localhost:4200}"
       App__PublicUrl: "${FRONTEND_ORIGIN:-http://localhost:4200}"
+      # Web push (ADR-017); push is off while any of these is empty.
+      Push__VapidPublicKey: "${PUSH_VAPID_PUBLIC_KEY:-}"
+      Push__VapidPrivateKey: "${PUSH_VAPID_PRIVATE_KEY:-}"
+      Push__Subject: "${PUSH_SUBJECT:-}"
       ASPNETCORE_ENVIRONMENT: Production
     ports:
       - "8080:8080"

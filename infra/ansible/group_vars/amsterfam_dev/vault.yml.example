@@ -15,3 +15,9 @@ vault_acme_email: "" # Let's Encrypt expiry/abuse notifications
 
 # Public half of the deploy user's SSH keypair (see roles/deploy_user).
 vault_deploy_ssh_public_key: ""
+
+# Web push (ADR-017), optional. Generate once with `npx web-push generate-vapid-keys` and
+# never rotate: new keys silently break every device's subscription.
+vault_push_vapid_public_key: ""
+vault_push_vapid_private_key: ""
+vault_push_subject: "" # mailto:you@example.com

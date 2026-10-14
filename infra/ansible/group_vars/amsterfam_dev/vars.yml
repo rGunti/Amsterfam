@@ -13,3 +13,8 @@ authentik_db_password: "{{ vault_authentik_db_password }}"
 acme_email: "{{ vault_acme_email }}"
 
 deploy_ssh_public_key: "{{ vault_deploy_ssh_public_key }}"
+
+# Optional: web push stays off until these are in the vault.
+push_vapid_public_key: "{{ vault_push_vapid_public_key | default('') }}"
+push_vapid_private_key: "{{ vault_push_vapid_private_key | default('') }}"
+push_subject: "{{ vault_push_subject | default('') }}"

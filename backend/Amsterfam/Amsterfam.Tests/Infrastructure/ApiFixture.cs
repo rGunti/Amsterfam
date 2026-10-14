@@ -20,6 +20,9 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Every call the app makes to Discord ends up here instead.</summary>
     public StubDiscordHandler Discord { get; } = new();
 
+    /// <summary>Every web push the app sends ends up here instead.</summary>
+    public StubPushHandler Push { get; } = new();
+
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 
     public async Task InitializeAsync()
@@ -41,6 +44,9 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("News:WorkerEnabled", "false");
         builder.UseSetting("App:PublicUrl", PublicUrl);
         builder.UseSetting("App:ApiUrl", ApiUrl);
+        builder.UseSetting("Push:VapidPublicKey", PushTestKeys.VapidPublicKey);
+        builder.UseSetting("Push:VapidPrivateKey", PushTestKeys.VapidPrivateKey);
+        builder.UseSetting("Push:Subject", PushTestKeys.Subject);
         // ...and notifications via NotificationDispatcher.RunAsync.
 
         builder.ConfigureServices(services =>
@@ -66,6 +72,10 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
                 .AddHttpClient<DiscordChannel>()
                 .ConfigurePrimaryHttpMessageHandler(() => Discord)
                 // The stub is shared, so the factory must never dispose it.
+                .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+            services
+                .AddHttpClient<PushChannel>()
+                .ConfigurePrimaryHttpMessageHandler(() => Push)
                 .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
         });
     }

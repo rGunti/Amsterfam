@@ -105,7 +105,13 @@ public class NotificationDispatcher(
             .SingleAsync(d => d.Id == id, ct);
         var channel = channels.FirstOrDefault(c => c.Channel == dispatch.Channel);
 
-        if (await SkipReasonAsync(dispatch, channel) is { } reason)
+        if (
+            (
+                await SkipReasonAsync(dispatch, channel)
+                ?? await channel!.SkipReasonAsync(dispatch, ct)
+            ) is
+            { } reason
+        )
         {
             dispatch.Status = NotificationStatus.Skipped;
             dispatch.LastError = reason;

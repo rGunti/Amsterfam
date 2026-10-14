@@ -41,6 +41,8 @@ builder.Services.AddScoped<NotificationDispatcher>();
 builder.Services.AddSingleton<DiscordTestThrottle>();
 builder.Services.AddHttpClient<DiscordChannel>(c => c.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<DiscordChannel>());
+builder.Services.AddHttpClient<PushChannel>(c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<PushChannel>());
 
 builder
     .Services.AddOptions<AutoTransitionOptions>()
@@ -57,6 +59,15 @@ builder
     .Validate(
         o => o.WorkerInterval > TimeSpan.Zero,
         $"{NewsOptions.SectionName}:WorkerInterval must be positive."
+    )
+    .ValidateOnStart();
+
+builder
+    .Services.AddOptions<PushOptions>()
+    .Bind(builder.Configuration.GetSection(PushOptions.SectionName))
+    .Validate(
+        o => o.HasValidSubject(),
+        $"{PushOptions.SectionName}:Subject must be a mailto: or https: URL."
     )
     .ValidateOnStart();
 
@@ -165,6 +176,7 @@ app.MapExpenseEndpoints();
 app.MapNewsEndpoints();
 app.MapNewsFeedEndpoints();
 app.MapDiscordWebhookEndpoints();
+app.MapPushEndpoints();
 
 app.Run();
 

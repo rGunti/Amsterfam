@@ -1,6 +1,7 @@
 using Amsterfam.Core.Entities;
 using Amsterfam.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Amsterfam.Api.Services;
 
@@ -9,7 +10,12 @@ namespace Amsterfam.Api.Services;
 /// <see cref="PublishAsync"/> only changes the context; the caller's SaveChanges stores the post and
 /// its timeline entry together. The post must already have its id.
 /// </summary>
-public class NewsPublisher(AmsterfamDbContext db, EventLog log, ILogger<NewsPublisher> logger)
+public class NewsPublisher(
+    AmsterfamDbContext db,
+    EventLog log,
+    IOptions<PushOptions> push,
+    ILogger<NewsPublisher> logger
+)
 {
     /// <summary>A publish time closer than this counts as "now" rather than a schedule.</summary>
     public static readonly TimeSpan ScheduleThreshold = TimeSpan.FromMinutes(1);
@@ -57,8 +63,8 @@ public class NewsPublisher(AmsterfamDbContext db, EventLog log, ILogger<NewsPubl
     }
 
     /// <summary>
-    /// One row per group channel the event has set up. Personal channels (Telegram, push,
-    /// email; later issues) add one row per confirmed member who opted in, except the author.
+    /// One row per group channel the event has set up, and per personal channel one row per
+    /// confirmed member who opted in, except the author.
     /// </summary>
     private async Task QueueNotificationsAsync(
         NewsPost post,
@@ -84,6 +90,36 @@ public class NewsPublisher(AmsterfamDbContext db, EventLog log, ILogger<NewsPubl
                     CreatedAt = now,
                 }
             );
+        }
+
+        if (push.Value.IsEnabled)
+        {
+            // Having a device subscribed is the opt-in (ADR-017).
+            var recipients = await db
+                .EventAttendances.Where(a =>
+                    a.EventId == post.EventId
+                    && (a.Role == AttendanceRole.Attendee || a.Role == AttendanceRole.Organiser)
+                    && a.UserId != post.AuthorId
+                    && db.PushSubscriptions.Any(s => s.UserId == a.UserId)
+                )
+                .Select(a => a.UserId)
+                .ToListAsync(ct);
+            foreach (var userId in recipients)
+            {
+                db.NotificationDispatches.Add(
+                    new NotificationDispatch
+                    {
+                        EventId = post.EventId,
+                        NewsPostId = post.Id,
+                        Action = NotificationAction.Send,
+                        Channel = NotificationChannel.Push,
+                        RecipientUserId = userId,
+                        Status = NotificationStatus.Pending,
+                        NextAttemptAt = now,
+                        CreatedAt = now,
+                    }
+                );
+            }
         }
     }
 
