@@ -156,6 +156,10 @@ import { TelegramLogo } from '../../shared/telegram-logo/telegram-logo';
       gap: 8px;
       align-items: flex-start;
     }
+    .connected mat-icon {
+      /* Long text wraps instead of squeezing the icon. */
+      flex-shrink: 0;
+    }
     .wide {
       width: 100%;
       margin-top: 8px;

@@ -97,6 +97,10 @@ import { DiscordLogo } from '../../shared/discord-logo/discord-logo';
       gap: 8px;
       align-items: flex-start;
     }
+    .connected mat-icon {
+      /* Long text wraps instead of squeezing the icon. */
+      flex-shrink: 0;
+    }
     .url {
       width: 100%;
     }
