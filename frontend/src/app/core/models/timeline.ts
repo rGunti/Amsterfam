@@ -30,7 +30,8 @@ export type TimelineEntryType =
   | 'NewsUnpinned'
   | 'NewsCommentRemoved'
   | 'NewsScheduled'
-  | 'DiscordWebhookChanged';
+  | 'DiscordWebhookChanged'
+  | 'TelegramChanged';
 
 /** Who can see an entry: everyone in the event, organisers, or only the owner. */
 export type TimelineVisibility = 'Everyone' | 'Organisers' | 'Owner';

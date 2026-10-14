@@ -148,6 +148,14 @@ describe('describeEntry', () => {
     expect(describeEntry(removed, 99).text).toBe('Alice disconnected the Discord channel');
   });
 
+  it('describes connecting and disconnecting Telegram, without the token', () => {
+    const set = entry({ type: 'TelegramChanged', data: { configured: true } });
+    expect(describeEntry(set, 99).text).toBe('Alice connected a Telegram group for news');
+
+    const removed = entry({ type: 'TelegramChanged', data: { configured: false } });
+    expect(describeEntry(removed, 99).text).toBe('Alice disconnected the Telegram group');
+  });
+
   it('describes an organiser removing a comment, without its text', () => {
     const removed = entry({
       type: 'NewsCommentRemoved',

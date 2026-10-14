@@ -242,6 +242,10 @@ function describeParts(
       return data['configured']
         ? { icon: 'webhook', parts: t`${actor} connected a Discord channel for news` }
         : { icon: 'webhook', parts: t`${actor} disconnected the Discord channel` };
+    case 'TelegramChanged':
+      return data['configured']
+        ? { icon: 'webhook', parts: t`${actor} connected a Telegram group for news` }
+        : { icon: 'webhook', parts: t`${actor} disconnected the Telegram group` };
     case 'NewsCommentRemoved': {
       const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : null;
       const on = title ? ` on “${title}”` : ' on a news post';

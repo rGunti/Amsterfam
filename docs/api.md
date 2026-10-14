@@ -144,7 +144,7 @@ GET    /api/v1/feeds/{token}/images/{postId}.{ext}   (anonymous; a published pos
 - Comments are plain text (max 2000), default `limit` 50 (max 100). A comment is `{ id, author, body, createdAt, editedAt, canEdit, canDelete, reactions, myReactions }`. Posts carry `commentsEnabled`, `commentCount` and `newCommentCount` (others' comments since the caller's last `seen`). Writing on a post with comments off is a 400; editing is author-only, deleting author or organiser (403 otherwise).
 - The Atom feed needs no login: the token in the URL is checked on every request (not revoked, owner still a confirmed member, event visible to them), and any failure is a 404. It holds the latest 50 published posts with links back to the app and no comments. A post's image is embedded and linked as an `enclosure`, served through the token-guarded images route. `Cache-Control: private, max-age=300`, ETag with `If-None-Match` → 304.
 - **Scheduling:** a `publishAt` more than a minute ahead keeps the post unpublished (`publishedAt` null) and logs an organisers-only `NewsScheduled` `{ postId, title, publishAt }`; anything sooner publishes now. Until it's out, the post is organiser-only (404 for others), edits don't set `editedAt`, and edits, image changes and deletion log organisers-only entries. Editing a scheduled post's `publishAt` to now publishes it; changing a published post's `publishAt` is a 400. `pin` on a scheduled post pins it when it publishes. The `NewsWorker` publishes due posts every `News:WorkerInterval` (default 30 s, off with `News:WorkerEnabled=false`) as their author, skipping read-only events, whose posts stay listed as overdue.
-- **Notifications (ADR-015):** `notify` (default true) mirrors the post to the event's outside channels when it's published; it's ignored once the post is out, since edits notify nobody. Posts carry `notify`. Deleting a sent post also deletes its Discord message.
+- **Notifications (ADR-015):** `notify` (default true) mirrors the post to the event's outside channels when it's published; it's ignored once the post is out, since edits notify nobody. Posts carry `notify`. Deleting a sent post also deletes its Discord and Telegram messages (Telegram only within 48 hours).
 - `GET /api/v1/events/{id}` returns `unreadNewsCount` for confirmed members: posts by others published after the caller's last `seen`.
 
 ### Discord webhook
@@ -157,6 +157,19 @@ POST   /api/v1/events/{id}/discord-webhook/test   (sends a test message; 204, 40
 ```
 - The URL must be `https://discord.com/api/webhooks/{id}/{token}` (or `discordapp.com`), with no port, user info, query or fragment; 400 with `{ "error": "..." }` otherwise.
 - The URL never appears in any response or timeline entry. `DiscordWebhookChanged` is organisers-only, with data `{ configured }`.
+
+### Telegram
+Organisers only, same rules as the Discord webhook. Set up in two steps: save the bot token, then pick a group. See ADR-015.
+```
+GET    /api/v1/events/{id}/telegram         ({ configured, tokenSaved, tokenHint, botUsername, chatId, chatTitle }; tokenHint = the token's last 4 characters)
+PUT    /api/v1/events/{id}/telegram         (body: token?, chatId?; logs TelegramChanged when the group is connected or changed)
+DELETE /api/v1/events/{id}/telegram         (204; logs TelegramChanged if a group was connected)
+GET    /api/v1/events/{id}/telegram/chats   ([{ id, title, type }]: groups the bot heard from in the last day; 400 without a token, 502 with { error } if Telegram refuses)
+POST   /api/v1/events/{id}/telegram/test    (sends a test message; 204, 400 unless set up, 429 with Retry-After within 10 s of the event's last Telegram test, 502 with { error } if Telegram refuses)
+```
+- A token must look like `123456789:AA…` and is checked with Telegram's `getMe`; a new token clears the group. 400 with `{ "error": "..." }` if it's malformed or refused.
+- A `chatId` needs a saved token and is checked with `getChat`; it must be a group or supergroup the bot is in (400 otherwise).
+- 502 when Telegram can't be reached. The token never appears in any response or timeline entry. `TelegramChanged` is organisers-only, with data `{ configured }`.
 
 ### Availability
 ```

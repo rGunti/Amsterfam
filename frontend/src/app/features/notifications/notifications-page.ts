@@ -2,14 +2,15 @@ import { Component, inject } from '@angular/core';
 
 import { CurrentEventService } from '../../core/event/current-event.service';
 import { DiscordWebhookCard } from './discord-webhook-card';
+import { TelegramCard } from './telegram-card';
 
 /**
- * Where organisers set up the outside channels news is sent to (ADR-015). Discord for now;
- * Telegram and the other channels join it later.
+ * Where organisers set up the outside channels news is sent to (ADR-015): Discord and
+ * Telegram groups.
  */
 @Component({
   selector: 'app-notifications-page',
-  imports: [DiscordWebhookCard],
+  imports: [DiscordWebhookCard, TelegramCard],
   template: `
     @if (event(); as ev) {
       <div class="page">
@@ -19,6 +20,7 @@ import { DiscordWebhookCard } from './discord-webhook-card';
           channels” when you write it.
         </p>
         <app-discord-webhook-card [eventId]="ev.id" />
+        <app-telegram-card [eventId]="ev.id" />
       </div>
     }
   `,
@@ -29,6 +31,10 @@ import { DiscordWebhookCard } from './discord-webhook-card';
     }
     h1 {
       margin: 0 0 8px;
+    }
+    app-telegram-card {
+      display: block;
+      margin-top: 16px;
     }
     .note {
       margin: 0 0 16px;

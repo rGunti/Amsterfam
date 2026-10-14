@@ -65,6 +65,7 @@ Per user, list of preferred ways for others to pay them back (splitting costs). 
 - `Status`: Draft | LookingForDate | Open | InProgress | Closed | Archived | Cancelled — see *Event lifecycle* below
 - `AutoTransitionsPaused` (bool) — set when the owner resets an event back to Open; the scheduled job skips it until the next manual transition
 - `DiscordWebhookUrl?` (max 300) — where news is mirrored (ADR-015); a secret, never returned or logged
+- `TelegramBotToken?` (max 100, a secret like the webhook URL), `TelegramBotUsername?` (max 64), `TelegramChatId?` (long), `TelegramChatTitle?` (max 255) — the bot and group news is mirrored to (ADR-015); set up only once both token and chat are set
 - `CreatedBy`, `CreatedAt`
 
 #### Event lifecycle
@@ -165,8 +166,9 @@ An announcement by an organiser, read by confirmed members (ADR-014). Deleted wi
 ### NotificationDispatch
 One message to an outside channel about a news post (ADR-015). Written by `NewsPublisher.PublishAsync`, sent by `NotificationDispatcher`. Deleted with the event (or recipient).
 - `Id` (long), `EventId`, `NewsPostId?` (set null when the post is deleted), `Action` (Send | Delete), `Channel` (Discord | Telegram | Push | Email), `RecipientUserId?` (null for group channels)
-- `Status` (Pending | Sent | Failed | Skipped), `Attempts` (max 4), `NextAttemptAt` (retries after 1, 5, 30 min), `LastError?`, `CreatedAt`, `SentAt?`, `ExternalId?` (e.g. the Discord message id)
-- Deleting a post removes its unsent rows and turns sent Discord rows into Delete rows.
+- `Status` (Pending | Sent | Failed | Skipped), `Attempts` (max 4), `NextAttemptAt` (retries after 1, 5, 30 min), `LastError?`, `CreatedAt`, `SentAt?`, `ExternalId?` (the Discord message id, or `{chatId}:{messageId}` for Telegram)
+- Deleting a post removes its unsent rows and turns sent Discord and Telegram rows into Delete rows.
+- A Telegram 429 waits for its `retry_after` instead of the usual backoff.
 
 ### NewsFeedToken
 A member's private Atom feed link for an event's news (ADR-016). Deleted with the event or user.

@@ -37,6 +37,28 @@ public static partial class NewsText
     }
 
     /// <summary>
+    /// Cuts plain text to <paramref name="maxLength"/>, at a word boundary with an ellipsis,
+    /// keeping its line breaks (unlike <see cref="Excerpt"/>).
+    /// </summary>
+    public static string Truncate(string text, int maxLength)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxLength, 2);
+        if (text.Length <= maxLength)
+            return text;
+        // Room for the ellipsis.
+        var limit = maxLength - 1;
+        var cut = text.LastIndexOfAny([' ', '\n'], limit);
+        if (cut < limit / 2)
+        {
+            cut = limit;
+            // A hard cut must never leave half of a surrogate pair (an emoji) behind.
+            if (char.IsHighSurrogate(text[cut - 1]))
+                cut--;
+        }
+        return text[..cut].TrimEnd() + "…";
+    }
+
+    /// <summary>
     /// The start of the body as one line of plain text, cut at a word boundary with an
     /// ellipsis when longer than <paramref name="maxLength"/>.
     /// </summary>

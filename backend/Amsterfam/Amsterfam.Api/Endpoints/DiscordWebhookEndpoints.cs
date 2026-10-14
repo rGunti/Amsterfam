@@ -97,7 +97,7 @@ public static class DiscordWebhookEndpoints
         ICurrentUserService currentUser,
         AmsterfamDbContext db,
         DiscordChannel discord,
-        DiscordTestThrottle throttle,
+        ChannelTestThrottle throttle,
         HttpContext http,
         CancellationToken ct
     )
@@ -107,7 +107,7 @@ public static class DiscordWebhookEndpoints
             return error!;
         if (ev.DiscordWebhookUrl is null)
             return TypedResults.BadRequest(new { error = "Set up a Discord webhook first." });
-        if (!throttle.TryAcquire(eventId, out var retryAfter))
+        if (!throttle.TryAcquire(eventId, NotificationChannel.Discord, out var retryAfter))
         {
             var seconds = (int)Math.Ceiling(retryAfter.TotalSeconds);
             http.Response.Headers.RetryAfter = seconds.ToString();

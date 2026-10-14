@@ -353,3 +353,17 @@ test('an organiser connects Discord without the webhook URL ever showing again',
   await card.getByRole('button', { name: 'Disconnect' }).click();
   await expect(card.getByLabel('Webhook URL')).toBeVisible();
 });
+
+test('an organiser sees the Telegram card, and a malformed token is rejected', async ({
+  page,
+  request,
+}) => {
+  const eventId = await createOpenEvent(request, BROWSER_USER);
+  await page.goto(`/events/${eventId}/notifications`);
+
+  // A well-formed token would be checked with Telegram itself, which e2e can't reach.
+  const card = page.locator('app-telegram-card');
+  await card.getByLabel('Bot token').fill('not-a-token');
+  await card.getByRole('button', { name: 'Save token' }).click();
+  await expect(card).toContainText("That isn't a Telegram bot token.");
+});

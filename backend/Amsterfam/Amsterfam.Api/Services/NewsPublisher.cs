@@ -73,25 +73,18 @@ public class NewsPublisher(
         CancellationToken ct
     )
     {
-        var hasDiscord = await db
+        var groups = await db
             .Events.Where(e => e.Id == post.EventId)
-            .Select(e => e.DiscordWebhookUrl != null)
+            .Select(e => new
+            {
+                Discord = e.DiscordWebhookUrl != null,
+                Telegram = e.TelegramBotToken != null && e.TelegramChatId != null,
+            })
             .SingleAsync(ct);
-        if (hasDiscord)
-        {
-            db.NotificationDispatches.Add(
-                new NotificationDispatch
-                {
-                    EventId = post.EventId,
-                    NewsPostId = post.Id,
-                    Action = NotificationAction.Send,
-                    Channel = NotificationChannel.Discord,
-                    Status = NotificationStatus.Pending,
-                    NextAttemptAt = now,
-                    CreatedAt = now,
-                }
-            );
-        }
+        if (groups.Discord)
+            db.NotificationDispatches.Add(GroupRow(post, NotificationChannel.Discord, now));
+        if (groups.Telegram)
+            db.NotificationDispatches.Add(GroupRow(post, NotificationChannel.Telegram, now));
 
         if (push.Value.IsEnabled)
         {
@@ -159,6 +152,22 @@ public class NewsPublisher(
             }
         }
     }
+
+    private static NotificationDispatch GroupRow(
+        NewsPost post,
+        NotificationChannel channel,
+        DateTimeOffset now
+    ) =>
+        new()
+        {
+            EventId = post.EventId,
+            NewsPostId = post.Id,
+            Action = NotificationAction.Send,
+            Channel = channel,
+            Status = NotificationStatus.Pending,
+            NextAttemptAt = now,
+            CreatedAt = now,
+        };
 
     /// <summary>
     /// Publishes every scheduled post that is due, as its author. Each post is claimed with a

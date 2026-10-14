@@ -38,7 +38,8 @@ public class EventLogEntry
             or EventLogType.JoinLinkRegenerated
             or EventLogType.NewsCommentRemoved
             or EventLogType.NewsScheduled
-            or EventLogType.DiscordWebhookChanged => EventLogVisibility.Organisers,
+            or EventLogType.DiscordWebhookChanged
+            or EventLogType.TelegramChanged => EventLogVisibility.Organisers,
             _ => EventLogVisibility.Everyone,
         };
 
@@ -88,6 +89,9 @@ public enum EventLogType
 
     /// <summary>The Discord webhook was set or removed; data never holds the URL.</summary>
     DiscordWebhookChanged,
+
+    /// <summary>The Telegram group was connected or disconnected; data never holds the token.</summary>
+    TelegramChanged,
 }
 
 public enum EventLogVisibility
