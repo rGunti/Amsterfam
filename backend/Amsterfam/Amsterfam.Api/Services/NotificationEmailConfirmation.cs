@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using Amsterfam.Core.Entities;
+using Amsterfam.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Amsterfam.Api.Services;
@@ -64,8 +66,30 @@ public class NotificationEmailConfirmation(IEmailSender sender, IOptions<AppOpti
         user.NotificationEmailTokenHash = SecureToken.Hash(token);
     }
 
-    public static bool CanResend(User user, DateTimeOffset now) =>
-        user.NotificationEmailTokenSentAt is not { } sent || now - sent >= ResendCooldown;
+    /// <summary>
+    /// Takes the user's slot for a confirmation mail, if the last one was at least
+    /// <see cref="ResendCooldown"/> ago. A conditional UPDATE, so parallel requests can't all
+    /// pass the check before any of them saves. False means "too soon".
+    /// </summary>
+    public static async Task<bool> TryClaimAsync(
+        AmsterfamDbContext db,
+        User user,
+        DateTimeOffset now,
+        CancellationToken ct
+    )
+    {
+        var cutoff = now - ResendCooldown;
+        var claimed = await db
+            .Users.Where(u =>
+                u.Id == user.Id
+                && (
+                    u.NotificationEmailTokenSentAt == null
+                    || u.NotificationEmailTokenSentAt <= cutoff
+                )
+            )
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.NotificationEmailTokenSentAt, now), ct);
+        return claimed == 1;
+    }
 
     /// <summary>True if <paramref name="token"/> is the user's pending, unexpired token.</summary>
     public static bool Matches(User user, string? token, DateTimeOffset now)

@@ -93,7 +93,7 @@ public static class NotificationSettingsEndpoints
         {
             return TypedResults.Ok(ToResponse(user, smtp.Value));
         }
-        if (!NotificationEmailConfirmation.CanResend(user, time.GetUtcNow()))
+        if (!await NotificationEmailConfirmation.TryClaimAsync(db, user, time.GetUtcNow(), ct))
             return TooSoon();
 
         // A link sent for the previous address must not confirm this one.
@@ -134,7 +134,7 @@ public static class NotificationSettingsEndpoints
         var user = await currentUser.GetOrCreateAsync(ct);
         if (!NotificationAddress.IsPending(user))
             return TypedResults.Conflict(new { error = "There's no address to confirm." });
-        if (!NotificationEmailConfirmation.CanResend(user, time.GetUtcNow()))
+        if (!await NotificationEmailConfirmation.TryClaimAsync(db, user, time.GetUtcNow(), ct))
             return TooSoon();
 
         return await SendConfirmationAsync(user, confirmation, db, time, smtp.Value, ct);
@@ -181,10 +181,16 @@ public static class NotificationSettingsEndpoints
         {
             await confirmation.SendAsync(user, time.GetUtcNow(), ct);
         }
-        catch (EmailSendException)
+        catch (EmailSendException ex)
         {
             // Saved anyway: the attempt counts towards the cooldown.
             await db.SaveChangesAsync(ct);
+            if (ex.Permanent)
+            {
+                return TypedResults.BadRequest(
+                    new { error = "The mail server refused this address." }
+                );
+            }
             return TypedResults.Json(
                 new { error = "The confirmation email couldn't be sent. Try again later." },
                 statusCode: StatusCodes.Status503ServiceUnavailable

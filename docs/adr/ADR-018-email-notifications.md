@@ -38,9 +38,10 @@ personal channel on the notification outbox (ADR-015), next to web push (ADR-017
     this size.
   - MailKit errors are rethrown with our own message, because the outbox stores `LastError`
     and server replies can carry details we don't want there.
-  - Temporary failures are retried by the outbox. A 5xx reply (e.g. no such mailbox) is final:
-    the channel throws `NotificationRejectedException` and the dispatcher marks the row Failed
-    after one attempt. The returned `Message-Id` is the `ExternalId`.
+  - Failures are retried by the outbox, except a 5xx refusal of the recipient (e.g. no such
+    mailbox): the channel throws `NotificationRejectedException` and the dispatcher marks the
+    row Failed after one attempt. Other 5xx replies (sender refused, relaying denied) are about
+    our setup and stay retryable, so fixing the config doesn't leave every queued row failed. The returned `Message-Id` is the `ExternalId`.
   - Emails can't be taken back (`CanDelete` is false).
 - **Message:**
   - Subject: `[{event name}] {title}`.
@@ -72,7 +73,9 @@ often on an old address. So a member can set a different address, used for notif
   email can turn email on while their address is pending; news starts once they confirm.
 - Confirmation mails are limited to one a minute per member (429). Setting an address and
   resending share the limit, failed sends count too, and dropping the address doesn't reset it,
-  so the endpoint can't be used to mail an arbitrary inbox over and over. `DELETE` drops the custom address, pending or
+  so the endpoint can't be used to mail an arbitrary inbox over and over. The slot is claimed
+  with a conditional UPDATE, so parallel requests can't all slip through. If the server refuses
+  the address for good, the request answers 400 instead of 503. `DELETE` drops the custom address, pending or
   confirmed, and news goes back to the login address.
 - The confirmation mail names the account that asked for it but nothing about any event, so a
   mistyped address learns nothing about the trip.

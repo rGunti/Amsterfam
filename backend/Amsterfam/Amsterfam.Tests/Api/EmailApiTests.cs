@@ -513,6 +513,34 @@ public partial class EmailApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task CustomAddress_ParallelRequestsSendOneMail()
+    {
+        var client = api.CreateClientWithUser("discord|mail-parallel");
+        await GetSettings(client);
+
+        var responses = await Task.WhenAll(
+            Enumerable.Range(0, 5).Select(i => SetAddress(client, $"parallel-{i}@example.com"))
+        );
+
+        Assert.Single(responses, r => r.StatusCode == HttpStatusCode.OK);
+        Assert.Equal(4, responses.Count(r => r.StatusCode == HttpStatusCode.TooManyRequests));
+        Assert.Single(
+            Enumerable.Range(0, 5).SelectMany(i => api.Email.SentTo($"parallel-{i}@example.com"))
+        );
+    }
+
+    [Fact]
+    public async Task CustomAddress_RefusedByTheMailServerIs400()
+    {
+        var client = api.CreateClientWithUser("discord|mail-refused");
+        api.Email.Rejecting["refused@example.com"] = true;
+
+        var response = await SetAddress(client, "refused@example.com");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task CustomAddress_DeletingDoesNotResetTheCooldown()
     {
         var client = api.CreateClientWithUser("discord|mail-delete-spam");
