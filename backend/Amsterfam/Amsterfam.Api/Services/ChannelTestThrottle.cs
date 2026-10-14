@@ -1,27 +1,30 @@
 using System.Collections.Concurrent;
+using Amsterfam.Core.Entities;
 
 namespace Amsterfam.Api.Services;
 
 /// <summary>
-/// Lets each event send one Discord test message per <see cref="Cooldown"/>, so repeated clicks
-/// don't run into Discord's rate limit. Kept in memory: a restart just allows one more test.
+/// Lets each event send one test message per channel per <see cref="Cooldown"/>, so repeated
+/// clicks don't run into Discord's or Telegram's rate limits. Kept in memory: a restart just allows one more test.
 /// </summary>
-public class DiscordTestThrottle(TimeProvider time)
+public class ChannelTestThrottle(TimeProvider time)
 {
     public static readonly TimeSpan Cooldown = TimeSpan.FromSeconds(10);
 
-    private readonly ConcurrentDictionary<Guid, DateTimeOffset> _lastSent = new();
+    private readonly ConcurrentDictionary<(Guid, NotificationChannel), DateTimeOffset> _lastSent =
+        new();
 
     /// <summary>
     /// Claims the event's next test, or returns how long to wait. Concurrent callers can't both
     /// get through.
     /// </summary>
-    public bool TryAcquire(Guid eventId, out TimeSpan retryAfter)
+    public bool TryAcquire(Guid eventId, NotificationChannel channel, out TimeSpan retryAfter)
     {
+        var key = (eventId, channel);
         var now = time.GetUtcNow();
         while (true)
         {
-            if (_lastSent.TryGetValue(eventId, out var last))
+            if (_lastSent.TryGetValue(key, out var last))
             {
                 var wait = last + Cooldown - now;
                 if (wait > TimeSpan.Zero)
@@ -29,10 +32,10 @@ public class DiscordTestThrottle(TimeProvider time)
                     retryAfter = wait;
                     return false;
                 }
-                if (_lastSent.TryUpdate(eventId, now, last))
+                if (_lastSent.TryUpdate(key, now, last))
                     break;
             }
-            else if (_lastSent.TryAdd(eventId, now))
+            else if (_lastSent.TryAdd(key, now))
             {
                 break;
             }

@@ -21,8 +21,11 @@ email (#143–#145) add their own senders to the same outbox.
 - **Sending:** `NewsWorker` calls `NotificationDispatcher.RunAsync(now)` after publishing due
   posts. Due rows are sent one at a time, no parallelism; plenty for about 20 people. Each row
   is claimed by counting the attempt with a conditional `UPDATE`, so a second instance skips it.
-- **Retries:** after 1, 5 and 30 minutes; the 4th failed attempt marks the row Failed. Errors
-  are stored in `LastError` and never contain secrets such as the webhook URL.
+- **Retries:** after 1, 5 and 30 minutes; the 4th failed attempt marks the row Failed. A
+  channel that's told how long to wait (Telegram's 429 with `retry_after`) throws
+  `NotificationRateLimitedException`, and the next attempt waits exactly that long instead;
+  it still counts as an attempt. Errors are stored in `LastError` and never contain secrets
+  such as the webhook URL or bot token.
 - **Re-checks before sending:** the post is still published, the event is still visible to
   members (not cancelled), the recipient (if any) is still a confirmed member, and the channel is
   still set up. Otherwise the row is Skipped, with the reason in `LastError`.
@@ -50,6 +53,9 @@ Every outside channel is text only and links back to the app:
   `{App:PublicUrl}/events/{id}/news/{postId}`. Bodies over 1,500 characters are cut after the
   last whole top-level block that fits, so a link or code block is never split, followed by
   "…"; if not even the first block fits, it falls back to `NewsText.Excerpt`.
+- **Telegram:** the title, the body as `NewsText.PlainText` cut at a word to 3,500 characters
+  (Telegram allows 4,096) and the same link, sent with no `parse_mode`, so nothing in the post
+  needs escaping and nothing is formatted. Link previews are turned off.
 - **No images:** attached images aren't sent (ADR-011 rules out public image URLs), and Markdown
   images in the body are sent as plain links, so Discord doesn't embed them.
 - **No pings:** every message sets `allowed_mentions: { parse: [] }`, so `@everyone` or a role in
@@ -74,6 +80,10 @@ Every outside channel is text only and links back to the app:
 - If a post is deleted while its message is being sent, the row is already gone when the send
   is saved. The dispatcher notices (a concurrency error on save) and queues a Delete row for the
   message it just sent.
+- Telegram messages are taken back too. Their `ExternalId` is `{chatId}:{messageId}`, since
+  message ids are only unique within a chat and the event may have moved to another group. A
+  bot can only delete messages younger than 48 hours; Telegram's "message can't be deleted" or
+  "message to delete not found" counts as done, so such a post's message just stays.
 - A message id longer than the column (100 characters) isn't kept: a cut-off id could delete the
   wrong message, so such a message just can't be taken back.
 
@@ -92,6 +102,33 @@ to the database protects nothing in a self-hosted setup. Instead it never leaves
   `/api/webhooks/{id}/{token}`, no user info, query or fragment. The URL is stored normalised.
 - `App:PublicUrl` (the app's origin, already used by the Atom feed's post links) builds the links
   back; never `App:ApiUrl`, which is for links to API routes.
+
+## Telegram: a bot token per event
+
+Telegram has no webhook URLs for posting into a group, so each event uses its own bot (#143).
+An organiser creates one with @BotFather, adds it to the group and pastes its token. Setting it
+up takes two steps, because the token is needed to find the group:
+
+1. `PUT /events/{id}/telegram { token }` checks the token's shape and asks Telegram (`getMe`),
+   then stores it with the bot's @username. A new token clears the picked group.
+2. `GET …/telegram/chats` calls `getUpdates` with the stored token and lists the groups and
+   supergroups the bot has heard from in the last day (Telegram keeps updates that long). The
+   updates aren't confirmed, so asking again shows the same list. A bot that has a webhook set
+   gets Telegram's 409, shown as is.
+3. `PUT … { chatId }` checks the group with `getChat` and stores its id and title. Only now is
+   Telegram set up (`IsConfigured` needs both).
+
+- `Event.TelegramBotToken` is stored plain, for the same reasons as the webhook URL below. It's
+  never returned: `GET` gives `{ configured, tokenSaved, tokenHint, botUsername, chatId,
+  chatTitle }`, the hint being its last 4 characters. `PUT`/`DELETE` log `TelegramChanged` for
+  organisers with `{ configured }`, only when the group is connected, changed or disconnected.
+- The token is part of every Bot API URL (`/bot{token}/method`), and `IHttpClientFactory` logs
+  request URLs. Both the Telegram and the Discord clients are registered with
+  `RemoveAllLoggers()`, and errors carry only Telegram's own `description`.
+- **SSRF:** the host is fixed (`api.telegram.org`), and the token must look like
+  `{digits}:{30–64 of [A-Za-z0-9_-]}`, so nothing else can be put into the path.
+- A group upgraded to a supergroup gets a new id; sending then fails with a message telling
+  organisers to pick the group again. The id isn't updated automatically.
 
 ## Rejected alternatives
 

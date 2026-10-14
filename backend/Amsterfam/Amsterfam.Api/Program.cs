@@ -38,9 +38,18 @@ builder.Services.AddScoped<EventAutoTransitioner>();
 builder.Services.AddScoped<EventLog>();
 builder.Services.AddScoped<NewsPublisher>();
 builder.Services.AddScoped<NotificationDispatcher>();
-builder.Services.AddSingleton<DiscordTestThrottle>();
-builder.Services.AddHttpClient<DiscordChannel>(c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddSingleton<ChannelTestThrottle>();
+
+// Webhook URLs and bot tokens are secrets inside the request URL, which HttpClient would log.
+builder
+    .Services.AddHttpClient<DiscordChannel>(c => c.Timeout = TimeSpan.FromSeconds(15))
+    .RemoveAllLoggers();
 builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<DiscordChannel>());
+builder
+    .Services.AddHttpClient<TelegramBotApi>(c => c.Timeout = TimeSpan.FromSeconds(15))
+    .RemoveAllLoggers();
+builder.Services.AddScoped<TelegramChannel>();
+builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<TelegramChannel>());
 builder.Services.AddHttpClient<PushChannel>(c => c.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<PushChannel>());
 
@@ -176,6 +185,7 @@ app.MapExpenseEndpoints();
 app.MapNewsEndpoints();
 app.MapNewsFeedEndpoints();
 app.MapDiscordWebhookEndpoints();
+app.MapTelegramEndpoints();
 app.MapPushEndpoints();
 
 app.Run();

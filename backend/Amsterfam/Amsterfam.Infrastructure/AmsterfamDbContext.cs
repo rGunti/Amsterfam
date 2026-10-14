@@ -81,6 +81,10 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.Property(ev => ev.Currency).HasMaxLength(3).HasDefaultValue(Currencies.Default);
             e.Property(ev => ev.CreatedAt).HasDefaultValueSql("now()");
             e.Property(ev => ev.DiscordWebhookUrl).HasMaxLength(Event.MaxDiscordWebhookUrlLength);
+            e.Property(ev => ev.TelegramBotToken).HasMaxLength(Event.MaxTelegramBotTokenLength);
+            e.Property(ev => ev.TelegramBotUsername)
+                .HasMaxLength(Event.MaxTelegramBotUsernameLength);
+            e.Property(ev => ev.TelegramChatTitle).HasMaxLength(Event.MaxTelegramChatTitleLength);
             e.HasOne(ev => ev.CreatedBy)
                 .WithMany()
                 .HasForeignKey(ev => ev.CreatedById)

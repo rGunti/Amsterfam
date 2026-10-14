@@ -173,7 +173,14 @@ public class NotificationDispatcher(
             }
             else
             {
-                dispatch.NextAttemptAt = now + NotificationDispatch.Backoff[dispatch.Attempts - 1];
+                // A channel that was told how long to wait (a 429) waits exactly that long.
+                dispatch.NextAttemptAt =
+                    now
+                    + (
+                        ex is NotificationRateLimitedException limited
+                            ? limited.RetryAfter
+                            : NotificationDispatch.Backoff[dispatch.Attempts - 1]
+                    );
                 logger.LogInformation(
                     "Notification {DispatchId} to {Channel} failed, retrying at {NextAttemptAt}: {Error}",
                     dispatch.Id,

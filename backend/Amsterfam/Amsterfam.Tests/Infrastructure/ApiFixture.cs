@@ -20,6 +20,9 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Every call the app makes to Discord ends up here instead.</summary>
     public StubDiscordHandler Discord { get; } = new();
 
+    /// <summary>Every call the app makes to the Telegram Bot API ends up here instead.</summary>
+    public StubTelegramHandler Telegram { get; } = new();
+
     /// <summary>Every web push the app sends ends up here instead.</summary>
     public StubPushHandler Push { get; } = new();
 
@@ -72,6 +75,10 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
                 .AddHttpClient<DiscordChannel>()
                 .ConfigurePrimaryHttpMessageHandler(() => Discord)
                 // The stub is shared, so the factory must never dispose it.
+                .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+            services
+                .AddHttpClient<TelegramBotApi>()
+                .ConfigurePrimaryHttpMessageHandler(() => Telegram)
                 .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
             services
                 .AddHttpClient<PushChannel>()

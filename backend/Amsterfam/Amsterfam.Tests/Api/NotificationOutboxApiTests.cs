@@ -466,4 +466,141 @@ public class NotificationOutboxApiTests(ApiFixture api) : IClassFixture<ApiFixtu
         Assert.Empty(await Rows(t.EventId));
         Assert.DoesNotContain(api.Discord.CallsTo(t.WebhookId), c => c.Method == HttpMethod.Delete);
     }
+
+    /// <summary>Connects the trip's Telegram group (chat -{n}) with stub token n.</summary>
+    private async Task<string> ConnectTelegram(Trip t, int n)
+    {
+        var token = StubTelegramHandler.Token(n);
+        api.Telegram.Chats[-n] = $"Group {n}";
+        var telegram = $"/api/v1/events/{t.EventId}/telegram";
+        (
+            await t.Owner.PutAsJsonAsync(telegram, new SetTelegramRequest(token, null))
+        ).EnsureSuccessStatusCode();
+        (
+            await t.Owner.PutAsJsonAsync(telegram, new SetTelegramRequest(null, -n))
+        ).EnsureSuccessStatusCode();
+        return token;
+    }
+
+    [Fact]
+    public async Task Telegram_IsSentAsPlainText_WithChatAndMessageIdKept()
+    {
+        var t = await CreateTrip(30, discord: false);
+        var token = await ConnectTelegram(t, 30);
+        var post = await Post(t);
+
+        var row = Assert.Single(await Rows(t.EventId));
+        Assert.Equal(NotificationChannel.Telegram, row.Channel);
+
+        await Dispatch(Tomorrow);
+
+        var call = Assert.Single(api.Telegram.CallsBy(token, "sendMessage"));
+        Assert.Equal(-30, call.Json.GetProperty("chat_id").GetInt64());
+        Assert.False(call.Json.TryGetProperty("parse_mode", out _));
+        Assert.Equal(
+            $"Dinner\n\nTable at 8.\n\n{ApiFixture.PublicUrl}/events/{t.EventId}/news/{post.Id}",
+            call.Json.GetProperty("text").GetString()
+        );
+        row = Assert.Single(await Rows(t.EventId));
+        Assert.Equal(NotificationStatus.Sent, row.Status);
+        Assert.Matches(@"^-30:\d+$", row.ExternalId);
+    }
+
+    [Fact]
+    public async Task Telegram_AndDiscord_EachGetARow()
+    {
+        var t = await CreateTrip(31);
+        await ConnectTelegram(t, 31);
+
+        await Post(t);
+
+        Assert.Equal(
+            [NotificationChannel.Discord, NotificationChannel.Telegram],
+            (await Rows(t.EventId)).Select(r => r.Channel).Order()
+        );
+    }
+
+    [Fact]
+    public async Task Telegram_WithTokenButNoChat_QueuesNothing()
+    {
+        var t = await CreateTrip(32, discord: false);
+        (
+            await t.Owner.PutAsJsonAsync(
+                $"/api/v1/events/{t.EventId}/telegram",
+                new SetTelegramRequest(StubTelegramHandler.Token(32), null)
+            )
+        ).EnsureSuccessStatusCode();
+
+        await Post(t);
+
+        Assert.Empty(await Rows(t.EventId));
+    }
+
+    [Fact]
+    public async Task Telegram_TooManyRequests_WaitsForRetryAfter()
+    {
+        var t = await CreateTrip(33, discord: false);
+        var token = await ConnectTelegram(t, 33);
+        await Post(t);
+        api.Telegram.Failing[$"{token}/sendMessage"] = new(
+            429,
+            "Too Many Requests: retry after 7",
+            RetryAfter: 7
+        );
+        var now = Tomorrow;
+
+        await Dispatch(now);
+
+        var row = Assert.Single(await Rows(t.EventId));
+        Assert.Equal(NotificationStatus.Pending, row.Status);
+        Assert.Equal(now.AddSeconds(7), row.NextAttemptAt);
+        Assert.Contains("429", row.LastError);
+        Assert.DoesNotContain("secret_token", row.LastError);
+
+        api.Telegram.Failing.TryRemove($"{token}/sendMessage", out _);
+        await Dispatch(now.AddSeconds(7));
+
+        Assert.Equal(NotificationStatus.Sent, Assert.Single(await Rows(t.EventId)).Status);
+        Assert.Equal(2, api.Telegram.CallsBy(token, "sendMessage").Count);
+    }
+
+    [Fact]
+    public async Task Telegram_DeletingASentPost_DeletesTheMessage()
+    {
+        var t = await CreateTrip(34, discord: false);
+        var token = await ConnectTelegram(t, 34);
+        var post = await Post(t);
+        await Dispatch(Tomorrow);
+        var externalId = Assert.Single(await Rows(t.EventId)).ExternalId!;
+
+        (await t.Owner.DeleteAsync($"{t.News}/{post.Id}")).EnsureSuccessStatusCode();
+        await Dispatch(Tomorrow.AddMinutes(1));
+
+        var call = Assert.Single(api.Telegram.CallsBy(token, "deleteMessage"));
+        Assert.Equal(
+            externalId,
+            $"{call.Json.GetProperty("chat_id").GetInt64()}:{call.Json.GetProperty("message_id").GetInt64()}"
+        );
+        Assert.Equal(NotificationStatus.Sent, Assert.Single(await Rows(t.EventId)).Status);
+    }
+
+    [Fact]
+    public async Task Telegram_MessageTooOldToDelete_CountsAsDone()
+    {
+        var t = await CreateTrip(35, discord: false);
+        var token = await ConnectTelegram(t, 35);
+        var post = await Post(t);
+        await Dispatch(Tomorrow);
+        (await t.Owner.DeleteAsync($"{t.News}/{post.Id}")).EnsureSuccessStatusCode();
+        api.Telegram.Failing[$"{token}/deleteMessage"] = new(
+            400,
+            "Bad Request: message can't be deleted for everyone"
+        );
+
+        await Dispatch(Tomorrow.AddMinutes(1));
+
+        var row = Assert.Single(await Rows(t.EventId));
+        Assert.Equal(NotificationStatus.Sent, row.Status);
+        Assert.Equal(1, row.Attempts);
+    }
 }

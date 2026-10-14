@@ -3,6 +3,9 @@ namespace Amsterfam.Core.Entities;
 public class Event
 {
     public const int MaxDiscordWebhookUrlLength = 300;
+    public const int MaxTelegramBotTokenLength = 100;
+    public const int MaxTelegramBotUsernameLength = 64;
+    public const int MaxTelegramChatTitleLength = 255;
 
     public Guid Id { get; set; } = Guid.NewGuid();
     public required string Name { get; set; }
@@ -23,6 +26,21 @@ public class Event
     /// Where news posts are mirrored (ADR-015). A secret: stored plain, never returned or logged.
     /// </summary>
     public string? DiscordWebhookUrl { get; set; }
+
+    /// <summary>
+    /// The bot that mirrors news to a Telegram group (ADR-015). A secret like
+    /// <see cref="DiscordWebhookUrl"/>: stored plain, never returned or logged.
+    /// </summary>
+    public string? TelegramBotToken { get; set; }
+
+    /// <summary>The bot's @username, from Telegram when the token was saved. Not a secret.</summary>
+    public string? TelegramBotUsername { get; set; }
+
+    /// <summary>The group news goes to; Telegram is only set up once this is set too.</summary>
+    public long? TelegramChatId { get; set; }
+
+    /// <summary>The group's name, from Telegram when the chat was picked.</summary>
+    public string? TelegramChatTitle { get; set; }
     public int CreatedById { get; set; }
     public DateTime CreatedAt { get; set; }
 
