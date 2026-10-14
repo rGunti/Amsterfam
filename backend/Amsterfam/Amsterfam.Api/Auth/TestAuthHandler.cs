@@ -19,6 +19,9 @@ public class TestAuthHandler(
     /// <summary>Optional; when set it's passed through as the auth_source claim.</summary>
     public const string AuthSourceHeader = "X-Test-User-AuthSource";
 
+    /// <summary>Optional; when present the token carries no email claim, like some logins.</summary>
+    public const string NoEmailHeader = "X-Test-User-NoEmail";
+
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (!Request.Headers.TryGetValue(UserIdHeader, out var userId))
@@ -29,8 +32,9 @@ public class TestAuthHandler(
             new Claim("sub", userId.ToString()),
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Name, $"Test User {userId}"),
-            new Claim(ClaimTypes.Email, $"{userId}@test.example"),
         };
+        if (!Request.Headers.ContainsKey(NoEmailHeader))
+            claims.Add(new Claim(ClaimTypes.Email, $"{userId}@test.example"));
         if (Request.Headers.TryGetValue(AuthSourceHeader, out var authSource))
             claims.Add(new Claim(CurrentUserService.AuthSourceClaim, authSource.ToString()));
 

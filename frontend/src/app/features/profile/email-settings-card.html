@@ -1,0 +1,82 @@
+@if (settings(); as s) {
+  @if (s.emailAvailable) {
+    <mat-card class="profile-card">
+      <mat-card-header>
+        <mat-card-title>Email</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-slide-toggle
+          [checked]="s.emailNotifications"
+          [disabled]="busy() || (!canEnable() && !s.emailNotifications)"
+          (change)="toggle($event)"
+        >
+          Email me when there's news
+        </mat-slide-toggle>
+
+        @if (s.effectiveEmail; as address) {
+          <p class="hint">
+            Emails go to <strong class="address">{{ address }}</strong
+            >.
+          </p>
+        } @else if (!pending()) {
+          <p class="hint reason">
+            <mat-icon>info</mat-icon>
+            <span>No email address from your login. Add one below to get news by email.</span>
+          </p>
+        }
+
+        @if (pending(); as address) {
+          <p class="hint reason pending">
+            <mat-icon>schedule</mat-icon>
+            <span>
+              Waiting for you to confirm <strong class="address">{{ address }}</strong
+              >. Open the link we emailed you.
+              @if (s.effectiveEmail) {
+                Until then, emails go to {{ s.effectiveEmail }}.
+              }
+            </span>
+          </p>
+          <div class="email-actions">
+            <button mat-button (click)="resend()" [disabled]="busy()">Resend link</button>
+            <button mat-button (click)="useLoginAddress()" [disabled]="busy()">Cancel</button>
+          </div>
+        }
+
+        @if (editing()) {
+          <div class="email-edit">
+            <mat-form-field class="email-field" subscriptSizing="dynamic">
+              <mat-label>Email address</mat-label>
+              <input
+                matInput
+                type="email"
+                autocomplete="email"
+                [formControl]="emailControl"
+                [maxlength]="maxLength"
+                (keydown.enter)="save()"
+                (keydown.escape)="cancelEdit()"
+              />
+              @if (emailControl.touched && emailControl.invalid) {
+                <mat-error>Enter a valid email address</mat-error>
+              }
+            </mat-form-field>
+            <div class="email-actions">
+              <button mat-flat-button (click)="save()" [disabled]="busy()">Send link</button>
+              <button mat-button (click)="cancelEdit()" [disabled]="busy()">Cancel</button>
+            </div>
+          </div>
+        } @else {
+          <div class="email-actions">
+            <button mat-button (click)="startEdit()" [disabled]="busy()">
+              {{ s.notificationEmail ? 'Change address' : 'Use a different address' }}
+            </button>
+            @if (s.notificationEmail && s.notificationEmailConfirmed && s.loginEmail) {
+              <button mat-button (click)="useLoginAddress()" [disabled]="busy()">
+                Use my login address
+              </button>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+}

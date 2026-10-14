@@ -56,6 +56,20 @@ ansible-playbook deploy.yml --ask-vault-pass
 Generate the keys once and keep them: new keys break every existing subscription, and members
 would have to turn push on again on each device.
 
+## Enabling email
+
+News by email (ADR-018) stays off until an SMTP server is in the vault:
+
+```bash
+ansible-vault edit group_vars/amsterfam_dev/vault.yml
+# add vault_smtp_host, vault_smtp_username, vault_smtp_password and
+# vault_smtp_from ("Amsterfam <news@example.com>"); vault_smtp_port and
+# vault_smtp_starttls default to 587 and true. Then redeploy:
+ansible-playbook deploy.yml --ask-vault-pass
+```
+
+Members then find an email switch on their profile page.
+
 ## Notes
 
 - No firewall role — the host sits behind an external firewall already.

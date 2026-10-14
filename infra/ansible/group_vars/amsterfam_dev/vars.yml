@@ -18,3 +18,11 @@ deploy_ssh_public_key: "{{ vault_deploy_ssh_public_key }}"
 push_vapid_public_key: "{{ vault_push_vapid_public_key | default('') }}"
 push_vapid_private_key: "{{ vault_push_vapid_private_key | default('') }}"
 push_subject: "{{ vault_push_subject | default('') }}"
+
+# Optional: news by email stays off until vault_smtp_host is in the vault.
+smtp_host: "{{ vault_smtp_host | default('') }}"
+smtp_port: "{{ vault_smtp_port | default(587) }}"
+smtp_username: "{{ vault_smtp_username | default('') }}"
+smtp_password: "{{ vault_smtp_password | default('') }}"
+smtp_from: "{{ vault_smtp_from | default('') }}"
+smtp_starttls: "{{ vault_smtp_starttls | default(true) }}"
