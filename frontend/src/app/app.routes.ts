@@ -111,6 +111,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'profile/confirm-email',
+    loadComponent: () => import('./features/profile/confirm-email').then((m) => m.ConfirmEmail),
+    canActivate: [authGuard],
+  },
+  {
     path: 'users/:handle',
     loadComponent: () => import('./features/users/user-profile').then((m) => m.UserProfile),
     canActivate: [authGuard],

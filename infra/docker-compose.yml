@@ -113,6 +113,13 @@ services:
       Push__VapidPublicKey: "${PUSH_VAPID_PUBLIC_KEY:-}"
       Push__VapidPrivateKey: "${PUSH_VAPID_PRIVATE_KEY:-}"
       Push__Subject: "${PUSH_SUBJECT:-}"
+      # News by email (ADR-018); email is off while the host is empty.
+      Smtp__Host: "${SMTP_HOST:-}"
+      Smtp__Port: "${SMTP_PORT:-587}"
+      Smtp__Username: "${SMTP_USERNAME:-}"
+      Smtp__Password: "${SMTP_PASSWORD:-}"
+      Smtp__From: "${SMTP_FROM:-}"
+      Smtp__StartTls: "${SMTP_STARTTLS:-true}"
       ASPNETCORE_ENVIRONMENT: Production
     ports:
       - "8080:8080"

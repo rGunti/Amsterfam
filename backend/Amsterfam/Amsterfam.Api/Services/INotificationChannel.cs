@@ -4,7 +4,8 @@ namespace Amsterfam.Api.Services;
 
 /// <summary>
 /// Sends outbox rows to one outside channel (ADR-015). Called by
-/// <see cref="NotificationDispatcher"/>, one row at a time; throwing means "try again later".
+/// <see cref="NotificationDispatcher"/>, one row at a time; throwing means "try again later",
+/// except for <see cref="NotificationRejectedException"/>.
 /// </summary>
 public interface INotificationChannel
 {
@@ -33,3 +34,9 @@ public interface INotificationChannel
     /// <summary>Removes the message <see cref="NotificationDispatch.ExternalId"/> points at.</summary>
     Task DeleteAsync(NotificationDispatch dispatch, Event ev, CancellationToken ct);
 }
+
+/// <summary>
+/// The channel refused this message for good (e.g. the mailbox doesn't exist): the row fails
+/// right away instead of being retried. The message is stored, so it must be the channel's own.
+/// </summary>
+public class NotificationRejectedException(string message) : Exception(message);

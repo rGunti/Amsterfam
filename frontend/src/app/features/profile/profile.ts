@@ -30,6 +30,7 @@ import { ConfirmDialog, ConfirmDialogData } from '../../shared/confirm-dialog/co
 import { UserProfileDetails } from '../../shared/user-profile-details/user-profile-details';
 import { AboutMeForm } from './about-me-form';
 import { PaymentMethodDialog, PaymentMethodDialogData } from './payment-method-dialog';
+import { EmailSettingsCard } from './email-settings-card';
 import { PushSettingsCard } from './push-settings-card';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -52,6 +53,7 @@ import { PaymentMethod } from '../../core/models/payment-method';
     MatIconModule,
     MatTooltipModule,
     PushSettingsCard,
+    EmailSettingsCard,
     UserProfileDetails,
     AboutMeForm,
     AuthSourceIcon,

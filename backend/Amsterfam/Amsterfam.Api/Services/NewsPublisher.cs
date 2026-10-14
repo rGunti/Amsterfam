@@ -14,6 +14,7 @@ public class NewsPublisher(
     AmsterfamDbContext db,
     EventLog log,
     IOptions<PushOptions> push,
+    IOptions<SmtpOptions> smtp,
     ILogger<NewsPublisher> logger
 )
 {
@@ -113,6 +114,42 @@ public class NewsPublisher(
                         NewsPostId = post.Id,
                         Action = NotificationAction.Send,
                         Channel = NotificationChannel.Push,
+                        RecipientUserId = userId,
+                        Status = NotificationStatus.Pending,
+                        NextAttemptAt = now,
+                        CreatedAt = now,
+                    }
+                );
+            }
+        }
+
+        if (smtp.Value.IsEnabled)
+        {
+            // Opt-in flag plus an address to send to (ADR-018); see NotificationAddress.
+            var recipients = await db
+                .EventAttendances.Where(a =>
+                    a.EventId == post.EventId
+                    && (a.Role == AttendanceRole.Attendee || a.Role == AttendanceRole.Organiser)
+                    && a.UserId != post.AuthorId
+                    && a.User.EmailNotifications
+                    && (
+                        (
+                            a.User.NotificationEmail != null
+                            && a.User.NotificationEmailConfirmedAt != null
+                        ) || !a.User.Email.EndsWith(NotificationAddress.FallbackSuffix)
+                    )
+                )
+                .Select(a => a.UserId)
+                .ToListAsync(ct);
+            foreach (var userId in recipients)
+            {
+                db.NotificationDispatches.Add(
+                    new NotificationDispatch
+                    {
+                        EventId = post.EventId,
+                        NewsPostId = post.Id,
+                        Action = NotificationAction.Send,
+                        Channel = NotificationChannel.Email,
                         RecipientUserId = userId,
                         Status = NotificationStatus.Pending,
                         NextAttemptAt = now,

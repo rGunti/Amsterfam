@@ -50,3 +50,23 @@ public record UserProfileResponse(
     IReadOnlyList<DietaryOptionResponse> DietaryOptions,
     string? DietaryNotes
 );
+
+/// <summary>
+/// News by email (ADR-018). <c>EmailAvailable</c> is false while the server has no SMTP set up.
+/// <c>LoginEmail</c> is null when the login sent no address. <c>EffectiveEmail</c> is where
+/// news goes right now: a confirmed custom address, else the login address.
+/// </summary>
+public record NotificationSettingsResponse(
+    bool EmailAvailable,
+    bool EmailNotifications,
+    string? LoginEmail,
+    string? NotificationEmail,
+    bool NotificationEmailConfirmed,
+    string? EffectiveEmail
+);
+
+public record UpdateNotificationSettingsRequest(bool EmailNotifications);
+
+public record SetNotificationEmailRequest(string? Email);
+
+public record ConfirmNotificationEmailRequest(string? Token);

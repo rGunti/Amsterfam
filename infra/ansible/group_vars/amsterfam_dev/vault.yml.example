@@ -21,3 +21,12 @@ vault_deploy_ssh_public_key: ""
 vault_push_vapid_public_key: ""
 vault_push_vapid_private_key: ""
 vault_push_subject: "" # mailto:you@example.com
+
+# News by email (ADR-018), optional; email is off while the host is empty. Port and
+# STARTTLS default to 587 and true.
+vault_smtp_host: ""
+vault_smtp_port: 587
+vault_smtp_username: ""
+vault_smtp_password: ""
+vault_smtp_from: "" # Amsterfam <news@example.com>
+vault_smtp_starttls: true

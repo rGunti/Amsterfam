@@ -1299,6 +1299,11 @@ namespace Amsterfam.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("EmailNotifications")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1310,6 +1315,20 @@ namespace Amsterfam.Infrastructure.Migrations
                     b.Property<string>("Location")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NotificationEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<DateTimeOffset?>("NotificationEmailConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NotificationEmailTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("NotificationEmailTokenSentAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Pronouns")
                         .HasMaxLength(40)

@@ -3,3 +3,14 @@ services:
   api:
     profiles:
       - full
+
+  # Catches email for manual checks (ADR-018): `docker compose --profile mail up mailpit`, then
+  # run the API with Smtp__Host=localhost, Smtp__Port=1025, Smtp__StartTls=false and any
+  # Smtp__From. Messages show up at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles:
+      - mail
+    ports:
+      - "1025:1025"
+      - "8025:8025"
