@@ -133,6 +133,18 @@ public class TelegramBotApiTests
     }
 
     [Fact]
+    public async Task GetMe_WithoutUsername_IsATelegramError()
+    {
+        var api = new TelegramBotApi(
+            new HttpClient(
+                new Answer(HttpStatusCode.OK, """{"ok":true,"result":{"id":1,"is_bot":true}}""")
+            )
+        );
+
+        await Assert.ThrowsAsync<TelegramApiException>(() => api.GetMeAsync(Token, default));
+    }
+
+    [Fact]
     public async Task UnreadableAnswer_IsAnError()
     {
         var api = new TelegramBotApi(

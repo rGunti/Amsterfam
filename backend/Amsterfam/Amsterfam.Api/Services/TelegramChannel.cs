@@ -51,8 +51,10 @@ public class TelegramChannel(TelegramBotApi telegram, IOptions<AppOptions> app)
         {
             await telegram.DeleteMessageAsync(ev.TelegramBotToken!, chatId, messageId, ct);
         }
-        // Already gone, or older than the 48 hours Telegram allows: nothing more can be done.
-        catch (TelegramApiException ex) when (ex.ErrorCode == 400 && IsFinal(ex.Description)) { }
+        // Already gone, older than the 48 hours Telegram allows, or (after the token was
+        // replaced) the bot is no longer in that group: nothing more can be done.
+        catch (TelegramApiException ex)
+            when (ex.ErrorCode == 403 || (ex.ErrorCode == 400 && IsFinal(ex.Description))) { }
     }
 
     /// <summary>Sends a short test message to the group, for the settings page.</summary>
@@ -85,5 +87,6 @@ public class TelegramChannel(TelegramBotApi telegram, IOptions<AppOptions> app)
 
     private static bool IsFinal(string description) =>
         description.Contains("message to delete not found", StringComparison.OrdinalIgnoreCase)
-        || description.Contains("message can't be deleted", StringComparison.OrdinalIgnoreCase);
+        || description.Contains("message can't be deleted", StringComparison.OrdinalIgnoreCase)
+        || description.Contains("chat not found", StringComparison.OrdinalIgnoreCase);
 }

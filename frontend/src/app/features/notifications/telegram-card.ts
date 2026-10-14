@@ -80,7 +80,7 @@ import { TelegramLogo } from '../../shared/telegram-logo/telegram-logo';
                   class="chats"
                   aria-label="Group"
                   [value]="selectedChat()"
-                  (change)="selectedChat.set($event.value)"
+                  (change)="pick($event.value)"
                 >
                   @for (chat of list; track chat.id) {
                     <mat-radio-button [value]="chat.id">{{ chat.title }}</mat-radio-button>
@@ -199,7 +199,7 @@ export class TelegramCard implements OnInit {
   });
   private readonly manualChatValue = signal('');
 
-  /** A typed-in id wins over a picked group. */
+  /** Typing an id clears the picked group and picking one clears the typed id, so only one is set. */
   readonly chatToSave = computed(() => {
     const typed = this.manualChatValue().trim();
     if (typed) return /^-?\d+$/.test(typed) ? Number(typed) : null;
@@ -207,7 +207,15 @@ export class TelegramCard implements OnInit {
   });
 
   constructor() {
-    this.manualChat.valueChanges.subscribe((v) => this.manualChatValue.set(v));
+    this.manualChat.valueChanges.subscribe((v) => {
+      this.manualChatValue.set(v);
+      if (v.trim()) this.selectedChat.set(null);
+    });
+  }
+
+  pick(chatId: number): void {
+    this.manualChat.setValue('');
+    this.selectedChat.set(chatId);
   }
 
   ngOnInit(): void {

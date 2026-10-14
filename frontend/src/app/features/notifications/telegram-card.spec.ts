@@ -121,6 +121,20 @@ describe('TelegramCard', () => {
     expect(fixture.componentInstance.chatToSave()).toBeNull();
   });
 
+  it('keeps a picked group and a typed id from both being set', () => {
+    const fixture = render(tokenOnly);
+    const card = fixture.componentInstance;
+
+    card.pick(-100);
+    card.manualChat.setValue('-200');
+    expect(card.selectedChat()).toBeNull();
+    expect(card.chatToSave()).toBe(-200);
+
+    card.pick(-100);
+    expect(card.manualChat.value).toBe('');
+    expect(card.chatToSave()).toBe(-100);
+  });
+
   it('sends a test message and can disconnect', () => {
     const fixture = render(connected);
     expect(text(fixture)).toContain('ending in “wxyz”');

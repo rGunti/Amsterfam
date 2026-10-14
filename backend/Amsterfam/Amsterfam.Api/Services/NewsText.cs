@@ -42,16 +42,19 @@ public static partial class NewsText
     /// </summary>
     public static string Truncate(string text, int maxLength)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxLength, 2);
         if (text.Length <= maxLength)
             return text;
         // Room for the ellipsis.
         var limit = maxLength - 1;
         var cut = text.LastIndexOfAny([' ', '\n'], limit);
         if (cut < limit / 2)
+        {
             cut = limit;
-        // Never leave half of a surrogate pair (an emoji) behind.
-        if (char.IsHighSurrogate(text[cut - 1]))
-            cut--;
+            // A hard cut must never leave half of a surrogate pair (an emoji) behind.
+            if (char.IsHighSurrogate(text[cut - 1]))
+                cut--;
+        }
         return text[..cut].TrimEnd() + "…";
     }
 

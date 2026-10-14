@@ -44,7 +44,11 @@ public class TelegramBotApi(HttpClient http)
     public async Task<string> GetMeAsync(string token, CancellationToken ct)
     {
         using var result = await CallAsync(token, "getMe", new { }, ct);
-        return result.RootElement.GetProperty("result").GetProperty("username").GetString()!;
+        return
+            result.RootElement.GetProperty("result").TryGetProperty("username", out var name)
+            && name.GetString() is { Length: > 0 } username
+            ? username
+            : throw new TelegramApiException(200, "the bot has no username");
     }
 
     /// <summary>The chat's title, if the bot can see it.</summary>
@@ -105,8 +109,8 @@ public class TelegramBotApi(HttpClient http)
     }
 
     /// <summary>
-    /// The groups in a getUpdates result, most recently seen title first wins; private chats and
-    /// channels are left out.
+    /// The groups in a getUpdates result, each once with its latest title, sorted by title;
+    /// private chats and channels are left out.
     /// </summary>
     public static IReadOnlyList<TelegramChat> ParseGroups(JsonElement updates)
     {

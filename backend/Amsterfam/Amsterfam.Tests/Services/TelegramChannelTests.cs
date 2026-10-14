@@ -98,6 +98,8 @@ public class TelegramChannelTests
     [Theory]
     [InlineData("Bad Request: message to delete not found")]
     [InlineData("Bad Request: message can't be deleted for everyone")]
+    // A replaced token's bot isn't in the old group.
+    [InlineData("Bad Request: chat not found")]
     public async Task Delete_OfAMessageThatCantBeDeletedAnymore_CountsAsDone(string description)
     {
         _telegram.Failing[$"{Token}/deleteMessage"] = new(400, description);
@@ -107,9 +109,21 @@ public class TelegramChannelTests
     }
 
     [Fact]
+    public async Task Delete_ByABotThatsNotInTheGroup_CountsAsDone()
+    {
+        _telegram.Failing[$"{Token}/deleteMessage"] = new(
+            403,
+            "Forbidden: bot is not a member of the supergroup chat"
+        );
+
+        await Channel()
+            .DeleteAsync(new NotificationDispatch { ExternalId = "-100123:42" }, Ev, default);
+    }
+
+    [Fact]
     public async Task Delete_OtherErrors_AreRetried()
     {
-        _telegram.Failing[$"{Token}/deleteMessage"] = new(403, "Forbidden: bot was kicked");
+        _telegram.Failing[$"{Token}/deleteMessage"] = new(500, "Internal Server Error");
 
         await Assert.ThrowsAsync<TelegramApiException>(() =>
             Channel()
@@ -123,4 +137,15 @@ public class TelegramChannelTests
         Assert.Equal("one\ntwo…", NewsText.Truncate("one\ntwo three four", 10));
         Assert.Equal("short", NewsText.Truncate("short", 10));
     }
+
+    [Fact]
+    public void Truncate_HardCut_NeverSplitsAnEmoji()
+    {
+        // No spaces, so it's a hard cut; 🎉 is two chars at index 4–5.
+        Assert.Equal("abcd…", NewsText.Truncate("abcd🎉efgh", 6));
+    }
+
+    [Fact]
+    public void Truncate_NeedsRoomForTheEllipsis() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => NewsText.Truncate("abc", 1));
 }
