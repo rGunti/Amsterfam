@@ -13,8 +13,12 @@ public static class NotificationAddress
     /// <summary>Suffix of the address made up when the login has no email claim.</summary>
     public const string FallbackSuffix = "@unknown";
 
+    /// <summary>
+    /// Case-sensitive, like the same check in <c>NewsPublisher</c>'s query: the fallback is
+    /// always generated in lower case.
+    /// </summary>
     public static bool IsFallback(string email) =>
-        email.EndsWith(FallbackSuffix, StringComparison.OrdinalIgnoreCase);
+        email.EndsWith(FallbackSuffix, StringComparison.Ordinal);
 
     public static string? Effective(User user) =>
         user is { NotificationEmail: { } custom, NotificationEmailConfirmedAt: not null } ? custom
@@ -30,7 +34,7 @@ public static class NotificationAddress
     /// </summary>
     public static bool IsValid(string email) =>
         email.Length <= User.MaxEmailLength
-        && !IsFallback(email)
+        && !email.EndsWith(FallbackSuffix, StringComparison.OrdinalIgnoreCase)
         && MailboxAddress.TryParse(email, out var mailbox)
         && mailbox.Address == email
         && string.IsNullOrEmpty(mailbox.Name)

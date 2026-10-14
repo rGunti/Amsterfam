@@ -48,7 +48,7 @@ public partial class EmailApiTests(ApiFixture api) : IClassFixture<ApiFixture>
     private string LatestToken(string address)
     {
         var message = api.Email.SentTo(address).Last();
-        return TokenPattern().Match(message.TextBody).Groups[1].Value;
+        return TokenPattern().Match(message.TextBody ?? "").Groups[1].Value;
     }
 
     /// <summary>An open event with its owner, a confirmed attendee and a pending member.</summary>
@@ -323,6 +323,22 @@ public partial class EmailApiTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         Assert.Equal(NotificationStatus.Sent, Assert.Single(await EmailRows(t.EventId)).Status);
         Assert.Single(api.Email.SentTo(address));
+    }
+
+    [Fact]
+    public async Task Dispatch_FailsRightAwayWhenTheMailServerRejectsForGood()
+    {
+        var t = await CreateTrip("rejected");
+        await SetOptIn(t.Guest, true);
+        await Post(t);
+        api.Email.Rejecting[LoginEmail("discord|mail-guest-rejected")] = true;
+
+        await Dispatch();
+
+        var row = Assert.Single(await EmailRows(t.EventId));
+        Assert.Equal(NotificationStatus.Failed, row.Status);
+        Assert.Equal(1, row.Attempts);
+        Assert.Equal("The mail server refused the message (550).", row.LastError);
     }
 
     // --- Custom address ---

@@ -1,3 +1,4 @@
+using MailKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
@@ -43,16 +44,23 @@ public class MailKitEmailSender(IOptions<SmtpOptions> options) : IEmailSender
         {
             throw new EmailSendException("The mail server rejected the login.");
         }
+        catch (ServiceNotAuthenticatedException)
+        {
+            throw new EmailSendException("The mail server requires a login.");
+        }
+        // 5xx is a final no for this message (e.g. no such mailbox); 4xx may pass later.
         catch (SmtpCommandException ex)
         {
             throw new EmailSendException(
-                $"The mail server refused the message ({(int)ex.StatusCode})."
+                $"The mail server refused the message ({(int)ex.StatusCode}).",
+                permanent: (int)ex.StatusCode >= 500
             );
         }
         catch (Exception ex)
             when (!ct.IsCancellationRequested
                 && ex
                     is SmtpProtocolException
+                        or ServiceNotConnectedException
                         or IOException
                         or System.Net.Sockets.SocketException
                         or SslHandshakeException
@@ -67,4 +75,10 @@ public class MailKitEmailSender(IOptions<SmtpOptions> options) : IEmailSender
     }
 }
 
-public class EmailSendException(string message) : Exception(message);
+/// <summary>
+/// Sending failed; the message is our own. <see cref="Permanent"/> means retrying won't help.
+/// </summary>
+public class EmailSendException(string message, bool permanent = false) : Exception(message)
+{
+    public bool Permanent { get; } = permanent;
+}

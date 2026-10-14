@@ -6,7 +6,8 @@ namespace Amsterfam.Tests.Infrastructure;
 
 /// <summary>
 /// Stands in for the mail server in tests: records every message, unless one of its
-/// recipients is listed in <see cref="Failing"/>, in which case sending throws.
+/// recipients is listed in <see cref="Failing"/> (sending throws, worth retrying) or
+/// <see cref="Rejecting"/> (sending throws for good, like a 5xx).
 /// </summary>
 public class FakeEmailSender : IEmailSender
 {
@@ -23,8 +24,13 @@ public class FakeEmailSender : IEmailSender
             )
             .ToList();
 
+    public ConcurrentDictionary<string, bool> Rejecting { get; } =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public Task SendAsync(MimeMessage message, CancellationToken ct)
     {
+        if (message.To.Mailboxes.Any(a => Rejecting.ContainsKey(a.Address)))
+            throw new EmailSendException("The mail server refused the message (550).", true);
         if (message.To.Mailboxes.Any(a => Failing.ContainsKey(a.Address)))
             throw new EmailSendException("The mail server couldn't be reached (test).");
         Sent.Enqueue(message);

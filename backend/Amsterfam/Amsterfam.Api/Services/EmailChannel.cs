@@ -54,7 +54,14 @@ public class EmailChannel(
             ?? throw new InvalidOperationException("The recipient has no email address.");
 
         var message = BuildMessage(post, ev, to, app.Value);
-        await sender.SendAsync(message, ct);
+        try
+        {
+            await sender.SendAsync(message, ct);
+        }
+        catch (EmailSendException ex) when (ex.Permanent)
+        {
+            throw new NotificationRejectedException(ex.Message);
+        }
         return message.MessageId;
     }
 
@@ -63,6 +70,8 @@ public class EmailChannel(
 
     public static MimeMessage BuildMessage(NewsPost post, Event ev, string to, AppOptions app)
     {
+        // The subject already starts with the event name, so an untitled post doesn't repeat it
+        // (push has no such prefix and falls back to the event name instead).
         var title = post.Title ?? "News";
         var postUrl = app.NewsPostUrl(ev.Id, post.Id);
         var profileUrl = ProfileUrl(app);

@@ -160,7 +160,10 @@ public class NotificationDispatcher(
             dispatch.LastError = ex.Message[
                 ..Math.Min(ex.Message.Length, NotificationDispatch.MaxErrorLength)
             ];
-            if (dispatch.Attempts >= NotificationDispatch.MaxAttempts)
+            if (
+                ex is NotificationRejectedException
+                || dispatch.Attempts >= NotificationDispatch.MaxAttempts
+            )
             {
                 dispatch.Status = NotificationStatus.Failed;
                 logger.LogWarning(

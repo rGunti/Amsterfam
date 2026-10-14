@@ -38,7 +38,9 @@ personal channel on the notification outbox (ADR-015), next to web push (ADR-017
     this size.
   - MailKit errors are rethrown with our own message, because the outbox stores `LastError`
     and server replies can carry details we don't want there.
-  - Failures are retried by the outbox. The returned `Message-Id` is the `ExternalId`.
+  - Temporary failures are retried by the outbox. A 5xx reply (e.g. no such mailbox) is final:
+    the channel throws `NotificationRejectedException` and the dispatcher marks the row Failed
+    after one attempt. The returned `Message-Id` is the `ExternalId`.
   - Emails can't be taken back (`CanDelete` is false).
 - **Message:**
   - Subject: `[{event name}] {title}`.
