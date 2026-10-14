@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Testcontainers.PostgreSql;
 
 namespace Amsterfam.Tests.Infrastructure;
@@ -25,6 +26,9 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     /// <summary>Every web push the app sends ends up here instead.</summary>
     public StubPushHandler Push { get; } = new();
+
+    /// <summary>Every email the app sends ends up here instead.</summary>
+    public FakeEmailSender Email { get; } = new();
 
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 
@@ -50,6 +54,8 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Push:VapidPublicKey", PushTestKeys.VapidPublicKey);
         builder.UseSetting("Push:VapidPrivateKey", PushTestKeys.VapidPrivateKey);
         builder.UseSetting("Push:Subject", PushTestKeys.Subject);
+        builder.UseSetting("Smtp:Host", "smtp.amsterfam.test");
+        builder.UseSetting("Smtp:From", "Amsterfam <news@amsterfam.test>");
         // ...and notifications via NotificationDispatcher.RunAsync.
 
         builder.ConfigureServices(services =>
@@ -84,15 +90,22 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
                 .AddHttpClient<PushChannel>()
                 .ConfigurePrimaryHttpMessageHandler(() => Push)
                 .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+            services.Replace(ServiceDescriptor.Singleton<IEmailSender>(Email));
         });
     }
 
-    public HttpClient CreateClientWithUser(string externalId, string? authSource = null)
+    public HttpClient CreateClientWithUser(
+        string externalId,
+        string? authSource = null,
+        bool noEmail = false
+    )
     {
         var client = CreateClient();
         client.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, externalId);
         if (authSource is not null)
             client.DefaultRequestHeaders.Add(TestAuthHandler.AuthSourceHeader, authSource);
+        if (noEmail)
+            client.DefaultRequestHeaders.Add(TestAuthHandler.NoEmailHeader, "1");
         return client;
     }
 

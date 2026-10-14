@@ -1,0 +1,21 @@
+@if (failed()) {
+  <mat-card class="confirm-card">
+    <mat-card-header>
+      <mat-card-title>Link invalid or expired</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>
+        Confirmation links work for one hour, only once, and only while signed in as the person who
+        asked for them. You can send a new one from your profile.
+      </p>
+    </mat-card-content>
+    <mat-card-actions>
+      <a mat-button routerLink="/profile">Go to my profile</a>
+    </mat-card-actions>
+  </mat-card>
+} @else {
+  <div class="confirming">
+    <mat-spinner diameter="40" />
+    <p>Confirming your email address…</p>
+  </div>
+}

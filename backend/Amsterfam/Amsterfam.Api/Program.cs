@@ -52,6 +52,10 @@ builder.Services.AddScoped<TelegramChannel>();
 builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<TelegramChannel>());
 builder.Services.AddHttpClient<PushChannel>(c => c.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<PushChannel>());
+builder.Services.AddTransient<IEmailSender, MailKitEmailSender>();
+builder.Services.AddScoped<NotificationEmailConfirmation>();
+builder.Services.AddScoped<EmailChannel>();
+builder.Services.AddTransient<INotificationChannel>(sp => sp.GetRequiredService<EmailChannel>());
 
 builder
     .Services.AddOptions<AutoTransitionOptions>()
@@ -77,6 +81,15 @@ builder
     .Validate(
         o => o.HasValidSubject(),
         $"{PushOptions.SectionName}:Subject must be a mailto: or https: URL."
+    )
+    .ValidateOnStart();
+
+builder
+    .Services.AddOptions<SmtpOptions>()
+    .Bind(builder.Configuration.GetSection(SmtpOptions.SectionName))
+    .Validate(
+        o => o.HasValidFrom(),
+        $"{SmtpOptions.SectionName}:From must be an email address when a host is set."
     )
     .ValidateOnStart();
 
@@ -187,6 +200,7 @@ app.MapNewsFeedEndpoints();
 app.MapDiscordWebhookEndpoints();
 app.MapTelegramEndpoints();
 app.MapPushEndpoints();
+app.MapNotificationSettingsEndpoints();
 
 app.Run();
 

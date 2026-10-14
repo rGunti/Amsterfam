@@ -54,6 +54,9 @@ public class AmsterfamDbContext(DbContextOptions<AmsterfamDbContext> options) : 
             e.Property(u => u.Location).HasMaxLength(User.MaxLocationLength);
             e.Property(u => u.Bio).HasMaxLength(User.MaxBioLength);
             e.Property(u => u.DietaryNotes).HasMaxLength(User.MaxDietaryNotesLength);
+            e.Property(u => u.EmailNotifications).HasDefaultValue(false);
+            e.Property(u => u.NotificationEmail).HasMaxLength(User.MaxEmailLength);
+            e.Property(u => u.NotificationEmailTokenHash).HasMaxLength(64);
             e.HasMany(u => u.DietaryOptions)
                 .WithMany(o => o.Users)
                 .UsingEntity(j => j.ToTable("UserDietaryOptions"));
